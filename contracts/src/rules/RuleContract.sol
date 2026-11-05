@@ -68,7 +68,7 @@ abstract contract RuleContract is RuleStake {
     error DirectCall();
     error ZeroNonceKey();
     error NotImplemented();
-    error PopArgsTooShort(uint256 needed, uint256 length);
+    error TriggerDataTooShort(uint256 needed, uint256 length);
 
     modifier onlyRuleContract() {
         if (address(this) == __self) revert DirectCall();
@@ -166,7 +166,7 @@ abstract contract RuleContract is RuleStake {
     /// @notice popArgs word i (bytes [32i, 32i+32)) as uint256; reverts if popArgs is shorter.
     function _word(bytes calldata popArgs, uint256 i) internal pure returns (uint256 v) {
         uint256 end = 32 * i + 32;
-        if (popArgs.length < end) revert PopArgsTooShort(end, popArgs.length);
+        if (popArgs.length < end) revert TriggerDataTooShort(end, popArgs.length);
         assembly ("memory-safe") {
             v := calldataload(add(popArgs.offset, mul(32, i)))
         }
@@ -175,7 +175,7 @@ abstract contract RuleContract is RuleStake {
     /// @notice popArgs word i as an address (low 20 bytes; the high 12 must be zero, as in abi.encode).
     function _address(bytes calldata popArgs, uint256 i) internal pure returns (address) {
         uint256 v = _word(popArgs, i);
-        if (v >> 160 != 0) revert PopArgsTooShort(0, popArgs.length);
+        if (v >> 160 != 0) revert TriggerDataTooShort(0, popArgs.length);
         return address(uint160(v));
     }
 

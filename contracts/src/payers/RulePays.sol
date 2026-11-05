@@ -15,7 +15,7 @@ abstract contract RulePays {
     }
 
     /// @notice Worst-case wei one trigger can make the rule contract reserve, from the rule contract's Core args.
-    function popcornMaxCostPerPop(
+    function popcornMaxCostPerTrigger(
         uint256 maxFeePerGas,
         uint256 maxGasPerFrame,
         uint256 maxStateGasPerFrame,
