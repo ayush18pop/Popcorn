@@ -25,7 +25,7 @@ while `__action` runs. So a logic's public functions are the rule contract's ord
 
 - **SENDER frame data** (frame 1 in rule-pays, frame 2 in caller-pays) must be the canonical encoding:
   `selector ‖ 0x20 ‖ len ‖ popArgs ‖ zero padding to 32`. Length must equal `68 + ceil32(len)`, the padding bytes must
-  be zero, and `len ≤ maxPopArgsLength`. Anything else is invalid (Core errors `0x0e`-`0x11`, `0x26`, `0x25`), so each
+  be zero, and `len ≤ maxTriggerDataLength`. Anything else is invalid (Core errors `0x0e`-`0x11`, `0x26`, `0x25`), so each
   popArgs has exactly one valid SENDER data.
 - **Frame 0 (VERIFY) data** = verifyData, at most `maxVerifyDataLength` bytes (`0x24`); empty is fine.
 - **`__nonceKey` calldata** = `0x97031c8c ‖ frame1.data[4:]`, i.e. exactly `abi.encodeCall(__nonceKey, (popArgs))`.

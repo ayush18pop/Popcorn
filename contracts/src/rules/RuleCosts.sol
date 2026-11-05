@@ -14,24 +14,24 @@ library RuleCosts {
 
     /// @notice Upper bound of total_gas_limit for any trigger the rule contract accepts: VERIFY limit <= maxGasPerFrame,
     ///         SENDER limits pinned to the caps, data at the caps.
-    function maxGasPerPop(uint256 maxGasPerFrame, uint256 maxStateGasPerFrame, uint256 maxVerifyDataLength, uint256 maxPopArgsLength)
+    function maxGasPerTrigger(uint256 maxGasPerFrame, uint256 maxStateGasPerFrame, uint256 maxVerifyDataLength, uint256 maxTriggerDataLength)
         internal
         pure
         returns (uint256)
     {
-        uint256 n1 = 68 + ((maxPopArgsLength + 31) / 32) * 32;
+        uint256 n1 = 68 + ((maxTriggerDataLength + 31) / 32) * 32;
         return MANDATORY_GAS + FLOOR_PER_BYTE * (maxVerifyDataLength + n1 + NONCE_RLP_BYTES) + 2 * maxGasPerFrame + maxStateGasPerFrame;
     }
 
     /// @notice Worst-case wei one trigger can reserve (and, for junk-sized data, spend) = minimum operating balance:
     ///         below it no trigger at the caps is includable (the protocol rejects the payer's balance).
-    function maxCostPerPop(
+    function maxCostPerTrigger(
         uint256 maxFeePerGas,
         uint256 maxGasPerFrame,
         uint256 maxStateGasPerFrame,
         uint256 maxVerifyDataLength,
-        uint256 maxPopArgsLength
+        uint256 maxTriggerDataLength
     ) internal pure returns (uint256) {
-        return maxFeePerGas * maxGasPerPop(maxGasPerFrame, maxStateGasPerFrame, maxVerifyDataLength, maxPopArgsLength);
+        return maxFeePerGas * maxGasPerTrigger(maxGasPerFrame, maxStateGasPerFrame, maxVerifyDataLength, maxTriggerDataLength);
     }
 }

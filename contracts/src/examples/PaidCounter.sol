@@ -51,7 +51,7 @@ contract PaidCounter is CallerPays {
 
 /// @notice PaidCounter that stakes itself (RuleStake's built-in stake trigger) so the alt mempool (ERC-8421 sidecar) lets its
 ///         condition read OTHER contracts' storage and the VERIFY budget grows to 2.5M. This example does not need that; it
-///         shows the one override a rule contract needs. Deploy with `stake: true`, caps maxPopArgsLength >= 32,
+///         shows the one override a rule contract needs. Deploy with `stake: true`, caps maxTriggerDataLength >= 32,
 ///         maxGasPerFrame >= 80,000 and maxStateGasPerFrame >= 3 fresh slots (3 * 97,920).
 contract StakedPaidCounter is PaidCounter {
     constructor(uint256 reward_) PaidCounter(reward_) {}

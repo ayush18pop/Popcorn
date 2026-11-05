@@ -10,7 +10,7 @@ import {RuleCosts} from "src/rules/RuleCosts.sol";
 ///         can never trigger, or that triggers at an absurd cost.
 ///
 ///         Modes: 0 rule-pays (fee caps bound what one trigger can cost the rule contract), 1 caller-pays (a separate
-///         payer pays every trigger; Core ignores the fee caps, so they must be 0 here and maxCostPerPop is 0). If the logic
+///         payer pays every trigger; Core ignores the fee caps, so they must be 0 here and maxCostPerTrigger is 0). If the logic
 ///         reports `popcornMode()` (RulePays / CallerPays), it must equal `mode`.
 ///
 ///         Core code: passed to the constructor (the bytes of core/out/PopcornCore.bin from core/build.sh), checked
@@ -33,7 +33,7 @@ contract RuleFactory {
         address verifier;
         uint32 conditionGas;
         uint32 maxVerifyDataLength;
-        uint32 maxPopArgsLength;
+        uint32 maxTriggerDataLength;
     }
 
     /// @notice The hybrid owner: written by Core's constructor into the owner slots, not
@@ -74,7 +74,7 @@ contract RuleFactory {
     uint256 public constant MIN_CONDITION_GAS = 5_000;
     uint256 public constant MAX_STATE_GAS_PER_FRAME = 64 * 97_920; // 64 fresh slots per action
     uint256 public constant MAX_VERIFY_DATA_LENGTH = 8_192; // a Groth16 proof is 256 bytes; each byte costs up to 64 gas
-    uint256 public constant MAX_POP_ARGS_LENGTH = 4_096;
+    uint256 public constant MAX_TRIGGER_DATA_LENGTH = 4_096;
     uint256 public constant STAKE_STATE_GAS = 3 * 97_920; // RuleStake: attempt record + registry stake + delay
     uint256 public constant STAKE_EXEC_GAS = 80_000; // RuleStake.STAKE_EXEC_GAS (measured SENDER ~52k)
 
@@ -102,14 +102,14 @@ contract RuleFactory {
     error ConditionGasTooLow(uint256 conditionGas);
     error VerifyFloorAboveGasPerFrame(uint256 floorAtCaps, uint256 maxGasPerFrame);
     error VerifyDataTooLong(uint256 maxVerifyDataLength);
-    error PopArgsTooLong(uint256 maxPopArgsLength);
+    error TriggerDataTooLong(uint256 maxTriggerDataLength);
     error DeployFailed();
     error WrongCoreCode(bytes32 got);
     error TxGasAboveCap(uint256 minTxExecutionGas);
     error StakeRegistryHasNoCode(address registry);
     error StakeNeedsStateGas(uint256 maxStateGasPerFrame, uint256 needed);
     error StakeNeedsGasPerFrame(uint256 maxGasPerFrame, uint256 needed);
-    error StakeNeedsPopArgs(uint256 maxPopArgsLength);
+    error StakeNeedsTriggerData(uint256 maxTriggerDataLength);
 
     constructor(bytes memory coreCreationCode_) {
         if (coreCreationCode_.length == 0) revert EmptyCoreCode();
@@ -142,13 +142,13 @@ contract RuleFactory {
     function encodeArgs(RuleContractArgs calldata a) public pure returns (bytes memory) {
         bytes memory head = abi.encodePacked(a.logic, a.mode, a.maxFeePerGas, a.maxPriorityFeePerGas, a.maxGasPerFrame);
         return bytes.concat(
-            head, abi.encodePacked(a.maxStateGasPerFrame, a.verifier, a.conditionGas, a.maxVerifyDataLength, a.maxPopArgsLength)
+            head, abi.encodePacked(a.maxStateGasPerFrame, a.verifier, a.conditionGas, a.maxVerifyDataLength, a.maxTriggerDataLength)
         );
     }
 
     /// @notice Smallest VERIFY limit Core accepts for a trigger with data at the caps (check 0x27).
     function verifyFloorAtCaps(RuleContractArgs calldata a) public pure returns (uint256) {
-        uint256 n1 = 68 + ((uint256(a.maxPopArgsLength) + 31) / 32) * 32;
+        uint256 n1 = 68 + ((uint256(a.maxTriggerDataLength) + 31) / 32) * 32;
         uint256 cg = a.conditionGas;
         return NONCE_KEY_GAS + cg + cg / 63 + VERIFY_FIXED_GAS + a.maxVerifyDataLength + n1;
     }
@@ -158,7 +158,7 @@ contract RuleFactory {
     ///         Mode 1: intrinsic 16,800 (4 frames, EOA payer signatures; ~150 signature bytes at 16 gas) + the payer
     ///         frame and the tail at PAYER_FRAME_GAS each.
     function minTxExecutionGas(RuleContractArgs calldata a) public pure returns (uint256) {
-        uint256 n1 = 68 + ((uint256(a.maxPopArgsLength) + 31) / 32) * 32;
+        uint256 n1 = 68 + ((uint256(a.maxTriggerDataLength) + 31) / 32) * 32;
         if (a.mode == 1) {
             uint256 intrinsicSp = MANDATORY_GAS_SENDER_PAYS + 16 * (uint256(a.maxVerifyDataLength) + n1 + 35 + 150);
             return intrinsicSp + verifyFloorAtCaps(a) + a.maxGasPerFrame + 2 * PAYER_FRAME_GAS;
@@ -198,7 +198,7 @@ contract RuleFactory {
         if (a.maxGasPerFrame > MAX_GAS_PER_FRAME) revert GasPerFrameTooHigh(a.maxGasPerFrame);
         if (a.maxStateGasPerFrame > MAX_STATE_GAS_PER_FRAME) revert StateGasTooHigh(a.maxStateGasPerFrame);
         if (a.maxVerifyDataLength > MAX_VERIFY_DATA_LENGTH) revert VerifyDataTooLong(a.maxVerifyDataLength);
-        if (a.maxPopArgsLength > MAX_POP_ARGS_LENGTH) revert PopArgsTooLong(a.maxPopArgsLength);
+        if (a.maxTriggerDataLength > MAX_TRIGGER_DATA_LENGTH) revert TriggerDataTooLong(a.maxTriggerDataLength);
         if (a.conditionGas < MIN_CONDITION_GAS) revert ConditionGasTooLow(a.conditionGas);
         uint256 floor = verifyFloorAtCaps(a);
         if (floor > a.maxGasPerFrame) revert VerifyFloorAboveGasPerFrame(floor, a.maxGasPerFrame);
@@ -226,7 +226,7 @@ contract RuleFactory {
         if (registry.code.length == 0) revert StakeRegistryHasNoCode(registry);
         if (a.maxStateGasPerFrame < STAKE_STATE_GAS) revert StakeNeedsStateGas(a.maxStateGasPerFrame, STAKE_STATE_GAS);
         if (a.maxGasPerFrame < STAKE_EXEC_GAS) revert StakeNeedsGasPerFrame(a.maxGasPerFrame, STAKE_EXEC_GAS);
-        if (a.maxPopArgsLength < 32) revert StakeNeedsPopArgs(a.maxPopArgsLength);
+        if (a.maxTriggerDataLength < 32) revert StakeNeedsTriggerData(a.maxTriggerDataLength);
     }
 
     /// @notice The 84 owner bytes of the initcode: ecdsa ++ wotsRoot ++ wotsPubSeed.
@@ -254,9 +254,9 @@ contract RuleFactory {
 
     /// @notice Worst-case wei one trigger can reserve from this rule contract = its minimum operating balance.
     ///         Mode 1 (caller-pays): 0, the payer pays every trigger.
-    function maxCostPerPop(RuleContractArgs calldata a) external pure returns (uint256) {
+    function maxCostPerTrigger(RuleContractArgs calldata a) external pure returns (uint256) {
         if (a.mode == 1) return 0;
-        return RuleCosts.maxCostPerPop(a.maxFeePerGas, a.maxGasPerFrame, a.maxStateGasPerFrame, a.maxVerifyDataLength, a.maxPopArgsLength);
+        return RuleCosts.maxCostPerTrigger(a.maxFeePerGas, a.maxGasPerFrame, a.maxStateGasPerFrame, a.maxVerifyDataLength, a.maxTriggerDataLength);
     }
 
     /// @notice Deploys a rule contract with CREATE2 and funds it with msg.value (Core's deploy code accepts value).

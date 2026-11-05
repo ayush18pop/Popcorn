@@ -20,22 +20,22 @@ abstract contract RulePays {
         uint256 maxGasPerFrame,
         uint256 maxStateGasPerFrame,
         uint256 maxVerifyDataLength,
-        uint256 maxPopArgsLength
+        uint256 maxTriggerDataLength
     ) external pure returns (uint256) {
-        return RuleCosts.maxCostPerPop(maxFeePerGas, maxGasPerFrame, maxStateGasPerFrame, maxVerifyDataLength, maxPopArgsLength);
+        return RuleCosts.maxCostPerTrigger(maxFeePerGas, maxGasPerFrame, maxStateGasPerFrame, maxVerifyDataLength, maxTriggerDataLength);
     }
 
     /// @notice Balance the rule contract must keep for `triggers` more triggers at worst-case cost. The protocol
-    ///         checks the full reservation for each trigger separately, so even one trigger needs maxCostPerPop.
+    ///         checks the full reservation for each trigger separately, so even one trigger needs maxCostPerTrigger.
     function popcornMinOperatingBalance(
         uint256 maxFeePerGas,
         uint256 maxGasPerFrame,
         uint256 maxStateGasPerFrame,
         uint256 maxVerifyDataLength,
-        uint256 maxPopArgsLength,
+        uint256 maxTriggerDataLength,
         uint256 pops
     ) external pure returns (uint256) {
         return (pops == 0 ? 1 : pops)
-            * RuleCosts.maxCostPerPop(maxFeePerGas, maxGasPerFrame, maxStateGasPerFrame, maxVerifyDataLength, maxPopArgsLength);
+            * RuleCosts.maxCostPerTrigger(maxFeePerGas, maxGasPerFrame, maxStateGasPerFrame, maxVerifyDataLength, maxTriggerDataLength);
     }
 }

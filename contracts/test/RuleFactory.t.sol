@@ -51,7 +51,7 @@ contract RuleFactoryTest {
             verifier: address(0),
             conditionGas: 50_000,
             maxVerifyDataLength: 256,
-            maxPopArgsLength: 256
+            maxTriggerDataLength: 256
         });
     }
 
@@ -60,7 +60,7 @@ contract RuleFactoryTest {
     function _packed(RuleFactory.RuleContractArgs memory a) internal pure returns (bytes memory) {
         return bytes.concat(
             abi.encodePacked(a.logic, a.mode, a.maxFeePerGas, a.maxPriorityFeePerGas, a.maxGasPerFrame),
-            abi.encodePacked(a.maxStateGasPerFrame, a.verifier, a.conditionGas, a.maxVerifyDataLength, a.maxPopArgsLength)
+            abi.encodePacked(a.maxStateGasPerFrame, a.verifier, a.conditionGas, a.maxVerifyDataLength, a.maxTriggerDataLength)
         );
     }
 
@@ -112,10 +112,10 @@ contract RuleFactoryTest {
         require(!ok && bytes4(r) == RuleFactory.DeployFailed.selector, "DeployFailed");
     }
 
-    function test_maxCostPerPop() public view {
+    function test_maxCostPerTrigger() public view {
         RuleFactory.RuleContractArgs memory a = _good();
-        require(f.maxCostPerPop(a) == RuleCosts.maxCostPerPop(3 gwei, 300_000, 200_000, 256, 256), "cost");
-        require(f.maxCostPerPop(a) == 3 gwei * (12_950 + 64 * (256 + 68 + 256 + 35) + 600_000 + 200_000), "formula");
+        require(f.maxCostPerTrigger(a) == RuleCosts.maxCostPerTrigger(3 gwei, 300_000, 200_000, 256, 256), "cost");
+        require(f.maxCostPerTrigger(a) == 3 gwei * (12_950 + 64 * (256 + 68 + 256 + 35) + 600_000 + 200_000), "formula");
     }
 
     // ---------------------------------------------------------------- every bound, both sides
@@ -191,10 +191,10 @@ contract RuleFactoryTest {
 
         a = _good();
         a.maxGasPerFrame = 400_000;
-        a.maxPopArgsLength = 4_096;
+        a.maxTriggerDataLength = 4_096;
         _expect(a, "");
-        a.maxPopArgsLength = 4_097;
-        _expect(a, abi.encodeWithSelector(RuleFactory.PopArgsTooLong.selector, 4_097));
+        a.maxTriggerDataLength = 4_097;
+        _expect(a, abi.encodeWithSelector(RuleFactory.TriggerDataTooLong.selector, 4_097));
 
         a = _good();
         a.conditionGas = 5_000;
@@ -248,9 +248,9 @@ contract RuleFactoryTest {
         a.maxVerifyDataLength = 0;
         _expect(a, abi.encodeWithSelector(RuleFactory.StakeNeedsGasPerFrame.selector, 79_999, 80_000));
         a.maxGasPerFrame = 80_000;
-        a.maxPopArgsLength = 31;
-        _expect(a, abi.encodeWithSelector(RuleFactory.StakeNeedsPopArgs.selector, 31));
-        a.maxPopArgsLength = 32;
+        a.maxTriggerDataLength = 31;
+        _expect(a, abi.encodeWithSelector(RuleFactory.StakeNeedsTriggerData.selector, 31));
+        a.maxTriggerDataLength = 32;
         _expect(a, "");
     }
 
@@ -265,7 +265,7 @@ contract RuleFactoryTest {
 
     function test_callerPays_deploys_costsTheRuleContractNothing() public {
         RuleFactory.RuleContractArgs memory a = _sp();
-        require(f.maxCostPerPop(a) == 0, "the payer pays every trigger");
+        require(f.maxCostPerTrigger(a) == 0, "the payer pays every trigger");
         address k = f.create(a, _noOwner(), bytes32(uint256(61)));
         require(keccak256(k.code) == keccak256(bytes.concat(runtime, _packed(a))), "code == runtime ++ args (mode byte 1)");
     }
@@ -300,7 +300,7 @@ contract RuleFactoryTest {
         _expect(a, ""); // still deployable: local / patched sidecars allow 250k
         a.conditionGas = 20_000;
         a.maxVerifyDataLength = 0;
-        a.maxPopArgsLength = 64;
+        a.maxTriggerDataLength = 64;
         require(f.prefixGasAtCaps(a) == 37_449 + 32_900 && f.fitsPublicPrefixBudget(a), "the RewardRule contract profile fits");
         RuleFactory.RuleContractArgs memory b = _good();
         require(f.prefixGasAtCaps(b) == f.verifyFloorAtCaps(b), "mode 0: the floor");
@@ -309,13 +309,13 @@ contract RuleFactoryTest {
     // ---------------------------------------------------------------- fuzz: checkArgs == the bounds model
 
     function _model(RuleFactory.RuleContractArgs memory a) internal view returns (bool) {
-        uint256 n1 = 68 + ((uint256(a.maxPopArgsLength) + 31) / 32) * 32;
+        uint256 n1 = 68 + ((uint256(a.maxTriggerDataLength) + 31) / 32) * 32;
         uint256 floor = 10_000 + uint256(a.conditionGas) + uint256(a.conditionGas) / 63 + 7_000 + a.maxVerifyDataLength + n1;
         uint256 txGas = 12_950 + 16 * (uint256(a.maxVerifyDataLength) + n1 + 35) + floor + a.maxGasPerFrame;
         return a.mode == 0 && a.logic.code.length > 0 && (a.verifier == address(0) || a.verifier.code.length > 0)
             && a.maxFeePerGas > 0 && a.maxFeePerGas <= 1_000 gwei && a.maxPriorityFeePerGas <= a.maxFeePerGas
             && a.maxGasPerFrame <= 16_777_216 && a.maxStateGasPerFrame <= 6_266_880 && a.maxVerifyDataLength <= 8_192
-            && a.maxPopArgsLength <= 4_096 && a.conditionGas >= 5_000 && floor <= a.maxGasPerFrame && txGas <= 16_777_216;
+            && a.maxTriggerDataLength <= 4_096 && a.conditionGas >= 5_000 && floor <= a.maxGasPerFrame && txGas <= 16_777_216;
     }
 
     function testFuzz_boundsMatchModel(
@@ -340,7 +340,7 @@ contract RuleFactoryTest {
             verifier: pick % 7 == 0 ? address(0xbeef) : address(0),
             conditionGas: cg % 1_000_000,
             maxVerifyDataLength: vd % 10_000,
-            maxPopArgsLength: pa % 5_000
+            maxTriggerDataLength: pa % 5_000
         });
         bool ok = _err(a).length == 0;
         require(ok == _model(a), "checkArgs disagrees with the bounds model");
@@ -362,7 +362,7 @@ contract RuleFactoryTest {
         a.maxPriorityFeePerGas = tip % (a.maxFeePerGas + 1);
         a.conditionGas = uint32(5_000 + cg % 2_000_000);
         a.maxVerifyDataLength = vd % 8_193;
-        a.maxPopArgsLength = pa % 4_097;
+        a.maxTriggerDataLength = pa % 4_097;
         a.maxStateGasPerFrame = state % 6_266_881;
         uint256 floor = f.verifyFloorAtCaps(a);
         a.maxGasPerFrame = uint64(floor);

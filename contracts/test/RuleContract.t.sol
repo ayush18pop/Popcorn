@@ -242,7 +242,7 @@ contract RuleContractTest {
         CounterRule l = new CounterRule();
         require(l.popcornMode() == 0, "mode 0");
         // 12,950 + 64 * (256 + 68 + 64 + 35) + 2 * 300,000 + 200,000 = 840,022 gas
-        require(RuleCosts.maxGasPerPop(300_000, 200_000, 256, 64) == 840_022, "gas");
+        require(RuleCosts.maxGasPerTrigger(300_000, 200_000, 256, 64) == 840_022, "gas");
         require(l.popcornMaxCostPerPop(3 gwei, 300_000, 200_000, 256, 64) == 840_022 * 3 gwei, "cost");
         require(l.popcornMinOperatingBalance(3 gwei, 300_000, 200_000, 256, 64, 10) == 10 * 840_022 * 3 gwei, "10 triggers");
         require(l.popcornMinOperatingBalance(3 gwei, 300_000, 200_000, 256, 64, 0) == 840_022 * 3 gwei, "at least one");
@@ -333,7 +333,7 @@ contract RuleContractTest {
     function test_stakePopFundedWithAmountPlusMaxCost() public {
         (MockRegistry reg,, CoreHarness h, bytes memory sp) = _stakeSetup(0.02 ether + 0.001 ether);
         h.pop(sp, "");
-        require(reg.stakeOf(address(h)) == 0.02 ether, "amount + maxCostPerPop is enough");
+        require(reg.stakeOf(address(h)) == 0.02 ether, "amount + maxCostPerTrigger is enough");
     }
 
     /// a registry without code is refused (condition false); nothing is sent.

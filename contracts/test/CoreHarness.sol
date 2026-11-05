@@ -117,7 +117,7 @@ contract CoreHarness {
         if (mc > 0) r.refund();
     }
 
-    /// @notice Sets the max_cost the next triggers reserve (e.g. RuleCosts.maxCostPerPop of the rule contract's args).
+    /// @notice Sets the max_cost the next triggers reserve (e.g. RuleCosts.maxCostPerTrigger of the rule contract's args).
     function setMaxCost(uint256 mc) external {
         bytes32 slot = MAX_COST;
         assembly ("memory-safe") {

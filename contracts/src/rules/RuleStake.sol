@@ -34,11 +34,11 @@ interface IStakingRegistry {
 ///         re-enables it (`ownerReEnableStake`, ). If even the attempt record cannot be written (state gas), the action reverts, the
 ///         key is consumed and the condition can never be true again for it: nothing more is paid either.
 ///
-///         FUND THE RULE CONTRACT WITH >= amount + maxCostPerPop BEFORE ENABLING. The protocol reserves the trigger's whole
+///         FUND THE RULE CONTRACT WITH >= amount + maxCostPerTrigger BEFORE ENABLING. The protocol reserves the trigger's whole
 ///         max_cost from the rule contract at APPROVE (before the SENDER frame), so during the action the rule contract holds
 ///         balance - max_cost; addStake{value: amount} fails if that is below `amount`.
 ///         Needs per rule contract: maxStateGasPerFrame >= STAKE_STATE_GAS (3 fresh slots: attempt record, registry
-///         stake, registry delay), maxGasPerFrame >= STAKE_EXEC_GAS, maxPopArgsLength >= 32 (RuleFactory checks
+///         stake, registry delay), maxGasPerFrame >= STAKE_EXEC_GAS, maxTriggerDataLength >= 32 (RuleFactory checks
 ///         these when the logic's popcornStakeConfig() reports staking on).
 ///
 ///         Owner functions: `ownerUnlockStake()` (registry.unlockStake: the

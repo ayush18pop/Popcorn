@@ -24,10 +24,10 @@ runtime reads each argument with `CODECOPY` at `datasize("runtime") + offset` (`
 | 69 | 20 | `verifier` | address | not read by Core; available to logic (the rule-set engine stores its config pointer here) |
 | 89 | 4 | `conditionGas` | uint32 | fixed gas forwarded to `__condition` |
 | 93 | 4 | `maxVerifyDataLength` | uint32 | max bytes of frame 0 data (verifyData) |
-| 97 | 4 | `maxPopArgsLength` | uint32 | max bytes of popArgs (the trigger data) |
+| 97 | 4 | `maxTriggerDataLength` | uint32 | max bytes of popArgs (the trigger data) |
 
 Solidity: `abi.encodePacked(logic, uint8(mode), uint128(maxFee), uint128(maxTip), uint64(maxGas), uint64(maxState),
-verifier, uint32(conditionGas), uint32(maxVerifyDataLength), uint32(maxPopArgsLength))`.
+verifier, uint32(conditionGas), uint32(maxVerifyDataLength), uint32(maxTriggerDataLength))`.
 
 **Why the SENDER frame's limits are pinned.** Anyone can build a transaction. With "≤ cap", a griefer could set the
 SENDER execution (or state) limit to 0: VERIFY still approves, APPROVE consumes the nonce key and debits the rule
@@ -64,10 +64,10 @@ nonce key is taken at payment approval, after the condition. An honest transacti
 | `maxPriorityFeePerGas` | ≤ `maxFeePerGas` | larger is unreachable |
 | `maxGasPerFrame` | ≥ the VERIFY floor at the data caps and ≥ `__action` need; ≤ 16,777,216 (EIP-7825 tx cap; the SENDER limit equals it) | it is both the VERIFY cap and the exact SENDER budget |
 | `maxStateGasPerFrame` | 97,920 × the new slots `__action` can create (0 if none) | the exact SENDER state budget |
-| `conditionGas` | 5,000 ≤ x and `10,000 + x + x/63 + 7,000 + maxVerifyDataLength + 68 + ceil32(maxPopArgsLength)` ≤ `maxGasPerFrame` | below 5k nothing useful runs; above, nothing at the data caps can meet the `0x27` floor |
-| all of the above | `12,950 + 16 × (maxVerifyDataLength + 68 + ceil32(maxPopArgsLength) + 35) + floor + maxGasPerFrame` ≤ 2^24 | EIP-7825 / EIP-8141: intrinsic + Σ execution limits ≤ 16,777,216 (state excluded) |
+| `conditionGas` | 5,000 ≤ x and `10,000 + x + x/63 + 7,000 + maxVerifyDataLength + 68 + ceil32(maxTriggerDataLength)` ≤ `maxGasPerFrame` | below 5k nothing useful runs; above, nothing at the data caps can meet the `0x27` floor |
+| all of the above | `12,950 + 16 × (maxVerifyDataLength + 68 + ceil32(maxTriggerDataLength) + 35) + floor + maxGasPerFrame` ≤ 2^24 | EIP-7825 / EIP-8141: intrinsic + Σ execution limits ≤ 16,777,216 (state excluded) |
 | `maxVerifyDataLength` | 0 when the condition ignores verifyData; else the exact proof/hint size (a Groth16 proof ≈ 256–384 bytes) | each byte costs the rule contract up to 64 gas |
-| `maxPopArgsLength` | the exact popArgs size the logic decodes (for example 32 or 64) | same |
+| `maxTriggerDataLength` | the exact popArgs size the logic decodes (for example 32 or 64) | same |
 
 ## Constants (in the bytecode)
 
@@ -102,7 +102,7 @@ total_gas_limit ≤ 12,950 + 64 × (n0 + n1 + 35) + exec0 + exec1 + state0 + sta
 Check `0x1a` requires `TXPARAM(0x06) ≤ TXPARAM(0x04) × (that bound)` with the transaction's actual limits and data
 lengths. With the per-field checks it always holds under today's pricing, and it fails closed if a future intrinsic
 term makes the transaction cost more. The most anyone can make the rule contract reserve per transaction is
-`maxFeePerGas × (12,950 + 64 × (maxVerifyDataLength + 68 + ceil32(maxPopArgsLength) + 35) + 2 × maxGasPerFrame +
+`maxFeePerGas × (12,950 + 64 × (maxVerifyDataLength + 68 + ceil32(maxTriggerDataLength) + 35) + 2 × maxGasPerFrame +
 maxStateGasPerFrame)`; the actual charge is the gas used (unused gas is refunded) but never below the 64 gas/byte floor.
 
 ## Error codes (32-byte revert data)
@@ -130,7 +130,7 @@ maxStateGasPerFrame)`; the actual charge is the gas used (unused gas is refunded
 | `0x0f` | popArgs offset word == 0x20 |
 | `0x10` | popArgs length < frame 1 data length |
 | `0x11` | frame 1 data length == 68 + ceil32(len) (canonical, nothing trailing) |
-| `0x25` | popArgs length ≤ `maxPopArgsLength` |
+| `0x25` | popArgs length ≤ `maxTriggerDataLength` |
 | `0x26` | popArgs ABI padding bytes are zero |
 | `0x12` | `max_fee_per_gas ≤ maxFeePerGas` |
 | `0x13` | `max_priority_fee_per_gas ≤ maxPriorityFeePerGas` |
