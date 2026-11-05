@@ -1,0 +1,164 @@
+name: popcorn-local
+
+# A local copy of the organisers' EIP-8141 devnet.
+#
+# Adapted from the organisers' single-validator devnet:
+#   mempool-workshop-sidecar/deploy/devnet/docker-compose.yml (+ genesis.values.env, README.md)
+#   (forshtat/mempool-workshop-sidecar, "EIP-8141 devnet (Docker Compose)"), itself derived from
+#   test/e2e/kurtosis/eip8141-single-node.yaml in that repo.
+# Same images, same fork schedule (Osaka at genesis -> Amsterdam epoch 1 -> Hegota epoch 2), same
+# two-beacon-node workaround. Our changes are listed in devnet/README.md ("How it differs"); in short:
+#   - ethrex runs with --mempool.max-verify-gas=250000 (the organisers' documented unstaked budget;
+#     the public node runs the 100k default),
+#   - chain id 1338 and our own premine (rendered by up.sh into data/genesis.values.env),
+#   - NaiveStakingRegistry preloaded in genesis at the public devnet's address,
+#   - host ports bound to 127.0.0.1 only, on numbers that do not clash with the public-devnet tooling,
+#   - a fixed bridge subnet so lighthouse-beacon's --enr-address is known up front,
+#   - no p2p ports published (the chain has no outside peers).
+#
+# Do not run this file by hand; use devnet/up.sh (it renders the genesis config, sets
+# GENESIS_TIMESTAMP and the beacon ENR, and starts things in the right order).
+
+networks:
+  devnet:
+    ipam:
+      config:
+        - subnet: 172.30.38.0/24
+
+services:
+  # One-shot: writes genesis.json (EL), genesis.ssz + config.yaml (CL), and a shared JWT secret.
+  genesis:
+    image: ethpandaops/ethereum-genesis-generator:6.1.6
+    environment:
+      - GENESIS_TIMESTAMP
+    volumes:
+      - ./data/genesis:/data
+      - ./data/genesis.values.env:/config/values.env:ro
+    command: ["all"]
+    networks: [devnet]
+
+  # One-shot: EIP-2335 keystores for the 32 genesis validators (generator's default mnemonic, throwaway).
+  validator-keys:
+    image: protolambda/eth2-val-tools:latest
+    volumes:
+      - ./data/validator-keys:/data
+    command:
+      - keystores
+      - --insecure
+      - --source-mnemonic
+      - "sleep moment list remain like wall lake industry canvas wonder ecology elite duck salad naive syrup frame brass utility club odor country obey pudding"
+      - --source-min=0
+      - --source-max=32
+      - --out-loc=/data/keystores
+    networks: [devnet]
+
+  ethrex:
+    image: ${ETHREX_IMAGE:-ghcr.io/forshtat/ethrex:eip8141-tracer-latest}
+    volumes:
+      - ./data/genesis:/genesis:ro
+      - ./data/ethrex:/data
+    ports:
+      # RPC, incl. ethrex_submitPrivilegedFrameTransaction (the local sidecar's relay target). Localhost only.
+      - "127.0.0.1:${LOCAL_RPC_PORT:-18545}:8545/tcp"
+    command:
+      - "--network=/genesis/metadata/genesis.json"
+      - "--datadir=/data"
+      - "--http.addr=0.0.0.0"
+      - "--http.port=8545"
+      - "--http.api=eth,net,web3,ethrex,debug,admin,txpool"
+      - "--authrpc.addr=0.0.0.0"
+      - "--authrpc.port=8551"
+      - "--authrpc.jwtsecret=/genesis/jwt/jwtsecret"
+      - "--log.level=info"
+      - "--syncmode=full"
+      - "--p2p.addr=0.0.0.0"
+      - "--p2p.port=30303"
+      - "--discovery.port=30303"
+      # EIP-8141 MAX_VERIFY_GAS for ethrex's own public mempool (eth_sendRawTransaction). Mempool policy,
+      # not consensus (cmd/ethrex/cli.rs). 250,000 = the organisers' documented UNSTAKED per-entity budget
+      # (ERC-8421 BUDGET-010, our patched sidecar's MAX_VERIFY_GAS_PER_ENTITY). ethrex has no notion of
+      # stake, so the 2.5M staked budget is only reachable through the sidecar (privileged submit).
+      # The public devnet node runs the 100,000 default.
+      - "--mempool.max-verify-gas=${LOCAL_MAX_VERIFY_GAS:-250000}"
+    networks:
+      devnet:
+        ipv4_address: 172.30.38.2
+
+  lighthouse-beacon:
+    image: ${LIGHTHOUSE_IMAGE:-ethpandaops/lighthouse:focil}
+    volumes:
+      - ./data/genesis:/genesis:ro
+      - ./data/lighthouse-beacon:/data
+    ports:
+      - "127.0.0.1:${LOCAL_BEACON_PORT:-15052}:5052/tcp"
+    entrypoint: ["lighthouse"]
+    command:
+      - bn
+      - --testnet-dir=/genesis/metadata
+      - --datadir=/data
+      - --execution-endpoint=http://ethrex:8551
+      - --execution-jwt=/genesis/jwt/jwtsecret
+      - --debug-level=info
+      - --http
+      - --http-address=0.0.0.0
+      - --http-port=5052
+      - --listen-address=0.0.0.0
+      - --port=9000
+      - --supernode
+      - --allow-insecure-genesis-sync
+      - --ignore-ws-check
+      # Fixed (see networks below), so no container-IP lookup is needed as in the organisers' runbook.
+      - --enr-address=172.30.38.3
+    networks:
+      devnet:
+        ipv4_address: 172.30.38.3
+
+  # Passive second beacon node: a solo Lighthouse never leaves SyncState::Stalled with zero peers
+  # (see the organisers' compose file for the full explanation). No validators.
+  lighthouse-beacon-2:
+    image: ${LIGHTHOUSE_IMAGE:-ethpandaops/lighthouse:focil}
+    volumes:
+      - ./data/genesis:/genesis:ro
+      - ./data/lighthouse-beacon-2:/data
+    entrypoint: ["lighthouse"]
+    command:
+      - bn
+      - --testnet-dir=/genesis/metadata
+      - --datadir=/data
+      - --execution-endpoint=http://ethrex:8551
+      - --execution-jwt=/genesis/jwt/jwtsecret
+      - --debug-level=info
+      - --http
+      - --http-address=0.0.0.0
+      - --http-port=5052
+      - --listen-address=0.0.0.0
+      - --port=9000
+      - --supernode
+      - --allow-insecure-genesis-sync
+      - --ignore-ws-check
+      - --enr-address=172.30.38.4
+      - --boot-nodes=${LIGHTHOUSE_BEACON_1_ENR:-unset}
+    networks:
+      devnet:
+        ipv4_address: 172.30.38.4
+
+  lighthouse-validator:
+    image: ${LIGHTHOUSE_IMAGE:-ethpandaops/lighthouse:focil}
+    volumes:
+      - ./data/genesis:/genesis:ro
+      - ./data/lighthouse-validator:/data
+      - ./data/validator-keys/keystores/keys:/data/validators
+      - ./data/validator-keys/keystores/secrets:/data/secrets:ro
+    entrypoint: ["lighthouse"]
+    command:
+      - vc
+      - --testnet-dir=/genesis/metadata
+      - --datadir=/data
+      - --secrets-dir=/data/secrets
+      - --beacon-nodes=http://lighthouse-beacon:5052
+      - --init-slashing-protection
+      # The organisers' published throwaway genesis address (also premined here).
+      - --suggested-fee-recipient=0x5544596212F91984C986A919C8026DF0576816f9
+    networks:
+      devnet:
+        ipv4_address: 172.30.38.5
