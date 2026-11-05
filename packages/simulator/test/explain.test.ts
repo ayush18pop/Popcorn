@@ -302,7 +302,7 @@ describe("output", () => {
     expect(formatReport(explain(fx.unstakedShield()))).toMatchInlineSnapshot(`
       "public mempool  NO   reads another contract's storage
       alt mempool     NO   that read needs a stake; this rule contract has none
-      fix  Stake the rule contract: deployRule({ stake: true }) or stakeRuleContract(rule contract), then simulate again.
+      fix  Stake the rule contract: deployRule({ stake: true }) or stakeRule(address), then simulate again.
       fix  Keep the condition on the rule contract's own storage for the public mempool, or send this trigger through an alt-mempool sidecar (stake the rule contract so it admits the read)."
     `);
   });
