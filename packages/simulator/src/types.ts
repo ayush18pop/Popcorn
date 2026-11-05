@@ -10,7 +10,7 @@ export type Num = bigint | number | string;
 /** Staking-registry status of the rule contract (read by the SDK from the devnet's registry). */
 export interface StakeStatus {
   registry: string;
-  /** registry.getDepositInfo(rule contract).stake, in wei. */
+  /** registry.getDepositInfo(ruleContract).stake, in wei. */
   stake: Num;
   /** The stake is enough for the alt mempool's staked budgets (stake > 0). */
   isStaked: boolean;

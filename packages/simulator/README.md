@@ -9,10 +9,13 @@ rule contract's balance and stake, and the mempool budgets. It never sends anyth
 ```ts
 import { explain, formatReport } from "@popcorn/simulator";
 
-const report = explain(result, { network: "local" });
-console.log(formatReport(report));
-// public mempool  NO   reads another contract's storage (StorageReadNonSender)
-// alt mempool     YES  staked rule contract, within the 2,500,000 budget
+console.log(formatReport(explain(result, { network: "local" })));
+```
+
+```
+public mempool  NO   reads another contract's storage
+alt mempool     NO   that read needs a stake; this rule contract has none
+fix  Stake the rule contract: deployRule({ stake: true }) or stakeRule(address), then simulate again.
 ```
 
 Every rejection the simulator knows has an id, a short title, a sentence and a fix (`RULES`). Core's own revert codes

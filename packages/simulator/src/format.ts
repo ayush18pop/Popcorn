@@ -10,7 +10,7 @@ const status = (v: Verdict) => (v.ok === true ? "YES" : v.ok === false ? "NO " :
  *
  *   public mempool  NO   reads another contract's storage
  *   alt mempool     NO   that read needs a stake; this rule contract has none
- *   fix  Stake the rule contract: deployRule({ stake: true }) or stakeRuleContract(rule contract), then simulate again.
+ *   fix  Stake the rule contract: deployRule({ stake: true }) or stakeRule(address), then simulate again.
  */
 export function formatReport(report: Report): string {
   const lines = [

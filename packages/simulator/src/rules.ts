@@ -125,7 +125,7 @@ const coreRules: Rule[] = coreRows.map(([code, title, short, sentence, fix, seve
   mempool: "both",
 }));
 
-const STAKE_FIX = "Stake the rule contract: deployRule({ stake: true }) or stakeRuleContract(rule contract), then simulate again.";
+const STAKE_FIX = "Stake the rule contract: deployRule({ stake: true }) or stakeRule(address), then simulate again.";
 
 // Order matters: the first matching regex wins, so the specific rules come before the broad ones.
 const messageRules: Rule[] = [
