@@ -425,3 +425,13 @@ caller-pays. Core's on-chain entry points keep their compiled selectors, so the 
 bytecode.
 
 **Why.** A developer should understand what a function does from its name, without learning our vocabulary first.
+
+## 51. Build only what needs no devnet change, or only a gas-limit change
+
+**Context.** Several frame-transaction proposals (ASSERT frames, commit-reveal, expiring nonces, the canonical
+recent-root frame) would need new client or mempool features before anything built on them could run.
+
+**Choice.** Build only modules that run on the devnet as it is, or that need nothing more than higher validation gas
+limits. Every gas-limit change we make on our own devnet comes with its reason.
+
+**Why.** Everything we ship should run end to end today, on infrastructure anyone can reproduce.
