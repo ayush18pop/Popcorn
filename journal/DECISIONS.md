@@ -464,3 +464,12 @@ trigger data.
 
 **Why.** The field name is part of what wallets sign. Renaming it would change every intent digest and every committed
 signature vector, including the post-quantum ones, for no gain in safety.
+
+## 55. The SDK is tested against an independent reference
+
+**Choice.** The SDK's offline tests compare its argument encoder and trigger builder, byte for byte, with a separate
+reference implementation that reads the argument layout from contracts/core/LAYOUT.md and builds triggers from first
+principles.
+
+**Why.** A builder tested only against itself can be consistently wrong. A second implementation written from the
+specification catches drift between the documentation, Core and the SDK.
