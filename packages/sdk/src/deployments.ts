@@ -29,7 +29,20 @@ export interface PopcornDeployment {
 }
 
 /** Factories deployed per devnet. A devnet without an entry needs `{ factory, core }` passed to popcorn(). */
-export const deployments: Partial<Record<DevnetName, PopcornDeployment>> = {};
+export const deployments: Partial<Record<DevnetName, PopcornDeployment>> = {
+  devnet1: {
+    // packages/sdk/scripts/deploy-factory.ts: CREATE2 via 0x4e59b44847b379578588920ca78fbf26c0b4956c, salt 0
+    factory: "0x1edd695a30f001b270e7a0f3a2781628a69e8380",
+    core: CORE,
+    factoryTx: "0xd94304f43d1c89b8a6196bfdb17ecfe361dbb588d739034047c01b368efebb04",
+  },
+  local: {
+    // packages/sdk/scripts/deploy-factory.ts: CREATE2 via 0x4e59b44847b379578588920ca78fbf26c0b4956c, salt 0
+    factory: "0x1edd695a30f001b270e7a0f3a2781628a69e8380",
+    core: CORE,
+    factoryTx: "0x9f3b7ed1a0bb63bcfbc8002c8518f94602bd8b5ee464831e42dbc23fbe16fc42",
+  },
+};
 
 export function getDeployment(devnet: string): PopcornDeployment {
   const d = (deployments as Record<string, PopcornDeployment | undefined>)[devnet];

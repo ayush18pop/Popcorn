@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "gen-artifacts": "bun scripts/gen-artifacts.ts && bun scripts/gen-ruleset-artifact.ts",
     "check-core-pin": "bun scripts/check-core-pin.ts",
+    "deploy-factory": "bun scripts/deploy-factory.ts",
     "simulate": "bun bin/popcorn-simulate.ts"
   },
   "dependencies": {
