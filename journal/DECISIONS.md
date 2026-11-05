@@ -435,3 +435,14 @@ recent-root frame) would need new client or mempool features before anything bui
 limits. Every gas-limit change we make on our own devnet comes with its reason.
 
 **Why.** Everything we ship should run end to end today, on infrastructure anyone can reproduce.
+
+## 52. The developer site is example-based, not a visual editor
+
+**Options.** A node-based workflow editor for building frame transactions, or a site built around worked examples.
+
+**Choice.** A developer site: every module has its own page, and every example plays step by step, frame by frame,
+from recorded real runs (the simulation trace, the mempool's admission report and the receipt). An explorer, a page per
+Claude skill and an MCP server sit alongside it.
+
+**Why.** Developers adopt a library by seeing a module work and copying it. Driving every animation from a recorded
+run keeps the site honest about what actually happened on chain.
