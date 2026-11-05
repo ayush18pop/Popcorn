@@ -7,3 +7,5 @@ node_modules/
 .env
 keys/
 *.key.json
+bun.lockb
+.env.local

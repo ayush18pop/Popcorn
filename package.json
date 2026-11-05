@@ -1,0 +1,11 @@
+{
+  "name": "popcorn",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build:core": "bash contracts/core/build.sh",
+    "test:contracts": "cd contracts && forge test",
+    "test:sdk": "bun --cwd packages/sdk run test",
+    "test:simulator": "bun --cwd packages/simulator run test"
+  }
+}
