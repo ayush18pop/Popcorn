@@ -1,0 +1,510 @@
+diff --git a/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts b/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
+index 8a34f88..6e5aea1 100644
+--- a/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
++++ b/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
+@@ -9,6 +9,44 @@ import { getAddress } from "viem";
+  */
+ export const MAX_VERIFY_GAS = BigInt(100_000);
+ 
++/**
++ * ERC-8421 BUDGET-010 (values from the altmempool.wtf landing page, which
++ * the ERC draft marks TBD): each entity's own validation frames may use up
++ * to this much execution gas, replacing EIP-8141's single MAX_VERIFY_GAS.
++ */
++export const MAX_VERIFY_GAS_PER_ENTITY = BigInt(250_000);
++export const MAX_VERIFY_GAS_STAKED_ENTITY = BigInt(2_500_000);
++
++/**
++ * BUDGET-010: sums `limits.execution` per entity address over that
++ * entity's own validation frames. A `pre_verify` frame counts toward the
++ * entity of the approving frame it precedes (its target), signature
++ * verification counts toward `tx.sender`, and so does any prefix frame
++ * outside `prefix.frames` (a leading `expiry_verify`). Keyed by address,
++ * so a self-relay sender that is also its own payer gets one budget.
++ */
++export function sumVerifyGasPerEntity(
++  tx: FrameTransaction,
++  prefix: ValidationPrefixMatch
++): Map<`0x${string}`, bigint> {
++  const sums = new Map<`0x${string}`, bigint>();
++  const add = (addr: `0x${string}`, gas: bigint): void => {
++    sums.set(addr, (sums.get(addr) ?? BigInt(0)) + gas);
++  };
++  const sender = resolvedTarget(null, tx.sender);
++  const counted = new Set<number>();
++  for (const { frame, frameIndex, role } of prefix.frames) {
++    counted.add(frameIndex);
++    add(role === "sender" ? sender : resolvedTarget(frame.target, tx.sender), frame.limits.execution);
++  }
++  const lastPrefixIndex = Math.max(...counted);
++  for (let i = 0; i <= lastPrefixIndex; i++) {
++    if (!counted.has(i)) add(sender, tx.frames[i].limits.execution);
++  }
++  add(sender, signatureVerificationCost(tx));
++  return sums;
++}
++
+ /**
+  * EIP-8141's intrinsic cost per signature, by scheme - not stated in
+  * erc-7562.md (that spec states the rule, FRA-040, that this cost counts
+@@ -254,7 +292,6 @@ export function validateStructuralRules(tx: FrameTransaction, prefix: Validation
+   // Items 3 (target half), 5 and 6 all scan the same full-prefix range
+   // tx.frames[0..lastPrefixIndex], including any leading expiry_verify
+   // frame skipped by recognizeValidationPrefix (see rationale above).
+-  let executionSum = BigInt(0);
+   let stateSum = BigInt(0);
+   for (let i = 0; i <= lastPrefixIndex; i++) {
+     const frame = tx.frames[i];
+@@ -275,22 +312,12 @@ export function validateStructuralRules(tx: FrameTransaction, prefix: Validation
+       return { valid: false, reason: `frame ${i} in validation prefix has ATOMIC_BATCH_FLAG set` };
+     }
+ 
+-    executionSum += frame.limits.execution;
+     stateSum += frame.limits.state;
+   }
+ 
+-  // Item 6 (FRA-040): the sum of the validation prefix's `limits.execution`,
+-  // PLUS the intrinsic cost of validating tx.signatures, MUST NOT exceed
+-  // MAX_VERIFY_GAS - see SIGNATURE_VERIFICATION_GAS_COST for where that
+-  // per-scheme cost comes from.
+-  const sigCost = signatureVerificationCost(tx);
+-  const totalVerifyGas = executionSum + sigCost;
+-  if (totalVerifyGas > MAX_VERIFY_GAS) {
+-    return {
+-      valid: false,
+-      reason: `validation prefix execution gas sum ${executionSum} + signature-verification cost ${sigCost} = ${totalVerifyGas} exceeds MAX_VERIFY_GAS ${MAX_VERIFY_GAS}`,
+-    };
+-  }
++  // Item 6 (FRA-040), execution half: replaced by ERC-8421 BUDGET-010's
++  // per-entity budgets, which need each entity's stake and so are checked
++  // in FrameTxValidationService.validate (see sumVerifyGasPerEntity).
+   if (stateSum > MAX_VERIFY_STATE_GAS) {
+     return {
+       valid: false,
+diff --git a/packages/executor/src/services/UserOpValidation/validators/frameTx.ts b/packages/executor/src/services/UserOpValidation/validators/frameTx.ts
+index ce5ef15..6ae0b0b 100644
+--- a/packages/executor/src/services/UserOpValidation/validators/frameTx.ts
++++ b/packages/executor/src/services/UserOpValidation/validators/frameTx.ts
+@@ -37,7 +37,10 @@ import { computeSigHash } from "../../FrameTxService/codec.js";
+ import { validateSignature } from "../../FrameTxService/signature.js";
+ import { selectPrefixTrace } from "../erc7562TraceAdapter.js";
+ import {
++  MAX_VERIFY_GAS_PER_ENTITY,
++  MAX_VERIFY_GAS_STAKED_ENTITY,
+   recognizeValidationPrefix,
++  sumVerifyGasPerEntity,
+   validateStructuralRules,
+   ValidationPrefixMatch,
+ } from "../utils/validationPrefix.js";
+@@ -314,6 +317,29 @@ export class FrameTxValidationService {
+         new RpcError(structural.reason, RpcErrorCodes.INVALID_USEROP)
+       );
+     }
++
++    // ERC-8421 BUDGET-010: each entity's validation gas against its own
++    // budget, the staked one when ReputationService.checkStake passes.
++    const budgetStakeCache = new Map<string, { code: number; msg: string }>();
++    for (const [addr, gas] of sumVerifyGasPerEntity(tx, prefix)) {
++      if (gas <= MAX_VERIFY_GAS_PER_ENTITY) continue;
++      const deposit = await this.stakingRegistryService.getDepositInfo(addr);
++      const stake = await this.checkStakeCached(
++        { addr, stake: deposit.stake, unstakeDelaySec: deposit.unstakeDelaySec, withdrawTime: deposit.withdrawTime },
++        budgetStakeCache
++      );
++      const staked = stake.code === 0;
++      const cap = staked ? MAX_VERIFY_GAS_STAKED_ENTITY : MAX_VERIFY_GAS_PER_ENTITY;
++      if (gas > cap) {
++        throw collector.failed(
++          EXPLORER_RULES.STRUCTURE,
++          new RpcError(
++            `entity ${addr} validation gas ${gas} exceeds ${staked ? "staked" : "unstaked"} budget ${cap} (BUDGET-010)`,
++            RpcErrorCodes.INVALID_USEROP
++          )
++        );
++      }
++    }
+     collector.pass(EXPLORER_RULES.STRUCTURE);
+ 
+     // The validation prefix's last real frame index (recognizeValidationPrefix
+diff --git a/packages/executor/test/services/UserOpValidation/utils/validationPrefix.test.ts b/packages/executor/test/services/UserOpValidation/utils/validationPrefix.test.ts
+index d186c59..dd49a95 100644
+--- a/packages/executor/test/services/UserOpValidation/utils/validationPrefix.test.ts
++++ b/packages/executor/test/services/UserOpValidation/utils/validationPrefix.test.ts
+@@ -2,7 +2,10 @@ import { describe, it, expect } from "vitest";
+ import {
+   recognizeValidationPrefix,
+   validateStructuralRules,
++  sumVerifyGasPerEntity,
+   MAX_VERIFY_GAS,
++  MAX_VERIFY_GAS_PER_ENTITY,
++  MAX_VERIFY_GAS_STAKED_ENTITY,
+   MAX_VERIFY_STATE_GAS,
+ } from "../../../../src/services/UserOpValidation/utils/validationPrefix.js";
+ import { FRAME_MODE, APPROVE_SCOPE, ATOMIC_BATCH_FLAG, Frame, FrameTransaction, SIG_SCHEME, SignatureEntry } from "@skandha/types/lib/contracts/FrameTx.js";
+@@ -224,33 +227,31 @@ describe("validateStructuralRules", () => {
+     }
+   });
+ 
+-  it("rejects when the sum of limits.execution across the prefix exceeds MAX_VERIFY_GAS (item 6)", () => {
++  it("leaves the execution budget to BUDGET-010: a prefix over EIP-8141's MAX_VERIFY_GAS is structurally valid", () => {
+     const bigFrame: Frame = {
+       ...verifyFrame(APPROVE_SCOPE.EXECUTION),
+       limits: { execution: MAX_VERIFY_GAS + 1n, state: 0n },
+     };
+-    const payFrame = verifyFrame(APPROVE_SCOPE.PAYMENT);
+-    const frames = [bigFrame, payFrame];
+-    const tx = baseTx(frames);
++    const frames = [bigFrame, verifyFrame(APPROVE_SCOPE.PAYMENT)];
+     const prefix = recognizeValidationPrefix(frames, SENDER)!;
+-    expect(prefix).not.toBeNull();
+-    const result = validateStructuralRules(tx, prefix);
+-    expect(result.valid).toBe(false);
+-    if (!result.valid) {
+-      expect(result.reason).toMatch(/MAX_VERIFY_GAS/);
+-    }
++    expect(validateStructuralRules(baseTx(frames), prefix).valid).toBe(true);
+   });
+ 
+-  it("rejects when limits.execution is within budget alone but signature-verification cost pushes the total over MAX_VERIFY_GAS (item 6)", () => {
++  it("sums execution gas per entity, so sender and paymaster each get their own budget (BUDGET-010)", () => {
++    const senderFrame: Frame = { ...verifyFrame(APPROVE_SCOPE.EXECUTION), limits: { execution: 200_000n, state: 0n } };
++    const payFrame: Frame = { ...verifyFrame(APPROVE_SCOPE.PAYMENT), target: PAYER, limits: { execution: 240_000n, state: 0n } };
++    const frames = [senderFrame, payFrame];
++    const prefix = recognizeValidationPrefix(frames, SENDER)!;
++    const sums = sumVerifyGasPerEntity(baseTx(frames), prefix);
++    expect(sums.get(SENDER)).toBe(200_000n);
++    expect(sums.get(PAYER)).toBe(240_000n);
++    expect(sums.get(PAYER)! <= MAX_VERIFY_GAS_PER_ENTITY).toBe(true);
++    expect(MAX_VERIFY_GAS_STAKED_ENTITY).toBe(2_500_000n);
++  });
++
++  it("counts signature-verification cost toward tx.sender, not the paymaster (BUDGET-010)", () => {
+     // A P256 signature costs 6700 gas (see SIGNATURE_VERIFICATION_GAS_COST).
+-    // executionSum here is MAX_VERIFY_GAS - 1, comfortably under budget on
+-    // its own - only adding the signature cost pushes it over.
+-    const almostMaxFrame: Frame = {
+-      ...verifyFrame(APPROVE_SCOPE.EXECUTION),
+-      limits: { execution: MAX_VERIFY_GAS - 1n, state: 0n },
+-    };
+-    const payFrame = verifyFrame(APPROVE_SCOPE.PAYMENT);
+-    const frames = [almostMaxFrame, payFrame];
++    const frames = [verifyFrame(APPROVE_SCOPE.EXECUTION), { ...verifyFrame(APPROVE_SCOPE.PAYMENT), target: PAYER }];
+     const tx: FrameTransaction = {
+       ...baseTx(frames),
+       signatures: [
+@@ -262,14 +263,15 @@ describe("validateStructuralRules", () => {
+         } as SignatureEntry,
+       ],
+     };
+-    const prefix = recognizeValidationPrefix(frames, SENDER)!;
+-    expect(prefix).not.toBeNull();
+-    const result = validateStructuralRules(tx, prefix);
+-    expect(result.valid).toBe(false);
+-    if (!result.valid) {
+-      expect(result.reason).toMatch(/MAX_VERIFY_GAS/);
+-      expect(result.reason).toMatch(/signature-verification cost 6700/);
+-    }
++    const sums = sumVerifyGasPerEntity(tx, recognizeValidationPrefix(frames, SENDER)!);
++    expect(sums.get(SENDER)).toBe(6701n);
++    expect(sums.get(PAYER)).toBe(1n);
++  });
++
++  it("gives a self-relay sender that is also its own payer a single budget (BUDGET-010)", () => {
++    const frames = [{ ...verifyFrame(APPROVE_SCOPE.EXECUTION_AND_PAYMENT), limits: { execution: 300_000n, state: 0n } }];
++    const sums = sumVerifyGasPerEntity(baseTx(frames), recognizeValidationPrefix(frames, SENDER)!);
++    expect([...sums.entries()]).toEqual([[SENDER, 300_000n]]);
+   });
+ 
+   it("accepts when limits.execution plus signature-verification cost together stay within MAX_VERIFY_GAS", () => {
+@@ -352,21 +354,16 @@ describe("validateStructuralRules", () => {
+     }
+   });
+ 
+-  it("rejects when a leading expiry_verify frame's oversized limits.execution pushes the prefix sum over MAX_VERIFY_GAS (item 6)", () => {
++  it("counts a leading expiry_verify frame's limits.execution toward tx.sender, even though it is excluded from prefix.frames (BUDGET-010)", () => {
+     const expiryFrame: Frame = {
+       ...verifyFrame(APPROVE_SCOPE.NONE),
+       limits: { execution: MAX_VERIFY_GAS + 1n, state: 0n },
+     };
+     const frames = [expiryFrame, verifyFrame(APPROVE_SCOPE.EXECUTION_AND_PAYMENT)];
+-    const tx = baseTx(frames);
+     const prefix = recognizeValidationPrefix(frames, SENDER)!;
+-    expect(prefix).not.toBeNull();
+     expect(prefix.frames.some((f) => f.frameIndex === 0)).toBe(false);
+-    const result = validateStructuralRules(tx, prefix);
+-    expect(result.valid).toBe(false);
+-    if (!result.valid) {
+-      expect(result.reason).toMatch(/MAX_VERIFY_GAS/);
+-    }
++    const sums = sumVerifyGasPerEntity(baseTx(frames), prefix);
++    expect(sums.get(SENDER)).toBe(MAX_VERIFY_GAS + 2n);
+   });
+ 
+   it("accepts a self_verify frame with an explicit target equal to tx.sender (item 3, target half)", () => {
+diff --git a/packages/executor/test/services/UserOpValidation/validators/frameTxBudget.test.ts b/packages/executor/test/services/UserOpValidation/validators/frameTxBudget.test.ts
+new file mode 100644
+index 0000000..ad7814d
+--- /dev/null
++++ b/packages/executor/test/services/UserOpValidation/validators/frameTxBudget.test.ts
+@@ -0,0 +1,261 @@
++import { describe, it, expect, vi } from "vitest";
++import { FrameTxValidationService } from "../../../../src/services/UserOpValidation/validators/frameTx.js";
++import { StakingRegistryService } from "../../../../src/services/StakingRegistryService/index.js";
++import { ReputationService } from "../../../../src/services/ReputationService.js";
++import { LocalDbController } from "../../../mocks/database.js";
++import { NetworkConfig } from "../../../../src/interfaces.js";
++import RpcError from "@skandha/types/lib/api/errors/rpc-error.js";
++import * as RpcErrorCodes from "@skandha/types/lib/api/errors/rpc-error-codes.js";
++import {
++  FRAME_MODE,
++  APPROVE_SCOPE,
++  Frame,
++  FrameTransaction,
++} from "@skandha/types/lib/contracts/FrameTx.js";
++
++// ERC-8421 BUDGET-010: per-entity validation gas, 250k unstaked / 2.5M staked.
++
++const SENDER = "0x1111111111111111111111111111111111111111" as const;
++const PAYMASTER = "0x5555555555555555555555555555555555555555" as const;
++const ENTRY_POINT = "0x00000000000000000000000000000000000000aa" as const;
++const STANDARD_MEMPOOL_ID = "test-standard-mempool";
++
++const UNSTAKED_CAP = 250_000n;
++const STAKED_CAP = 2_500_000n;
++
++const onlyVerify = (gas: bigint): Frame => ({
++  mode: FRAME_MODE.VERIFY,
++  flags: APPROVE_SCOPE.EXECUTION,
++  target: null,
++  limits: { execution: gas, state: 0n },
++  value: 0n,
++  data: "0x",
++});
++
++const selfVerify = (gas: bigint): Frame => ({
++  mode: FRAME_MODE.VERIFY,
++  flags: APPROVE_SCOPE.EXECUTION_AND_PAYMENT,
++  target: null,
++  limits: { execution: gas, state: 0n },
++  value: 0n,
++  data: "0x",
++});
++
++const payFrame = (target: `0x${string}`, gas: bigint): Frame => ({
++  mode: FRAME_MODE.VERIFY,
++  flags: APPROVE_SCOPE.PAYMENT,
++  target,
++  limits: { execution: gas, state: 0n },
++  value: 0n,
++  data: "0x",
++});
++
++const baseTx = (frames: Frame[]): FrameTransaction => ({
++  chainId: 1n,
++  nonceKeys: [0n],
++  nonceSeq: 0n,
++  sender: SENDER,
++  frames,
++  signatures: [],
++  fees: { maxPriorityFeePerGas: 1n, maxFeePerGas: 2n, maxFeePerBlobGas: 0n },
++  blobVersionedHashes: [],
++  recentRootReferences: [],
++});
++
++// One clean root trace per prefix frame, targeting that frame's entity.
++function simResultFor(targets: `0x${string}`[]): any {
++  return {
++    canonicalMempoolValid: true,
++    prefixShape: "SelfVerify",
++    payer: SENDER,
++    maxCost: "0x0",
++    canonicalMempoolViolation: null,
++    gasUsed: "0x64",
++    frames: targets.map(() => ({ gasUsed: "0x1", succeeded: true })),
++    executionStatus: "success",
++    executionError: null,
++    erc7562Trace: targets.map((to, frameIndex) => ({
++      frameIndex,
++      root: {
++        from: ENTRY_POINT,
++        to,
++        type: "CALL",
++        value: "0x0",
++        accessedSlots: { reads: {}, writes: {}, transientReads: {}, transientWrites: {} },
++        extCodeAccessInfo: [],
++        usedOpcodes: {},
++        contractSize: {},
++        outOfGas: false,
++      },
++    })),
++    erc7562TraceError: null,
++  };
++}
++
++type Deposit = { stake: bigint; unstakeDelaySec: number; withdrawTime: bigint };
++const GOOD_DEPOSIT: Deposit = { stake: 10_000_000_000n, unstakeDelaySec: 100, withdrawTime: 0n };
++const NO_DEPOSIT: Deposit = { stake: 0n, unstakeDelaySec: 0, withdrawTime: 0n };
++
++function registry(deposits: Record<string, Deposit> = {}) {
++  const getDepositInfo = vi.fn(
++    async (addr: string) => deposits[addr.toLowerCase()] ?? NO_DEPOSIT
++  );
++  return { getDepositInfo } as unknown as StakingRegistryService & {
++    getDepositInfo: ReturnType<typeof vi.fn>;
++  };
++}
++
++// Mirrors the existing frameTx.test.ts fake: staked addresses get code 0.
++function fakeReputation(stakedAddr?: string) {
++  const checkStake = vi.fn(async (info: { addr: string }) =>
++    stakedAddr && info.addr.toLowerCase() === stakedAddr.toLowerCase()
++      ? { code: 0, msg: "" }
++      : { code: 1, msg: "unstaked" }
++  );
++  return { checkStake } as unknown as ReputationService & {
++    checkStake: ReturnType<typeof vi.fn>;
++  };
++}
++
++// minStake 1e9 wei, minUnstakeDelay 10 s: the same thresholds as the real
++// ReputationService test above in frameTx.test.ts, plus a delay floor.
++let dbCounter = 0;
++const realReputation = () =>
++  new ReputationService(
++    new LocalDbController(`test-frameTxBudget-${dbCounter++}`),
++    1337,
++    10,
++    10,
++    50,
++    1_000_000_000n,
++    10
++  );
++
++const networkConfig = () =>
++  ({
++    minStake: 1_000_000_000n,
++    precompiles: [],
++    whitelistedEntities: {},
++    relayOpsWithWhitelistedEntities: false,
++    standardMempoolId: STANDARD_MEMPOOL_ID,
++  }) as unknown as NetworkConfig;
++
++const service = (reg: StakingRegistryService, rep: ReputationService) =>
++  new FrameTxValidationService(
++    reg,
++    rep,
++    networkConfig(),
++    { debug: vi.fn(), error: vi.fn() } as any
++  );
++
++// Canonical paymaster shape: only_verify for the sender, pay frame for PAYMASTER.
++const paymasterTx = (senderGas: bigint, paymasterGas: bigint) => ({
++  tx: baseTx([onlyVerify(senderGas), payFrame(PAYMASTER, paymasterGas)]),
++  sim: simResultFor([SENDER, PAYMASTER]),
++});
++
++describe("FrameTxValidationService BUDGET-010 (stake-aware per-entity verify gas)", () => {
++  it("1. entity at exactly 250,000, unstaked: accepted, registry not queried", async () => {
++    const reg = registry();
++    const rep = fakeReputation();
++    const tx = baseTx([selfVerify(UNSTAKED_CAP)]);
++    await expect(
++      service(reg, rep).validate(tx, simResultFor([SENDER]))
++    ).resolves.toMatchObject({ mempoolMembership: { [STANDARD_MEMPOOL_ID]: true } });
++    // validate() itself reads the registry later for roleStakes; the budget
++    // check must not have asked for the budget-only lookup before that, so
++    // assert on the stake check instead, which only the budget path (and
++    // storage rules, not triggered by this clean trace) would call.
++    expect(rep.checkStake).not.toHaveBeenCalled();
++  });
++
++  it("2. entity at 250,001, unstaked: rejected with BUDGET-010 unstaked", async () => {
++    const reg = registry();
++    const rep = fakeReputation();
++    const tx = baseTx([selfVerify(UNSTAKED_CAP + 1n)]);
++    const p = service(reg, rep).validate(tx, simResultFor([SENDER]));
++    await expect(p).rejects.toThrow(RpcError);
++    await expect(p).rejects.toThrow(/exceeds unstaked budget 250000 \(BUDGET-010\)/);
++    expect(reg.getDepositInfo).toHaveBeenCalledTimes(1);
++    expect(rep.checkStake).toHaveBeenCalledTimes(1);
++  });
++
++  it("3. entity at 2,500,000, staked: accepted", async () => {
++    const reg = registry({ [SENDER]: GOOD_DEPOSIT });
++    const rep = fakeReputation(SENDER);
++    const tx = baseTx([selfVerify(STAKED_CAP)]);
++    await expect(
++      service(reg, rep).validate(tx, simResultFor([SENDER]))
++    ).resolves.toMatchObject({ mempoolMembership: { [STANDARD_MEMPOOL_ID]: true } });
++    expect(rep.checkStake).toHaveBeenCalled();
++  });
++
++  it("4. entity at 2,500,001, staked: rejected with BUDGET-010 staked", async () => {
++    const reg = registry({ [SENDER]: GOOD_DEPOSIT });
++    const rep = fakeReputation(SENDER);
++    const tx = baseTx([selfVerify(STAKED_CAP + 1n)]);
++    const p = service(reg, rep).validate(tx, simResultFor([SENDER]));
++    await expect(p).rejects.toThrow(/exceeds staked budget 2500000 \(BUDGET-010\)/);
++    await expect(p).rejects.toMatchObject({ code: RpcErrorCodes.INVALID_USEROP });
++  });
++
++  describe("5. 300,000 gas with a failing real stake check", () => {
++    const cases: [string, Deposit][] = [
++      ["withdrawal started", { ...GOOD_DEPOSIT, withdrawTime: 1_700_000_000n }],
++      ["stake too low", { ...GOOD_DEPOSIT, stake: 1n }],
++      ["unstake delay too short", { ...GOOD_DEPOSIT, unstakeDelaySec: 1 }],
++    ];
++    it.each(cases)("%s: rejected as unstaked", async (_name, deposit) => {
++      const reg = registry({ [SENDER]: deposit });
++      const tx = baseTx([selfVerify(300_000n)]);
++      const p = service(reg, realReputation()).validate(tx, simResultFor([SENDER]));
++      await expect(p).rejects.toThrow(/exceeds unstaked budget 250000 \(BUDGET-010\)/);
++    });
++
++    it("control: the same deposit without the defect is accepted at 300,000", async () => {
++      const reg = registry({ [SENDER]: GOOD_DEPOSIT });
++      const tx = baseTx([selfVerify(300_000n)]);
++      await expect(
++        service(reg, realReputation()).validate(tx, simResultFor([SENDER]))
++      ).resolves.toMatchObject({ mempoolMembership: { [STANDARD_MEMPOOL_ID]: true } });
++    });
++  });
++
++  it("6. sender 240k and paymaster 240k, both unstaked: accepted (separate budgets)", async () => {
++    const reg = registry();
++    const rep = fakeReputation();
++    const { tx, sim } = paymasterTx(240_000n, 240_000n);
++    await expect(service(reg, rep).validate(tx, sim)).resolves.toMatchObject({
++      mempoolMembership: { [STANDARD_MEMPOOL_ID]: true },
++    });
++    expect(rep.checkStake).not.toHaveBeenCalled();
++  });
++
++  it("7. sender that is also the paymaster, 2 x 140k: one 280k budget, rejected when unstaked", async () => {
++    const reg = registry();
++    const rep = fakeReputation();
++    const tx = baseTx([onlyVerify(140_000n), payFrame(SENDER, 140_000n)]);
++    const p = service(reg, rep).validate(tx, simResultFor([SENDER, SENDER]));
++    await expect(p).rejects.toThrow(
++      new RegExp(`entity ${SENDER} validation gas 280000 exceeds unstaked budget 250000`)
++    );
++  });
++
++  describe("8. registry failure", () => {
++    it("getDepositInfo throws: the tx is rejected, not accepted", async () => {
++      const reg = registry();
++      reg.getDepositInfo.mockRejectedValue(new Error("rpc down"));
++      const { tx, sim } = paymasterTx(100_000n, 300_000n);
++      await expect(service(reg, fakeReputation()).validate(tx, sim)).rejects.toThrow(
++        "rpc down"
++      );
++    });
++
++    it("checkStake throws: the tx is rejected, not accepted", async () => {
++      const rep = fakeReputation();
++      rep.checkStake.mockRejectedValue(new Error("db down"));
++      const { tx, sim } = paymasterTx(100_000n, 300_000n);
++      await expect(service(registry(), rep).validate(tx, sim)).rejects.toThrow("db down");
++    });
++  });
++});
