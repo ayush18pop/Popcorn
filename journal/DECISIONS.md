@@ -446,3 +446,11 @@ Claude skill and an MCP server sit alongside it.
 
 **Why.** Developers adopt a library by seeing a module work and copying it. Driving every animation from a recorded
 run keeps the site honest about what actually happened on chain.
+
+## 53. The SDK ships exactly one Core build
+
+**Choice.** The SDK carries a single Core artifact, pinned to the creation-code hash the factory accepts, and recognises
+rule contracts only by that build's code.
+
+**Why.** One build means one set of checks to trust. A rule contract on any other code is not treated as a Popcorn rule
+contract.
