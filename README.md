@@ -9,7 +9,8 @@ Frame transactions let a contract approve and pay for its own transactions. Popc
 | Path | Contents |
 |---|---|
 | `contracts/` | Solidity and Yul contracts (Foundry) |
-| `docs/` | Design notes and decisions |
+| `contracts/docs/` | Design notes |
+| `journal/` | The decisions behind the project |
 
 Status: work in progress. Reviewed by the team, not externally audited.
 
