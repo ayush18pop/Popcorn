@@ -14,7 +14,7 @@ import type { FrameTx } from "./types.ts";
 
 /**
  * VERIFY-prefix gas budgets an endpoint ENFORCES, in gas (the declared VERIFY limits + signature cost). `null` = unknown:
- * not measured, never guessed. Sources: contracts/core/SPEC.md "Budgets actually enforced" (devnet1) and devnet/README.md (local).
+ * not measured, never guessed. Sources: contracts/core/SPEC.md "Budgets enforced by the public endpoints" (devnet1) and devnet/README.md (local).
  */
 export interface EndpointBudget {
   /** Cap for an unstaked entity (the rule contract). */
@@ -26,9 +26,9 @@ export interface EndpointBudget {
 export interface DevnetBudgets {
   /** The ethrex node's own mempool (`rpcUrl`, eth_sendRawTransaction): a flat cap, staked or not (`--mempool.max-verify-gas`). */
   ethrex: number | null;
-  /** The sidecar at `sidecarUrl` (the local patched one: ERC-8421 per-entity budgets). */
+  /** The sidecar at `sidecarUrl` (on the local devnet, the patched one with ERC-8421 per-entity budgets). */
   sidecar: EndpointBudget | null;
-  /** The gateway at `gatewayUrl`. null fields: unknown (devnet1's has returned HTTP 502 whenever it was probed). */
+  /** The gateway at `gatewayUrl`. null fields: unknown (not measured). */
   gateway: EndpointBudget | null;
   /** Where the numbers come from, and what is not known. */
   note: string;
@@ -44,7 +44,7 @@ export interface DevnetConfig {
   rpcUrl: string;
   /** Public ERC-8421 gateway (a skandha sidecar that relays to block builders). */
   gatewayUrl: string;
-  /** Local sidecar from scripts/start-sidecar.sh (admission verdicts only; never relays). */
+  /** A sidecar (ERC-8421 mempool node) that admits and relays frame transactions. */
   sidecarUrl: string;
   /** Block explorer base; tx pages are `${explorerUrl}/tx/<hash>`. */
   explorerUrl: string;
@@ -59,13 +59,13 @@ export const devnets = {
     chainIdBigint: 1337n,
     rpcUrl: "https://altmempool.forshtat.com",
     gatewayUrl: "https://altmempoolgateway.forshtat.com/rpc",
-    sidecarUrl: "http://127.0.0.1:4367/rpc",
-    explorerUrl: "https://altmempoolexplorer.forshtat.com",
+    sidecarUrl: "https://altmempool.forshtat.com/rpc",
+    explorerUrl: "https://explorer.altmempool.wtf",
     budgets: {
-      ethrex: 100_000, // measured 2026-10-30: prefix 100,001 -> "exceeds MAX_VERIFY_GAS" (contracts/core/SPEC.md "Budgets actually enforced")
-      sidecar: { unstaked: 250_000, staked: 2_500_000 }, // OUR patched sidecar (scripts/start-sidecar.sh, BUDGET-010), measured by agent 2
-      gateway: { unstaked: null, staked: null }, // unknown: /rpc answered HTTP 502 every time it was probed
-      note: "ethrex and the upstream public sidecar (altmempool.forshtat.com/rpc, not in this config) enforce a flat 100,000; sidecarUrl is the local patched sidecar (250k unstaked / 2.5M staked); the gateway's budget is unknown (HTTP 502).",
+      ethrex: 100_000, // prefix 100,001 -> "exceeds MAX_VERIFY_GAS" (contracts/core/SPEC.md, "Budgets enforced by the public endpoints")
+      sidecar: { unstaked: 100_000, staked: 100_000 }, // the public sidecars enforce one flat MAX_VERIFY_GAS of 100,000, staked or not
+      gateway: { unstaked: 100_000, staked: 100_000 },
+      note: "the public ethrex and both public sidecars (altmempool.forshtat.com/rpc, altmempoolgateway.forshtat.com/rpc) enforce a flat 100,000, measured by sending prefixes of 100,001 to 2,500,001 gas; the landing page's 250k / 2.5M per-entity budgets are not what they run. Use the local devnet (devnet/up.sh) for larger budgets.",
     },
   },
   // devnet2 / devnet3: add entries here with the same shape when their URLs are published.

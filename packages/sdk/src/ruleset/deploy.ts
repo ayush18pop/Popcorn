@@ -104,8 +104,8 @@ export interface PlanOptions {
   /** Max witness bytes of any one trigger (default: 5 per OR node + each predicate's maxWitnessBytes + 4). */
   maxWitnessBytes?: number;
   caps?: RuleContractCaps;
-  /** Budgets to warn against. Default: public 100k, unstaked 250k (or `devnet`'s; an unknown budget is not warned about). */
-  budgets?: { public?: bigint | null; unstaked?: bigint | null };
+  /** Budgets to warn against. Default: public 100k, unstaked 250k, staked 2.5M (or `devnet`'s; an unknown budget is not warned about). */
+  budgets?: { public?: bigint | null; unstaked?: bigint | null; staked?: bigint | null };
   /** Take the budgets from this devnet's `budgets` (DevnetConfig). */
   devnet?: DevnetSelector;
 }
@@ -162,11 +162,15 @@ export function planRuleSet(spec: RuleSetSpec, o: PlanOptions = {}): RuleSetPlan
   const budgets = {
     public: o.budgets?.public !== undefined ? o.budgets.public : dv ? fromDevnet(dv.ethrex) : PUBLIC_PREFIX_BUDGET,
     unstaked: o.budgets?.unstaked !== undefined ? o.budgets.unstaked : dv ? fromDevnet(dv.sidecar?.unstaked) : 250_000n,
+    staked: o.budgets?.staked !== undefined ? o.budgets.staked : dv ? fromDevnet(dv.sidecar?.staked) : 2_500_000n,
   };
   if (o.caps?.conditionGas !== undefined && o.caps.conditionGas < worstCond) warnings.push(`conditionGas ${o.caps.conditionGas} is below the worst-case estimate ${worstCond}: a trigger that reaches the expensive reads can fail closed`);
   if (maxStateGasPerFrame < BigInt(Math.max(...gas.map((g) => g.freshSlots))) * STATE_SLOT_GAS) warnings.push("maxStateGasPerFrame is below the state gas the action can need (epoch + checkpoint slots): the first fire of that rule could revert and burn its key");
   if (o.caps?.maxGasPerFrame !== undefined && o.caps.maxGasPerFrame < BigInt(Math.ceil(worstAct))) warnings.push(`maxGasPerFrame ${o.caps.maxGasPerFrame} is below the worst-case action estimate ${worstAct}: an action that runs out of gas reverts and burns its key`);
-  if (budgets.unstaked !== null && floorAt > budgets.unstaked) warnings.push(`the VERIFY floor at these caps is ${floorAt}: over the ${budgets.unstaked} unstaked budget (staked only)`);
+  if (budgets.unstaked !== null && floorAt > budgets.unstaked) {
+    const stakedFits = budgets.staked === null || floorAt <= budgets.staked;
+    warnings.push(`the VERIFY floor at these caps is ${floorAt}: over the ${budgets.unstaked} unstaked budget (${stakedFits ? "staked only" : `and over the ${budgets.staked} staked budget`})`);
+  }
   else if (budgets.public !== null && floorAt > budgets.public) warnings.push(`the VERIFY floor at these caps is ${floorAt}: over the public ${budgets.public} budget (local/organiser mempools only)`);
   if (maxVerifyDataLength > RULESET_LIMITS.MAX_CONFIG) warnings.push("witness cap over 16 KB");
   return { config, configBytes, gas, caps: { conditionGas, maxVerifyDataLength, maxTriggerDataLength, maxGasPerFrame, maxStateGasPerFrame }, classes: ruleClasses(spec), verifyFloorAtCaps: floorAt, warnings };
