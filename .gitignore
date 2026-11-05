@@ -1,0 +1,9 @@
+# build output
+out/
+cache/
+contracts/core/out/
+node_modules/
+# secrets
+.env
+keys/
+*.key.json
