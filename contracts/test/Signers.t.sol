@@ -57,7 +57,7 @@ abstract contract IntentBase {
         K = vm.parseJsonAddress(J, ".ruleContract");
         ruleId = vm.parseJsonUint(J, ".ruleId");
         epoch = vm.parseJsonUint(J, ".ruleEpoch");
-        popArgs = vm.parseJsonBytes(J, ".popArgs");
+        popArgs = vm.parseJsonBytes(J, ".triggerData");
         ctx = vm.parseJsonBytes(J, ".context");
         digest = vm.parseJsonBytes32(J, ".digest");
     }

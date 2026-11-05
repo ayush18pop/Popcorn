@@ -38,7 +38,7 @@ abstract contract PqBase {
         K = vm.parseJsonAddress(J, ".ruleContract");
         ruleId = vm.parseJsonUint(J, ".ruleId");
         epoch = vm.parseJsonUint(J, ".ruleEpoch");
-        popArgs = vm.parseJsonBytes(J, ".popArgs");
+        popArgs = vm.parseJsonBytes(J, ".triggerData");
         ctx = vm.parseJsonBytes(J, ".context");
     }
 
@@ -283,22 +283,22 @@ contract InlineIntentTriggerTest is PqBase {
 
     function test_ecdsaInline() public {
         CoreHarness h = _ruleContract(address(new EcdsaIntentCounter(vm.parseJsonAddress(J, ".inline.ecdsaSigner"))));
-        _run(h, _b(".inline.popArgs"), _b(".inline.ecdsa0"), _b(".inline.ecdsa1"));
+        _run(h, _b(".inline.triggerData"), _b(".inline.ecdsa0"), _b(".inline.ecdsa1"));
     }
 
     function test_wotsInline() public {
         CoreHarness h = _ruleContract(address(new WotsIntentCounter(vm.parseJsonBytes32(J, ".inline.wots.root"), vm.parseJsonBytes32(J, ".inline.wots.pubSeed"), 0, 1338, 1)));
-        _run(h, _b(".inline.popArgs"), _b(".inline.wots.w0"), _b(".inline.wots.w1"));
+        _run(h, _b(".inline.triggerData"), _b(".inline.wots.w0"), _b(".inline.wots.w1"));
     }
 
     function test_forsInline() public {
         CoreHarness h = _ruleContract(address(new ForsIntentCounter(vm.parseJsonBytes32(J, ".inline.fors.pk"), vm.parseJsonBytes32(J, ".inline.fors.pubSeed"), 0, 1338, 1)));
-        _run(h, _b(".inline.popArgs"), _b(".inline.fors.w0"), _b(".inline.fors.w1"));
+        _run(h, _b(".inline.triggerData"), _b(".inline.fors.w0"), _b(".inline.fors.w1"));
     }
 
     function test_xmssInline() public {
         CoreHarness h = _ruleContract(address(new XmssIntentCounter(vm.parseJsonBytes32(J, ".inline.xmss.root"), vm.parseJsonBytes32(J, ".inline.xmss.seed"), 0, 4, 1338, 1)));
-        _run(h, _b(".inline.popArgs"), _b(".inline.xmss.w0"), _b(".inline.xmss.w1"));
+        _run(h, _b(".inline.triggerData"), _b(".inline.xmss.w0"), _b(".inline.xmss.w1"));
     }
 
     function test_inlineKeyIsBoundToItsRuleAndChain() public {
@@ -306,21 +306,21 @@ contract InlineIntentTriggerTest is PqBase {
         bytes32 root = vm.parseJsonBytes32(J, ".inline.wots.root");
         bytes32 seed = vm.parseJsonBytes32(J, ".inline.wots.pubSeed");
         CoreHarness h = _ruleContract(address(new WotsIntentCounter(root, seed, 0, 1338, 0)));
-        require(!h.condition(_b(".inline.popArgs"), _b(".inline.wots.w0")), "key bound to rule 0 refuses a rule 1 trigger");
+        require(!h.condition(_b(".inline.triggerData"), _b(".inline.wots.w0")), "key bound to rule 0 refuses a rule 1 trigger");
         h = _ruleContract(address(new WotsIntentCounter(root, seed, 0, 1, 1)));
-        require(!h.condition(_b(".inline.popArgs"), _b(".inline.wots.w0")), "key bound to chain 1 refuses chain 1338");
+        require(!h.condition(_b(".inline.triggerData"), _b(".inline.wots.w0")), "key bound to chain 1 refuses chain 1338");
         h = _ruleContract(address(new ForsIntentCounter(vm.parseJsonBytes32(J, ".inline.fors.pk"), vm.parseJsonBytes32(J, ".inline.fors.pubSeed"), 0, 1338, 0)));
-        require(!h.condition(_b(".inline.popArgs"), _b(".inline.fors.w0")), "FORS bound to rule 0");
+        require(!h.condition(_b(".inline.triggerData"), _b(".inline.fors.w0")), "FORS bound to rule 0");
         h = _ruleContract(address(new XmssIntentCounter(vm.parseJsonBytes32(J, ".inline.xmss.root"), vm.parseJsonBytes32(J, ".inline.xmss.seed"), 0, 4, 1338, 0)));
-        require(!h.condition(_b(".inline.popArgs"), _b(".inline.xmss.w0")), "XMSS bound to rule 0");
+        require(!h.condition(_b(".inline.triggerData"), _b(".inline.xmss.w0")), "XMSS bound to rule 0");
     }
 
     function test_inlineSignatureIsForThisRuleContractOnly() public {
         CoreHarness h = _ruleContract(address(new WotsIntentCounter(vm.parseJsonBytes32(J, ".inline.wots.root"), vm.parseJsonBytes32(J, ".inline.wots.pubSeed"), 0, 1338, 1)));
         address other = address(uint160(K) + 7);
         vm.etch(other, K.code);
-        require(!CoreHarness(payable(other)).condition(_b(".inline.popArgs"), _b(".inline.wots.w0")), "another rule contract with the same key");
-        require(h.condition(_b(".inline.popArgs"), _b(".inline.wots.w0")), "the vector's rule contract");
+        require(!CoreHarness(payable(other)).condition(_b(".inline.triggerData"), _b(".inline.wots.w0")), "another rule contract with the same key");
+        require(h.condition(_b(".inline.triggerData"), _b(".inline.wots.w0")), "the vector's rule contract");
     }
 }
 
