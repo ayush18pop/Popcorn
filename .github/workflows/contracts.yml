@@ -1,0 +1,28 @@
+name: contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install solc 0.8.33
+        run: scripts/install-solc.sh
+
+      - name: Build Core
+        run: bash contracts/core/build.sh
+
+      - name: Build contracts
+        working-directory: contracts
+        run: forge build
+
+      - name: Test
+        working-directory: contracts
+        run: forge test
