@@ -5,7 +5,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 const root = new URL("../../../", import.meta.url).pathname;
-const READMES = ["packages/sdk/README.md", "README.md"];
+const READMES = ["packages/sdk/README.md"];
 const SOURCES = ["packages/sdk/examples", "contracts/src/examples"];
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();

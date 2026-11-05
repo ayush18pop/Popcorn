@@ -6,7 +6,7 @@
 //
 // Sends NOTHING by default: ethrex simulates the trigger, and the alt-mempool verdict is predicted from that, the rule contract's
 // stake and the budgets ("predicted: ..."). Exit code 0 both mempools accept, 1 at least one rejects, 2 usage / network error.
-//   --sidecar-admit   ALSO ask the sidecar for its own verdict. THIS SUBMITS THE POP (eth_sendFrameTransaction); the local
+//   --sidecar-admit   ALSO ask the sidecar for its own verdict. THIS SUBMITS THE TRIGGER (eth_sendFrameTransaction); the local
 //                     devnet's sidecar auto-bundles, so an admitted trigger is INCLUDED FOR REAL. The sidecar has no read-only
 //                     validate (eth_estimateFrameTransactionGas always fails with Core 0x15).
 //   --payer           caller-pays rule contracts: the payer. A contract address needs no key; an EOA needs its key, from
