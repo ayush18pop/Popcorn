@@ -454,3 +454,13 @@ rule contracts only by that build's code.
 
 **Why.** One build means one set of checks to trust. A rule contract on any other code is not treated as a Popcorn rule
 contract.
+
+## 54. The signed-intent typed data keeps the field name popArgsHash
+
+**Options.** Rename the EIP-712 field to triggerDataHash, or keep popArgsHash.
+
+**Choice.** Keep popArgsHash. It is the hash of Core's popArgs parameter, which the documentation describes as the
+trigger data.
+
+**Why.** The field name is part of what wallets sign. Renaming it would change every intent digest and every committed
+signature vector, including the post-quantum ones, for no gain in safety.
