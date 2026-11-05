@@ -1,0 +1,38 @@
+name: packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install solc 0.8.33
+        run: scripts/install-solc.sh
+
+      - name: Build Core and contracts
+        run: |
+          bash contracts/core/build.sh
+          cd contracts && forge build
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Check the SDK's Core pin
+        run: bun packages/sdk/scripts/check-core-pin.ts
+
+      - name: Simulator
+        working-directory: packages/simulator
+        run: bunx tsc --noEmit && bunx vitest run
+
+      - name: SDK
+        working-directory: packages/sdk
+        run: bunx tsc --noEmit && bunx vitest run
