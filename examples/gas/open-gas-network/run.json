@@ -12,9 +12,9 @@
     "payer": "the open sponsor"
   },
   "contracts": {
-    "sponsor": "0xfd186d28c03A2847eaA9365847547466166D706b",
-    "verifier": "0x3E12E03EC8cCf981c1F272DeC356c21874CF15d3",
-    "app": "0x41feC055cc1036219a38a5d7F87A23Ac42665Cbf"
+    "sponsor": "0xb1aa37a7a46D38B7cd98e239Fb0f040665589c15",
+    "verifier": "0x40Be1ecad28032BA362D11E03973087F38bcfD1F",
+    "app": "0x490aa303B49Cf13bE0ecf946E494024e260EADb2"
   },
   "steps": [
     {
@@ -33,7 +33,7 @@
           "flags": 1,
           "target": "open sponsor",
           "gasLimit": 340000,
-          "data": "0x11aaacbc…(288 bytes)",
+          "data": "0x0dc3b0f3…(288 bytes)",
           "explain": "the sponsor checks the membership proof and its budget, then approves payment"
         },
         {
@@ -64,11 +64,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 12914
+          "gas": 12936
         }
       ],
       "result": "READY",
-      "gasUsed": 12914
+      "gasUsed": 12936
     },
     {
       "stage": "admit",
@@ -97,11 +97,11 @@
     },
     {
       "stage": "include",
-      "tx": "0xecb5d47c2bb5f6fdf79076d8a322cfb01e0cae504b4bcdb1add19d9e845cdc0f",
-      "block": 890,
+      "tx": "0x75a380048af00a27acb980a99d4b432b7a8d2320d5d3aae812360e893840931f",
+      "block": 6386,
       "status": "success",
       "payer": "open sponsor",
-      "gasUsed": 839489
+      "gasUsed": 839535
     },
     {
       "stage": "act",
@@ -110,7 +110,7 @@
         "account admitted": "0"
       },
       "after": {
-        "sponsor balance": "9.998321021994123577 ETH",
+        "sponsor balance": "9.999497054499467875 ETH",
         "account admitted": "1"
       },
       "events": [
@@ -137,7 +137,7 @@
             "flags": 1,
             "target": "open sponsor",
             "gasLimit": 340000,
-            "data": "0x23e0f940…(288 bytes)"
+            "data": "0x2c83bbd7…(288 bytes)"
           },
           {
             "mode": "SENDER",
@@ -155,7 +155,7 @@
           }
         ],
         "world": {
-          "sponsor balance": "9.998321021994123577 ETH"
+          "sponsor balance": "9.999497054499467875 ETH"
         }
       },
       {
@@ -188,21 +188,21 @@
   },
   "story": [
     {
-      "module": "open-sponsor",
+      "module": "public-gas-sponsor",
       "role": "policy",
       "title": "The community funds a sponsor and publishes its member set's root; no server signs anything",
-      "tx": "0xc2908e3b685b43862ce917337d153cf1df306959df86b5cbde2e3410d7ca0529",
-      "block": 885,
-      "gasUsed": 238461,
+      "tx": "0xe943b685a5c78da62e988c0bbdca815084f269ac4f7e142dd3e5142276a1052a",
+      "block": 6381,
+      "gasUsed": 238449,
       "status": "success"
     },
     {
-      "module": "membership-proof",
+      "module": "prove-youre-in-the-group",
       "role": "admit",
       "title": "A member proves they belong, without saying who, and the account is sponsored from then on",
-      "tx": "0xecb5d47c2bb5f6fdf79076d8a322cfb01e0cae504b4bcdb1add19d9e845cdc0f",
-      "block": 890,
-      "gasUsed": 839489,
+      "tx": "0x75a380048af00a27acb980a99d4b432b7a8d2320d5d3aae812360e893840931f",
+      "block": 6386,
+      "gasUsed": 839535,
       "status": "success"
     }
   ],

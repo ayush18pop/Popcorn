@@ -12,7 +12,7 @@
     "payer": "the treasury"
   },
   "contracts": {
-    "treasury": "0xe8b23752e1B0279685aDab3F9aC12bf42BEb70a3"
+    "treasury": "0xBA35Df259839fad21FF6424dC5a4EBD2968C38Cc"
   },
   "steps": [
     {
@@ -36,7 +36,7 @@
         }
       ],
       "world": {
-        "treasury balance": "3.106936027988235898 ETH",
+        "treasury balance": "3.109287524634106575 ETH",
         "post-quantum target": "0 ETH"
       }
     },
@@ -46,11 +46,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 125851
+          "gas": 133417
         }
       ],
       "result": "READY",
-      "gasUsed": 125851
+      "gasUsed": 133417
     },
     {
       "stage": "admit",
@@ -79,24 +79,25 @@
     },
     {
       "stage": "include",
-      "tx": "0x7cf6b31a3b0fb61cc6239bf905a4e947f9427c3017e84fb0e81c55e6b9472675",
-      "block": 947,
+      "tx": "0x021865100b40700d105df0276c86da7e21174c182249d23674d4282a18739458",
+      "block": 6321,
       "status": "success",
       "payer": "treasury",
-      "gasUsed": 492304
+      "gasUsed": 501415
     },
     {
       "stage": "act",
       "before": {
-        "treasury balance": "3.106936027988235898 ETH",
+        "treasury balance": "3.109287524634106575 ETH",
         "post-quantum target": "0 ETH"
       },
       "after": {
-        "treasury balance": "0.008806120065088968 ETH",
-        "post-quantum target": "3.097145299919700802 ETH"
+        "treasury balance": "0.002632339389389059 ETH",
+        "post-quantum target": "3.106354799414288391 ETH"
       },
       "events": [
         "treasury: 0x8b80bd19",
+        "treasury: 0x920bb94e",
         "0xfffffffffffffffffffffffffffffffffffffffe: 0xddf252ad",
         "treasury: 0x737c6922"
       ]
@@ -125,7 +126,7 @@
           }
         ],
         "world": {
-          "treasury balance": "3.106936027988235898 ETH",
+          "treasury balance": "3.109287524634106575 ETH",
           "quantum switch": "on"
         }
       },
@@ -159,48 +160,48 @@
   },
   "story": [
     {
-      "module": "hybrid-owner-key",
+      "module": "quantum-ready-treasury",
       "role": "set up",
       "title": "The treasury commits its owner key, a hidden post-quantum backup key and its guardians",
-      "tx": "0x2bd927bd54d6b688b158e04afb061b6f9d23643f1c3694fd52ba71d41f51f886",
-      "block": 933,
-      "gasUsed": 684480,
+      "tx": "0x06286cc921e372ad65665f666b74e437375e5ab5a424693803dcb067c96355fe",
+      "block": 6314,
+      "gasUsed": 689251,
       "status": "success"
     },
     {
-      "module": "signed-intent",
+      "module": "signed-instruction",
       "role": "spend",
       "title": "A normal payment signed by the owner",
-      "tx": "0x25b403b2d7710f6599e2888b056588bb6ecdfde77e05d90fabb528610f68478c",
-      "block": 938,
-      "gasUsed": 380087,
+      "tx": "0xf47b4d4131abf0fd6e38abdab5e84a5556d7d9aff9ab3000afde52d1f9006e5f",
+      "block": 6316,
+      "gasUsed": 384435,
       "status": "success"
     },
     {
-      "module": "hidden-guardians",
+      "module": "anonymous-group-vote",
       "role": "vote",
       "title": "A guardian votes to flip the quantum switch, without revealing who",
-      "tx": "0x1cb4ff5cda95eeb20aff3ccfc6471d1e7b7c9cae2b3878fb782406a6fdbecb41",
-      "block": 942,
-      "gasUsed": 391173,
+      "tx": "0x8581f8a3d0a3c8292d5f2856cf1f43519bdfd5cd633ae7c3b10dea966ec4cbfd",
+      "block": 6318,
+      "gasUsed": 391498,
       "status": "success"
     },
     {
-      "module": "quantum-switch",
+      "module": "switch-to-quantum-safe-only",
       "role": "switch",
       "title": "The second vote reaches the quorum: from now on ECDSA alone moves nothing",
-      "tx": "0xa8baa5fbc65bbe18fa13c4a709076e90ac8fc95992f1a0dc11f7a1e4912506e2",
-      "block": 945,
-      "gasUsed": 514450,
+      "tx": "0x42962045c3e4ad39cb3665d80833d767f7d56d7f7ce0ead469559b7e95b90ca0",
+      "block": 6319,
+      "gasUsed": 514689,
       "status": "success"
     },
     {
-      "module": "post-quantum-signer",
+      "module": "exit-to-an-address",
       "role": "migrate",
       "title": "The committed WOTS+ backup key moves everything to a post-quantum account",
-      "tx": "0x7cf6b31a3b0fb61cc6239bf905a4e947f9427c3017e84fb0e81c55e6b9472675",
-      "block": 947,
-      "gasUsed": 492304,
+      "tx": "0x021865100b40700d105df0276c86da7e21174c182249d23674d4282a18739458",
+      "block": 6321,
+      "gasUsed": 501415,
       "status": "success"
     }
   ],

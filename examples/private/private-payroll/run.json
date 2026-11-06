@@ -12,8 +12,8 @@
     "payer": "the stealth vault"
   },
   "contracts": {
-    "stealthVault": "0x77347A56A301eBD72328182D836C9Ab9E5d4A2d7",
-    "privatePool": "0x23db6F6776297520C72170D4a983591d1D729eff"
+    "stealthVault": "0xa37496ff545fAd27dEEDd1e9a4d344283bC7CdbE",
+    "privatePool": "0x4bD6d66f12a9952D8Be411C2E3adcfdc99735361"
   },
   "steps": [
     {
@@ -23,8 +23,8 @@
           "mode": "VERIFY",
           "flags": 3,
           "target": "stealth vault",
-          "gasLimit": 263181,
-          "data": "0x1ff4e248…(256 bytes)",
+          "gasLimit": 263206,
+          "data": "0x1477f36f…(256 bytes)",
           "explain": "the vault checks the spend proof for this commitment, recipient and fee, then approves execution and payment"
         },
         {
@@ -38,7 +38,7 @@
       ],
       "world": {
         "employee address balance": "0 ETH",
-        "stealth vault balance": "1.219885551997236932 ETH"
+        "stealth vault balance": "1.2204384774977147 ETH"
       }
     },
     {
@@ -47,11 +47,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 239256
+          "gas": 239279
         }
       ],
       "result": "READY",
-      "gasUsed": 239256
+      "gasUsed": 239279
     },
     {
       "stage": "admit",
@@ -62,7 +62,7 @@
           "name": "stealth vault",
           "staked": true,
           "budget": 2500000,
-          "used": 263181
+          "used": 263206
         },
         "checks": [
           {
@@ -73,28 +73,28 @@
           {
             "rule": "CANONICAL",
             "verdict": "warn",
-            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 263181 > 250000 (MAX_VERIFY_GAS)"
+            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 263206 > 250000 (MAX_VERIFY_GAS)"
           }
         ]
       }
     },
     {
       "stage": "include",
-      "tx": "0xf505140818d6d2c93fa844eb0694acab905b6a88bc05b8a81d2d502648797604",
-      "block": 791,
+      "tx": "0xcc612b8307eb676f2afbbade5ed4d369743297e0db0e5f76bbeb6508aac4ef67",
+      "block": 6371,
       "status": "success",
       "payer": "stealth vault",
-      "gasUsed": 460335
+      "gasUsed": 460459
     },
     {
       "stage": "act",
       "before": {
         "employee address balance": "0 ETH",
-        "stealth vault balance": "1.219885551997236932 ETH"
+        "stealth vault balance": "1.2204384774977147 ETH"
       },
       "after": {
         "employee address balance": "1.1896625 ETH",
-        "stealth vault balance": "0.029302381994014587 ETH"
+        "stealth vault balance": "0.030500127435204475 ETH"
       },
       "events": [
         "stealth vault: 0xc1adca96",
@@ -114,7 +114,7 @@
             "flags": 3,
             "target": "stealth vault",
             "gasLimit": 251070,
-            "data": "0x1ff4e248…(256 bytes)"
+            "data": "0x1477f36f…(256 bytes)"
           },
           {
             "mode": "SENDER",
@@ -125,7 +125,7 @@
           }
         ],
         "world": {
-          "stealth vault balance": "0.029302381994014587 ETH"
+          "stealth vault balance": "0.030500127435204475 ETH"
         }
       },
       {
@@ -158,38 +158,38 @@
   },
   "story": [
     {
-      "module": "stealth-address",
+      "module": "stealth-vault",
       "role": "receive",
       "title": "The employer pays the salary to a stealth address only the employee can recognise (ML-KEM announcement)",
-      "tx": "0x2015ae07916d21e39f6960dae20e457940b079fd02b7471cda93a2d02e7f29d2",
-      "block": 787,
-      "gasUsed": 165764,
+      "tx": "0x40a6c6dc0c7774d705dc8083b751d1cb7adad854688fdc1895ea86542633dd32",
+      "block": 6367,
+      "gasUsed": 165752,
       "status": "success"
     },
     {
-      "module": "stealth-address",
+      "module": "stealth-vault",
       "role": "spend",
       "title": "The employee moves it to a fresh address with no ETH; the vault pays the gas",
-      "tx": "0xf505140818d6d2c93fa844eb0694acab905b6a88bc05b8a81d2d502648797604",
-      "block": 791,
-      "gasUsed": 460335,
+      "tx": "0xcc612b8307eb676f2afbbade5ed4d369743297e0db0e5f76bbeb6508aac4ef67",
+      "block": 6371,
+      "gasUsed": 460459,
       "status": "success"
     },
     {
       "module": "private-pool",
       "role": "hold",
       "title": "Savings go into the private pool as a note",
-      "tx": "0x67b383c54d2e89b352a56b731e4c63504ca28dfe95e6fd60473f510ee5eb1bdb",
-      "block": 792,
+      "tx": "0xb280c30ec3d03e283f6e9f620b03bbb5b7ce63662ecd89d48a62c620bb093794",
+      "block": 6372,
       "gasUsed": 3166356,
       "status": "success"
     },
     {
-      "module": "association-set",
+      "module": "prove-youre-in-the-group",
       "role": "vouch",
       "title": "The association-set provider accepts the deposit",
-      "tx": "0x190b4316dfa16b7666e70c0fd2fccb4f4ab4b3ae62b6916807c3a85bad90d122",
-      "block": 793,
+      "tx": "0xf891b4d537c3ea8d163c9a46524b43bc099f0975612c6db29f465848c9e1fd41",
+      "block": 6373,
       "gasUsed": 131372,
       "status": "success"
     },
@@ -197,9 +197,9 @@
       "module": "private-pool",
       "role": "withdraw",
       "title": "A withdrawal to a fresh address, paid by the pool, sent by a key with no ETH",
-      "tx": "0x5215c296ce6e6233ab77998fffaef29dc03c75d007803bcccebfcd562fc18c0e",
-      "block": 798,
-      "gasUsed": 486648,
+      "tx": "0xa1a58c855ee3496a47e56a9a72d77957cab723a62f2b650f8bc879e799c89548",
+      "block": 6376,
+      "gasUsed": 486682,
       "status": "success"
     }
   ],

@@ -12,7 +12,7 @@
     "payer": "the account"
   },
   "contracts": {
-    "account": "0xe7D2dca6D39994946b1680b3D1607FC1fd7979e9"
+    "account": "0xA69512Bc58A7F51e04fBe03176e0cD15F7C4EE51"
   },
   "steps": [
     {
@@ -36,7 +36,7 @@
         }
       ],
       "world": {
-        "account balance": "3.207470713990107299 ETH",
+        "account balance": "3.209450219372565975 ETH",
         "exit address": "0 ETH"
       }
     },
@@ -46,11 +46,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 36150
+          "gas": 36088
         }
       ],
       "result": "READY",
-      "gasUsed": 36150
+      "gasUsed": 36088
     },
     {
       "stage": "admit",
@@ -79,21 +79,21 @@
     },
     {
       "stage": "include",
-      "tx": "0xe1df8c1380470ceef6970d4b9b8f4f843d550fbb305cbe27eb766ff4e62899d1",
-      "block": 972,
+      "tx": "0x36d5339e8222fa293440707f721778b451b588e0d2eda05ff305697ef30702c1",
+      "block": 6304,
       "status": "success",
       "payer": "account",
-      "gasUsed": 362324
+      "gasUsed": 362276
     },
     {
       "stage": "act",
       "before": {
-        "account balance": "3.207470713990107299 ETH",
+        "account balance": "3.209450219372565975 ETH",
         "exit address": "0 ETH"
       },
       "after": {
-        "account balance": "0.008976072065368772 ETH",
-        "exit address": "3.197769993922202259 ETH"
+        "account balance": "0.00268870467855962 ETH",
+        "exit address": "3.206544483737404455 ETH"
       },
       "events": [
         "account: 0x920bb94e",
@@ -125,7 +125,7 @@
           }
         ],
         "world": {
-          "account balance": "3.209507447997235868 ETH",
+          "account balance": "3.210060705654299625 ETH",
           "contested": "false"
         }
       },
@@ -159,48 +159,48 @@
   },
   "story": [
     {
-      "module": "forced-exit",
+      "module": "exit-to-an-address",
       "role": "commit",
       "title": "The owner commits an exit address when the account is created",
-      "tx": "0xc360c33372ddeebdec6dabe98b5f9d4b324f933bf42dd1fa06365c3e5ec730f5",
-      "block": 961,
-      "gasUsed": 684480,
+      "tx": "0x834d406a24ae6e1b86875e840e833f2645a54a2d2d6290317f557780b0f0f46d",
+      "block": 6297,
+      "gasUsed": 689263,
       "status": "success"
     },
     {
-      "module": "hidden-guardians",
+      "module": "anonymous-group-vote",
       "role": "vote",
       "title": "A guardian votes to hand the account to a new key",
-      "tx": "0x7c63c0f23530232ca54d33909e0f15fe8a7b9dc6aad0d4050826d278fc81b794",
-      "block": 967,
-      "gasUsed": 391173,
+      "tx": "0x9bd36ec541ddf8f41ae14e7b05f9b3d89ea20b179283b721cff0565fab3b28d7",
+      "block": 6299,
+      "gasUsed": 391498,
       "status": "success"
     },
     {
-      "module": "hidden-guardians",
+      "module": "anonymous-group-vote",
       "role": "quorum",
       "title": "A second vote reaches the quorum: the takeover waits out its delay",
-      "tx": "0x7ec14f2fb90ea5f68d9746196348932197dfa06affbda0b2e70e2713753a507e",
-      "block": 969,
-      "gasUsed": 627194,
+      "tx": "0xa975653dc437cf8604db8f6ebd59ee7d1410310f357168f0b66256a7d6db89ed",
+      "block": 6301,
+      "gasUsed": 627548,
       "status": "success"
     },
     {
-      "module": "forced-exit",
+      "module": "hand-over-to-a-new-key",
       "role": "contest",
       "title": "The real owner signs that this was not them: the account is contested",
-      "tx": "0x2fe79ba7801beea0835dd0f8dce44ef9c91ad64d8b549f00822f3d69b9b082d5",
-      "block": 970,
-      "gasUsed": 150073,
+      "tx": "0x98bc8695ab693845207622da495942696016bc5894fd5469c32807bfcee8d153",
+      "block": 6302,
+      "gasUsed": 150431,
       "status": "success"
     },
     {
-      "module": "forced-exit",
+      "module": "exit-to-an-address",
       "role": "exit",
       "title": "Anyone, here a key with no ETH, sends the funds to the owner's committed exit address",
-      "tx": "0xe1df8c1380470ceef6970d4b9b8f4f843d550fbb305cbe27eb766ff4e62899d1",
-      "block": 972,
-      "gasUsed": 362324,
+      "tx": "0x36d5339e8222fa293440707f721778b451b588e0d2eda05ff305697ef30702c1",
+      "block": 6304,
+      "gasUsed": 362276,
       "status": "success"
     }
   ],
