@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {CoreHarness} from "test/CoreHarness.sol";
-import {SovereignAccount} from "src/account/SovereignAccount.sol";
+import {SovereignAccount} from "src/builds/SovereignAccount.sol";
 import {MembershipVerifier} from "src/proofs/MembershipVerifier.sol";
 import {EcdsaSigner} from "src/signers/EcdsaSigner.sol";
 import {IIntentScheme} from "src/signers/IIntentScheme.sol";
