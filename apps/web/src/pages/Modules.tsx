@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Atom } from "lucide-react";
 import { Reveal, Spotlight } from "@/components/motion";
 import { GasTag, MempoolBadges, StatusBadge } from "@/components/bits";
-import { CORNERS, MODULES, TRIGGER_TEXT, cornerById, type Module, type Status, type Trigger } from "@/lib/catalog";
+import { CORNERS, MODULES, TRIGGER_TEXT, cornerById, moduleById, type Module, type Status, type Trigger } from "@/lib/catalog";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,63 @@ export function ModuleCard({ m, i = 0 }: { m: Module; i?: number }) {
   );
 }
 
+// The modules a reader should see first, whatever they filter by: the bounty, the quantum switch and the post-quantum
+// signers, the private pool, Core and the open sponsor.
+const HIGHLIGHTS: { id: string; kicker: string; title: string; line: string; big?: boolean; href?: string; chips?: string[] }[] = [
+  { id: "proof-of-exploit-bounty", kicker: "Protect", title: "Proof-of-Exploit Bounty", line: "A whitehat proves the bug in zero knowledge from a key with no ETH. Paid to a fresh address, and the vault paused, in one transaction. No committee.", big: true },
+  { id: "quantum-switch", kicker: "Post-quantum", title: "Quantum Switch", line: "The day ECDSA breaks, owner signatures stop working and only a post-quantum key nobody has seen can move the money." },
+  { id: "wots-signer", kicker: "Post-quantum", title: "Post-quantum signers", line: "Hash-based and lattice signatures a quantum computer cannot forge, three of them within the public mempool's budget.", chips: ["wots-signer", "xmss-signer", "sphincs-signer", "fors-signer", "falcon-signer"] },
+  { id: "private-pool", kicker: "Private", title: "Private Pool", line: "Withdraw to an address with no ETH, no relayer and no link to the deposit. The pool pays the gas; association sets keep flagged funds out." },
+  { id: "core", kicker: "Core", title: "Popcorn Core", line: "The account code every rule contract runs: one frame layout, fee caps, once per event, a re-entry lock. Anyone can trigger; a false condition costs nothing.", href: "#/docs/contracts" },
+  { id: "open-sponsor", kicker: "Gas", title: "Open Sponsor", line: "Gas sponsorship as public code, not a server: budgets, a fee cap and an anonymous one-account-per-member gate." },
+];
+
+function Highlights() {
+  return (
+    <section className="mt-10">
+      <p className="label-mono mb-4">Start here</p>
+      <div className="grid gap-4 md:grid-cols-3">
+        {HIGHLIGHTS.map((h, i) => {
+          const m = moduleById(h.id);
+          const link = h.href ?? (m ? href("modules", m.group, m.id) : "#");
+          const gas = m?.gas ? (m.gas.total ?? m.gas.validation) : null;
+          return (
+            <Reveal key={h.id} delay={i * 0.05} className={cn(h.big && "md:col-span-2 md:row-span-2")}>
+              <Spotlight className="glass group relative h-full overflow-hidden rounded-[26px]">
+                <a href={link} className={cn("flex h-full flex-col p-6", h.big && "md:p-9")}>
+                  <div className="flex items-center justify-between">
+                    <span className="label-mono">{h.kicker}</span>
+                    <ArrowRight className="size-4 text-faint transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
+                  </div>
+                  <h3 className={cn("text-chrome mt-4 font-semibold tracking-tight", h.big ? "text-[30px] leading-[1.05] md:text-[44px]" : "text-[19px]")}>{h.title}</h3>
+                  <p className={cn("mt-3 leading-relaxed text-muted-foreground", h.big ? "max-w-[520px] text-[15px] md:text-[17px]" : "text-[13px]")}>{h.line}</p>
+                  {h.chips && (
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {h.chips.map((c) => {
+                        const cm = moduleById(c);
+                        return cm ? (
+                          <span key={c} onClick={(e) => { e.preventDefault(); window.location.hash = href("modules", cm.group, cm.id).slice(1); }} className="cursor-pointer rounded-full border border-foreground/30 px-2.5 py-1 font-mono text-[11px] text-foreground hover:bg-foreground/[0.06]">
+                            {cm.name.replace(/ Signer$/, "")}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <div className="mt-auto flex flex-wrap items-center gap-3 pt-5 font-mono text-[11px] text-faint">
+                    {gas !== null && gas !== undefined && <span>{gas.toLocaleString("en-US")} gas · {m!.gas!.tag}</span>}
+                    {m?.example && <span>recorded example ↗</span>}
+                    {h.id === "core" && <span>254 contract tests</span>}
+                  </div>
+                </a>
+              </Spotlight>
+            </Reveal>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function Modules({ corner }: { corner?: string }) {
   const [trigger, setTrigger] = useState<Trigger | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
@@ -81,6 +138,8 @@ export default function Modules({ corner }: { corner?: string }) {
               : `${MODULES.length} modules in five use cases. ${built} are built, in the repository with passing tests; the rest are planned. Every page starts from what the module does for you.`}
           </p>
         </Reveal>
+
+        {!active && <Highlights />}
 
         {/* corners */}
         <Reveal delay={0.1} className="mt-10">
