@@ -3,7 +3,7 @@ name: "Switch To Quantum-Safe Only"
 shape: action
 tier: 3
 status: built
-runsOn: [public, alternative]
+runsOn: [alternative-staked]
 gas: null
 inputs:
   - { name: "backup key", what: "a post-quantum key, committed as a hash and never revealed until used" }
@@ -47,7 +47,7 @@ _switchToQuantumSafe(byGroup);
 
 ## Runs on
 
-Plain storage; it runs wherever the build that holds it runs.
+The block itself keeps plain storage and adds no mempool limit. The builds that use it today also check proofs or read other contracts, so they are staked on the alternative mempool.
 
 ## Limits
 

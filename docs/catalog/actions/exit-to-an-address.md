@@ -3,7 +3,7 @@ name: "Exit To An Address"
 shape: action
 tier: 2
 status: built
-runsOn: [public, alternative]
+runsOn: [alternative-staked]
 gas: null
 inputs:
   - { name: "address", what: "committed once at setup (forced exit), or chosen at the time and signed by a committed key (migrate)" }
@@ -45,7 +45,7 @@ else if (_quantumSafeOnly()) _exitTo(signedTarget); // migrate
 
 ## Runs on
 
-Plain storage; it runs wherever the build that holds it runs.
+The block itself keeps plain storage and adds no mempool limit. The builds that use it today also check proofs or read other contracts, so they are staked on the alternative mempool.
 
 ## Limits
 

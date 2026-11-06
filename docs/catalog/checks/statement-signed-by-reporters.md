@@ -3,7 +3,7 @@ name: "Statement Signed By k Of n Reporters"
 shape: check
 tier: 3
 status: built
-runsOn: [public, alternative]
+runsOn: [alternative]
 gas: null
 inputs:
   - { name: "statement", what: "a hash of the fact, agreed off chain (\"ETH/USD below 1,800\", \"the bridge halted\")" }
@@ -51,7 +51,7 @@ function condition(bytes calldata data, bytes calldata sigs) internal view overr
 
 ## Runs on
 
-The signatures are checked by a stateless signer contract: public mempool for a few ECDSA reporters.
+The signatures are checked by a stateless signer contract that reads no storage, so no stake is needed; it has been run on the alternative mempool.
 
 ## Limits
 

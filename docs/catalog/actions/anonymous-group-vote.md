@@ -40,7 +40,8 @@ k of n members agree on a proposal, and the chain never learns which members vot
 ## Code
 
 ```ts
-await anyone.trigger(account, await s.vote(guardianIndex, proposal));
+const p = await membershipProof({ secret, tree, index, signalHash: guardianSignal(proposal, round), externalNullifier: guardianScope(account, round) });
+await anyone.trigger(account, voteTrigger(proposal, p.nullifierHash, p.proof));
 ```
 
 ```solidity

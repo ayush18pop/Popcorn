@@ -3,7 +3,7 @@ name: "Payer Gets Rewarded"
 shape: payer
 tier: 2
 status: built
-runsOn: [alternative-staked]
+runsOn: [public, alternative]
 gas: null
 inputs:
   - { name: "reward", what: "token and amount, from the build" }
@@ -43,7 +43,7 @@ _payReward(address(token), reward); // to the payer Core passed in
 
 ## Runs on
 
-The build reads other contracts in the examples here, so it is staked on the alternative mempool.
+The payer's own verification approves payment and the build approves execution, each reading only its own storage: the public mempool and the alternative mempool. A build whose checks read other contracts (Auto-Repay Loan) needs a stake.
 
 ## Limits
 

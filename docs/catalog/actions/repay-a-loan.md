@@ -3,7 +3,7 @@ name: "Repay A Loan"
 shape: action
 tier: 3
 status: built
-runsOn: [public, alternative]
+runsOn: [alternative-staked]
 gas: null
 inputs:
   - { name: "pool", what: "the lending pool (repayFor)" }
@@ -42,7 +42,7 @@ RepayFailure f = _repayLoan(address(pool), address(token), user, amount);
 
 ## Runs on
 
-Actions run after validation, so they do not decide where a build runs.
+The block itself adds no mempool limit; Auto-Repay Loan reads the pool and the token, so it is staked on the alternative mempool.
 
 ## Limits
 

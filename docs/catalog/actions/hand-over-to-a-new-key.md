@@ -3,7 +3,7 @@ name: "Hand Over To A New Key"
 shape: action
 tier: 2
 status: built
-runsOn: [public, alternative]
+runsOn: [alternative-staked]
 gas: null
 inputs:
   - { name: "delay", what: "how long a handover waits" }
@@ -50,7 +50,7 @@ _finalizeHandover();           // anyone, after the delay
 
 ## Runs on
 
-Plain storage; it runs wherever the build that holds it runs.
+The block itself keeps plain storage and adds no mempool limit. The builds that use it today also check proofs or read other contracts, so they are staked on the alternative mempool.
 
 ## Limits
 
