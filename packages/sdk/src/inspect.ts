@@ -58,7 +58,8 @@ export interface Inspection {
   hash: Hex;
   /** Where the transaction was found. */
   foundOn: "node" | "sidecar" | "nowhere";
-  status: "included" | "action-reverted" | "pending" | "refused" | "unknown";
+  /** "dropped": admitted by the sidecar, relayed, never included, then given up. */
+  status: "included" | "action-reverted" | "pending" | "refused" | "dropped" | "unknown";
   build: Address | null;
   payer: Address | null;
   triggerData: Hex | null;
@@ -379,6 +380,17 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
     out.stages.push({ id: "core", title: "Core checks", state: "skipped", detail: `not run: the mempool's ${ref.rule} rule refused the transaction first` });
     out.stages.push({ id: "build", title: "The build's condition", state: "skipped", detail: "not reached" });
     out.stages.push({ id: "chain", title: "Included", state: "skipped", detail: "never included: a refused transaction costs nothing" });
+  } else if (out.foundOn === "sidecar" && (side?.entry?.status === "Cancelled" || adm?.outcome === "dropped" || side?.events?.some((e) => e.kind === "dropped"))) {
+    out.status = "dropped";
+    const why = side?.events?.filter((e) => e.kind === "dropped").pop()?.reason ?? "dropped";
+    out.stages.push({ id: "core", title: "Core checks", state: "pass", detail: "passed when the sidecar simulated it" });
+    out.stages.push({ id: "build", title: "The build's condition", state: "pass", detail: "YES when the sidecar admitted it" });
+    out.stages.push({
+      id: "chain",
+      title: "Included",
+      state: "fail",
+      detail: `never included: ${why}. A common cause is a tip below what the network's builders include (on the public devnet about 1 gwei; the SDK's devnet table sets it).`,
+    });
   } else if (out.foundOn === "sidecar") {
     out.status = adm?.outcome === "rejected" ? "refused" : "pending";
     const buildRefused = ref?.who === "build";

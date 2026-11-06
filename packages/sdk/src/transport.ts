@@ -48,6 +48,12 @@ export interface DevnetConfig {
   sidecarUrl: string;
   /** Block explorer base; tx pages are `${explorerUrl}/tx/<hash>`. */
   explorerUrl: string;
+  /** Where "auto" submits when set (otherwise: the gateway if it answers, else the node). The public devnet's gateway
+   *  answers health checks but drops frame transactions, so there "auto" goes to its sidecar. */
+  autoVia?: "gateway" | "rpc" | "sidecar";
+  /** The least tip the network's block builders include (wei). The node suggests 1 wei on the public devnet, yet frame
+   *  transactions with a tip under about 1 gwei are relayed and never included; at 1 gwei they land within a few blocks. */
+  minPriorityFee?: bigint;
   /** What each endpoint enforces. Optional: hand-written configs may omit it; readers fall back to the public 100k. */
   budgets?: DevnetBudgets;
 }
@@ -61,6 +67,8 @@ export const devnets = {
     gatewayUrl: "https://altmempoolgateway.forshtat.com/rpc",
     sidecarUrl: "https://altmempool.forshtat.com/rpc",
     explorerUrl: "https://explorer.altmempool.wtf",
+    autoVia: "sidecar",
+    minPriorityFee: 1_000_000_000n,
     budgets: {
       ethrex: 100_000, // the node's own (canonical) mempool: prefix 100,001 -> "exceeds MAX_VERIFY_GAS"
       sidecar: { unstaked: 10_000_000, staked: 10_000_000 }, // no limit observed: probes up to 10,000,000 pass the budget check
