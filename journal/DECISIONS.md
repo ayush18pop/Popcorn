@@ -569,3 +569,16 @@ placed under the property they serve; "Used in: DeFi" is a filter on any module,
 
 **Why.** The library should read as one progression from a basic block to the things built from it, not as a pile of
 unrelated templates, and its headline should be what makes it different.
+
+## 66. Checks and actions explain a transaction; they are not a builder
+
+**Context.** The rule-set engine has conditions and actions, and the new privacy and post-quantum work adds higher-level
+ones such as pool membership or a one-time code.
+
+**Choice.** They exist so the site and the Explorer can show a transaction's path: which steps ran, which passed, and
+where it stopped and why. In the interface they are called checks and actions, appear as a short plain-language trail on
+each module page and on a transaction in the Explorer (what the rule decided, what the network decided, what happened),
+and are listed in a searchable reference under the docs. They never appear in the navigation, and there is no visual
+editor for assembling them.
+
+**Why.** The value is explaining a transaction to the person who sent it. A graph editor would be a different product.
