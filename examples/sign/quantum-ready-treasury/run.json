@@ -12,7 +12,7 @@
     "payer": "the treasury"
   },
   "contracts": {
-    "treasury": "0x30c9608b47d18F0572B0a95DA537390A55F407d6"
+    "treasury": "0x02DD5C09dD7F32933Ea2a282Bb5ab6a915Bc0b68"
   },
   "steps": [
     {
@@ -36,7 +36,7 @@
         }
       ],
       "world": {
-        "treasury balance": "3.109287197538460425 ETH",
+        "treasury balance": "3.1092870998890276 ETH",
         "post-quantum target": "0 ETH"
       }
     },
@@ -46,11 +46,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 125003
+          "gas": 139122
         }
       ],
       "result": "READY",
-      "gasUsed": 125003
+      "gasUsed": 139122
     },
     {
       "stage": "admit",
@@ -79,21 +79,21 @@
     },
     {
       "stage": "include",
-      "tx": "0xe40a739add022f238cb1f36c7048053f773b19c410c1279e69a902275e88b059",
-      "block": 6713,
+      "tx": "0x56b9a051288cabda6fc7c1ed29a7f75b9ac44e64bb992e0cdb8b121381e23329",
+      "block": 7273,
       "status": "success",
       "payer": "treasury",
-      "gasUsed": 492965
+      "gasUsed": 507046
     },
     {
       "stage": "act",
       "before": {
-        "treasury balance": "3.109287197538460425 ETH",
+        "treasury balance": "3.1092870998890276 ETH",
         "post-quantum target": "0 ETH"
       },
       "after": {
-        "treasury balance": "0.002637380017166657 ETH",
-        "post-quantum target": "3.106354493885388393 ETH"
+        "treasury balance": "0.002628937235222998 ETH",
+        "post-quantum target": "3.106354403424870952 ETH"
       },
       "events": [
         "treasury: 0x8b80bd19",
@@ -103,9 +103,169 @@
       ]
     }
   ],
+  "flow": {
+    "source": "explain",
+    "trigger": "migrate",
+    "evaluated": "inclusion",
+    "nodes": [
+      {
+        "index": 0,
+        "kind": "trigger",
+        "blockId": "",
+        "label": "Migrate: a target address signed by the backup key",
+        "result": "yes",
+        "inputs": []
+      },
+      {
+        "index": 1,
+        "kind": "payer",
+        "blockId": "self-paying",
+        "label": "the account pays its own gas",
+        "result": "yes",
+        "inputs": [
+          0
+        ]
+      },
+      {
+        "index": 2,
+        "kind": "condition",
+        "blockId": "",
+        "label": "the account is set up and has not exited",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 3,
+        "kind": "condition",
+        "blockId": "post-quantum-mode",
+        "label": "Post-Quantum Mode is on",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 4,
+        "kind": "condition",
+        "blockId": "signature",
+        "label": "the committed post-quantum backup key signed this target",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 5,
+        "kind": "operator",
+        "blockId": "and",
+        "label": "AND",
+        "result": "yes",
+        "inputs": [
+          2,
+          3,
+          4
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 6,
+        "kind": "action",
+        "blockId": "withdraw-all",
+        "label": "send everything to the signed target, once",
+        "result": "yes",
+        "inputs": [
+          5
+        ],
+        "note": "ran: the action frame succeeded"
+      }
+    ]
+  },
   "failing": {
     "result": "CONDITION_FALSE",
     "core": "0x22",
+    "tx": "0x2384594c74b87d56eafb6c3e7cc39517b80443cb32d5708b559bf5b6d7196974",
+    "flow": {
+      "source": "explain",
+      "trigger": "spend",
+      "evaluated": "current-state",
+      "nodes": [
+        {
+          "index": 0,
+          "kind": "trigger",
+          "blockId": "",
+          "label": "Spend: (to, value, data) signed by the owner, anyone can send it",
+          "result": "yes",
+          "inputs": []
+        },
+        {
+          "index": 1,
+          "kind": "payer",
+          "blockId": "self-paying",
+          "label": "the account pays its own gas",
+          "result": "yes",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 2,
+          "kind": "condition",
+          "blockId": "",
+          "label": "the account is set up and has not exited",
+          "result": "yes",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 3,
+          "kind": "condition",
+          "blockId": "post-quantum-mode",
+          "label": "Post-Quantum Mode is off",
+          "result": "no",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 4,
+          "kind": "condition",
+          "blockId": "signature",
+          "label": "the owner key signed this exact spend",
+          "result": "skipped",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 5,
+          "kind": "operator",
+          "blockId": "and",
+          "label": "AND",
+          "result": "no",
+          "inputs": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "index": 6,
+          "kind": "action",
+          "blockId": "call",
+          "label": "make the call with the value",
+          "result": "skipped",
+          "inputs": [
+            5
+          ]
+        }
+      ]
+    },
     "steps": [
       {
         "stage": "build",
@@ -126,7 +286,7 @@
           }
         ],
         "world": {
-          "treasury balance": "3.109287197538460425 ETH",
+          "treasury balance": "3.1092870998890276 ETH",
           "quantum switch": "on"
         }
       },
@@ -163,46 +323,390 @@
       "module": "quantum-ready-treasury",
       "role": "set up",
       "title": "The treasury commits its owner key, a hidden post-quantum backup key and its guardians",
-      "tx": "0x40ffca5949936ec15d52bfa66055df37dbc711a9e951a4173150d9b4525035df",
-      "block": 6702,
-      "gasUsed": 689251,
+      "tx": "0xc2cf9e5a43266ed41445500050252bb8be6a1155aa33a7dc6e9018a90429024c",
+      "block": 7262,
+      "gasUsed": 689321,
       "status": "success"
     },
     {
       "module": "signature",
       "role": "spend",
       "title": "A normal payment signed by the owner",
-      "tx": "0x30a6571d926ed6a1969c5018d12b02ea4ee06212acfbf73d3eecc10ed47ec2c3",
-      "block": 6706,
-      "gasUsed": 384981,
-      "status": "success"
+      "tx": "0x2c4807fbbcc8461df8b1365dfe8769110d5380ba4d928549e06f1835c24d914e",
+      "block": 7266,
+      "gasUsed": 385038,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "spend",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Spend: (to, value, data) signed by the owner, anyone can send it",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "post-quantum-mode",
+            "label": "Post-Quantum Mode is off",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "condition",
+            "blockId": "signature",
+            "label": "the owner key signed this exact spend",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3,
+              4
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 6,
+            "kind": "action",
+            "blockId": "call",
+            "label": "make the call with the value",
+            "result": "yes",
+            "inputs": [
+              5
+            ],
+            "note": "ran: the action frame succeeded"
+          }
+        ]
+      }
     },
     {
       "module": "anonymous-vote",
       "role": "vote",
       "title": "A guardian votes to flip the quantum switch, without revealing who",
-      "tx": "0x9fa3ef753f42114382ce3a224a7ec27fa03bfc840a84d6501caa155b91f1052f",
-      "block": 6708,
-      "gasUsed": 391474,
-      "status": "success"
+      "tx": "0x425009558a4a57d92f724b018970fc806ab916e3be63516ac0d1087edbb85a4c",
+      "block": 7268,
+      "gasUsed": 391536,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "vote",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Vote: a proposal and a guardian's nullifier, with a membership proof",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "membership-proof",
+            "label": "a guardian's valid vote for this round (who is not revealed)",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "action",
+            "blockId": "anonymous-vote",
+            "label": "count the vote",
+            "result": "yes",
+            "inputs": [
+              4
+            ],
+            "note": "ran: the action frame succeeded"
+          },
+          {
+            "index": 6,
+            "kind": "condition",
+            "blockId": "anonymous-vote",
+            "label": "this vote reaches the quorum",
+            "result": "not-recorded",
+            "inputs": [
+              5
+            ]
+          },
+          {
+            "index": 7,
+            "kind": "action",
+            "blockId": "post-quantum-mode",
+            "label": "turn on Post-Quantum Mode",
+            "result": "not-recorded",
+            "inputs": [
+              6
+            ]
+          }
+        ]
+      }
     },
     {
       "module": "post-quantum-mode",
       "role": "switch",
       "title": "The second vote reaches the quorum: from now on ECDSA alone moves nothing",
-      "tx": "0xc49e5ade2be6e553275cef45da336fe40b58b29d67a9119aaf5b4d161b3f4e26",
-      "block": 6711,
-      "gasUsed": 514713,
-      "status": "success"
+      "tx": "0x6f4b9b4d912fad4d56521a3246e8be775757119e64ac219a8531f5447b62dc4f",
+      "block": 7271,
+      "gasUsed": 514787,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "vote",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Vote: a proposal and a guardian's nullifier, with a membership proof",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "membership-proof",
+            "label": "a guardian's valid vote for this round (who is not revealed)",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "action",
+            "blockId": "anonymous-vote",
+            "label": "count the vote",
+            "result": "yes",
+            "inputs": [
+              4
+            ],
+            "note": "ran: the action frame succeeded"
+          },
+          {
+            "index": 6,
+            "kind": "condition",
+            "blockId": "anonymous-vote",
+            "label": "this vote reaches the quorum",
+            "result": "not-recorded",
+            "inputs": [
+              5
+            ]
+          },
+          {
+            "index": 7,
+            "kind": "action",
+            "blockId": "post-quantum-mode",
+            "label": "turn on Post-Quantum Mode",
+            "result": "not-recorded",
+            "inputs": [
+              6
+            ]
+          }
+        ]
+      }
     },
     {
       "module": "withdraw-all",
       "role": "migrate",
       "title": "The committed WOTS+ backup key moves everything to a post-quantum account",
-      "tx": "0xe40a739add022f238cb1f36c7048053f773b19c410c1279e69a902275e88b059",
-      "block": 6713,
-      "gasUsed": 492965,
-      "status": "success"
+      "tx": "0x56b9a051288cabda6fc7c1ed29a7f75b9ac44e64bb992e0cdb8b121381e23329",
+      "block": 7273,
+      "gasUsed": 507046,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "migrate",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Migrate: a target address signed by the backup key",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "post-quantum-mode",
+            "label": "Post-Quantum Mode is on",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "condition",
+            "blockId": "signature",
+            "label": "the committed post-quantum backup key signed this target",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3,
+              4
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 6,
+            "kind": "action",
+            "blockId": "withdraw-all",
+            "label": "send everything to the signed target, once",
+            "result": "yes",
+            "inputs": [
+              5
+            ],
+            "note": "ran: the action frame succeeded"
+          }
+        ]
+      }
     }
   ],
   "sources": {

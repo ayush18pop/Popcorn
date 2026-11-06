@@ -12,7 +12,7 @@
     "payer": "the account"
   },
   "contracts": {
-    "account": "0x6b3e340B820Da8c0fEA2428138C7d1f7903611Ac"
+    "account": "0x613Bd00e84A72d56Ca8b6343775d209fb6EaEa4D"
   },
   "steps": [
     {
@@ -36,7 +36,7 @@
         }
       ],
       "world": {
-        "account balance": "3.209450240939311875 ETH",
+        "account balance": "3.209450191815057325 ETH",
         "exit address": "0 ETH"
       }
     },
@@ -46,11 +46,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 36088
+          "gas": 36117
         }
       ],
       "result": "READY",
-      "gasUsed": 36088
+      "gasUsed": 36117
     },
     {
       "stage": "admit",
@@ -79,21 +79,21 @@
     },
     {
       "stage": "include",
-      "tx": "0x909b501de9d6e67ce1e0b59d5047e83ee7d301c12f15089fcea2212ea0482f95",
-      "block": 6691,
+      "tx": "0x468b565f29de49036c2f7b8b7a33db57f03900b58c06d90f3b062fc3037b1547",
+      "block": 7291,
       "status": "success",
       "payer": "account",
-      "gasUsed": 362276
+      "gasUsed": 362283
     },
     {
       "stage": "act",
       "before": {
-        "account balance": "3.209450240939311875 ETH",
+        "account balance": "3.209450191815057325 ETH",
         "exit address": "0 ETH"
       },
       "after": {
-        "account balance": "0.00268870467855962 ETH",
-        "exit address": "3.206544505304150355 ETH"
+        "account balance": "0.002688700485025695 ETH",
+        "exit address": "3.206544456179895805 ETH"
       },
       "events": [
         "account: 0x920bb94e",
@@ -102,9 +102,146 @@
       ]
     }
   ],
+  "flow": {
+    "source": "explain",
+    "trigger": "exit",
+    "evaluated": "inclusion",
+    "nodes": [
+      {
+        "index": 0,
+        "kind": "trigger",
+        "blockId": "",
+        "label": "Exit: no data, anyone can send it",
+        "result": "yes",
+        "inputs": []
+      },
+      {
+        "index": 1,
+        "kind": "payer",
+        "blockId": "self-paying",
+        "label": "the account pays its own gas",
+        "result": "yes",
+        "inputs": [
+          0
+        ]
+      },
+      {
+        "index": 2,
+        "kind": "condition",
+        "blockId": "",
+        "label": "the account is set up and has not exited",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 3,
+        "kind": "condition",
+        "blockId": "key-rotation",
+        "label": "an owner contested a key rotation",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 4,
+        "kind": "operator",
+        "blockId": "and",
+        "label": "AND",
+        "result": "yes",
+        "inputs": [
+          2,
+          3
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 5,
+        "kind": "action",
+        "blockId": "withdraw-all",
+        "label": "send everything to the exit address committed on day one",
+        "result": "yes",
+        "inputs": [
+          4
+        ],
+        "note": "ran: the action frame succeeded"
+      }
+    ]
+  },
   "failing": {
     "result": "CONDITION_FALSE",
     "core": "0x22",
+    "tx": "0x468b565f29de49036c2f7b8b7a33db57f03900b58c06d90f3b062fc3037b1547",
+    "flow": {
+      "source": "explain",
+      "trigger": "exit",
+      "evaluated": "current-state",
+      "nodes": [
+        {
+          "index": 0,
+          "kind": "trigger",
+          "blockId": "",
+          "label": "Exit: no data, anyone can send it",
+          "result": "yes",
+          "inputs": []
+        },
+        {
+          "index": 1,
+          "kind": "payer",
+          "blockId": "self-paying",
+          "label": "the account pays its own gas",
+          "result": "yes",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 2,
+          "kind": "condition",
+          "blockId": "",
+          "label": "the account is set up and has not exited",
+          "result": "yes",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 3,
+          "kind": "condition",
+          "blockId": "key-rotation",
+          "label": "an owner contested a key rotation",
+          "result": "no",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 4,
+          "kind": "operator",
+          "blockId": "and",
+          "label": "AND",
+          "result": "no",
+          "inputs": [
+            2,
+            3
+          ]
+        },
+        {
+          "index": 5,
+          "kind": "action",
+          "blockId": "withdraw-all",
+          "label": "send everything to the exit address committed on day one",
+          "result": "skipped",
+          "inputs": [
+            4
+          ]
+        }
+      ]
+    },
     "steps": [
       {
         "stage": "build",
@@ -125,7 +262,7 @@
           }
         ],
         "world": {
-          "account balance": "3.210060705654299625 ETH",
+          "account balance": "3.210060723626587875 ETH",
           "contested": "false"
         }
       },
@@ -162,46 +299,296 @@
       "module": "withdraw-all",
       "role": "commit",
       "title": "The owner commits an exit address when the account is created",
-      "tx": "0x20c9b7d6d9b6727b5de91c024180204f5a55100cf45956dfb580019364e5c3c3",
-      "block": 6679,
-      "gasUsed": 689251,
+      "tx": "0x31b34e3d2ecd9abe4b37f829f503409e3ee49e8f6e5edee85151e5cc40068fa4",
+      "block": 7282,
+      "gasUsed": 689321,
       "status": "success"
     },
     {
       "module": "anonymous-vote",
       "role": "vote",
       "title": "A guardian votes to hand the account to a new key",
-      "tx": "0xd620393fb51be448f5698847c3142054d399d3e13ab9f32d6f775154607c98ba",
-      "block": 6683,
-      "gasUsed": 391474,
-      "status": "success"
+      "tx": "0x715581f78a2c8218b3c72c218e48c42091094c8e46f69e0a5a0e01438f9e25e1",
+      "block": 7286,
+      "gasUsed": 391524,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "vote",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Vote: a proposal and a guardian's nullifier, with a membership proof",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "membership-proof",
+            "label": "a guardian's valid vote for this round (who is not revealed)",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "action",
+            "blockId": "anonymous-vote",
+            "label": "count the vote",
+            "result": "yes",
+            "inputs": [
+              4
+            ],
+            "note": "ran: the action frame succeeded"
+          },
+          {
+            "index": 6,
+            "kind": "condition",
+            "blockId": "anonymous-vote",
+            "label": "this vote reaches the quorum",
+            "result": "not-recorded",
+            "inputs": [
+              5
+            ]
+          },
+          {
+            "index": 7,
+            "kind": "action",
+            "blockId": "key-rotation",
+            "label": "propose this key as the new owner, after the timelock",
+            "result": "not-recorded",
+            "inputs": [
+              6
+            ]
+          }
+        ]
+      }
     },
     {
       "module": "anonymous-vote",
       "role": "quorum",
       "title": "A second vote reaches the quorum: the takeover waits out its delay",
-      "tx": "0x12a966dc4429a410a20851eb70a9066e96d6d93b267d50494485ef7bd30119f9",
-      "block": 6686,
-      "gasUsed": 627536,
-      "status": "success"
+      "tx": "0xf18ecb95527349b4800843c55b0ca6c5aeac422d23bbab1fae55fd160ba5c276",
+      "block": 7288,
+      "gasUsed": 627598,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "vote",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Vote: a proposal and a guardian's nullifier, with a membership proof",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "membership-proof",
+            "label": "a guardian's valid vote for this round (who is not revealed)",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "action",
+            "blockId": "anonymous-vote",
+            "label": "count the vote",
+            "result": "yes",
+            "inputs": [
+              4
+            ],
+            "note": "ran: the action frame succeeded"
+          },
+          {
+            "index": 6,
+            "kind": "condition",
+            "blockId": "anonymous-vote",
+            "label": "this vote reaches the quorum",
+            "result": "not-recorded",
+            "inputs": [
+              5
+            ]
+          },
+          {
+            "index": 7,
+            "kind": "action",
+            "blockId": "key-rotation",
+            "label": "propose this key as the new owner, after the timelock",
+            "result": "not-recorded",
+            "inputs": [
+              6
+            ]
+          }
+        ]
+      }
     },
     {
       "module": "key-rotation",
       "role": "contest",
       "title": "The real owner signs that this was not them: the account is contested",
-      "tx": "0x21e0f99e15e9f171511eb693bbb721dff768fce590997a51ae479394a13f9a1a",
-      "block": 6687,
-      "gasUsed": 150411,
+      "tx": "0xb4a06b16db7d0bf755d627f20aca9c0987b77c26ac21b5afe44b611dd6ce2636",
+      "block": 7289,
+      "gasUsed": 150461,
       "status": "success"
     },
     {
       "module": "withdraw-all",
       "role": "exit",
       "title": "Anyone, here a key with no ETH, sends the funds to the owner's committed exit address",
-      "tx": "0x909b501de9d6e67ce1e0b59d5047e83ee7d301c12f15089fcea2212ea0482f95",
-      "block": 6691,
-      "gasUsed": 362276,
-      "status": "success"
+      "tx": "0x468b565f29de49036c2f7b8b7a33db57f03900b58c06d90f3b062fc3037b1547",
+      "block": 7291,
+      "gasUsed": 362283,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "exit",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Exit: no data, anyone can send it",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the account pays its own gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the account is set up and has not exited",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "key-rotation",
+            "label": "an owner contested a key rotation",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "action",
+            "blockId": "withdraw-all",
+            "label": "send everything to the exit address committed on day one",
+            "result": "yes",
+            "inputs": [
+              4
+            ],
+            "note": "ran: the action frame succeeded"
+          }
+        ]
+      }
     }
   ],
   "sources": {
