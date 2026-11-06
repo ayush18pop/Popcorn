@@ -582,3 +582,12 @@ and are listed in a searchable reference under the docs. They never appear in th
 editor for assembling them.
 
 **Why.** The value is explaining a transaction to the person who sent it. A graph editor would be a different product.
+
+## 67. A module says where it runs, not where it does not
+
+**Choice.** Each module lists the configurations it runs on, such as the public mempool or the alternative mempool, as
+positive chips. A refusal is shown only for a transaction that was actually refused, in the Explorer or the simulator,
+with the rule that blocked it.
+
+**Why.** A page full of "does not work on X" reads as a library with holes. The facts stay available where they help:
+when something is refused.
