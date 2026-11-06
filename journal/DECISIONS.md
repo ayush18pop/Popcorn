@@ -805,3 +805,22 @@ reads Overview, Configuration, Use cases (ready to use, common configurations, o
 Gotchas. This supersedes decision 82's display names; the Solidity and SDK identifiers keep their names for now.
 
 **Why.** A developer should recognise a block from its name without reading its page.
+
+## 84. Every transaction is explained block by block, from chain data alone
+
+**Context.** The owner asked that any transaction, pasted into the explorer by its hash, show the build's flow: which
+block said yes, which said no, which were never reached. The chain records only Core's overall code (0x22, "condition
+false"), not which part of a condition failed, and the local node keeps state for the latest block only.
+
+**Choice.** Every build implements `popcornExplain(triggerData, verifyData)`, an ordinary forwarded view that runs the
+build's blocks in the same order and with the same short-circuits as its condition and returns each node (kind, block,
+label, result, inputs). The build suites require its verdict to equal the condition's on every condition they ask. A
+rule set explains itself through its existing debug view. The SDK's `inspectTransaction(hash)` finds an included
+transaction on the node and a refused or pending one in the sidecar's record (which keeps the frames, every admission
+check and the failing frame's code), reads the trigger and verify data back out of the frames, and reports each stage
+and the flow. For an included transaction, node results are derived only from what inclusion proves (an AND that held, a
+NOT); for a refused one, the nodes are evaluated on the current state, and the UI says so. The recorder submits each
+example's refused case to the sidecar, so its hash is a real refused transaction.
+
+**Why.** A developer should see where their transaction failed without reading Core codes or source, and nothing shown
+should be invented: every colour comes from the node, the sidecar's record or the build's own view of its condition.
