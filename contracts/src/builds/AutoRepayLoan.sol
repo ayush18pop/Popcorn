@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {CallerPays} from "src/payers/CallerPays.sol";
+import {ValueCrossesLine} from "src/blocks/checks/ValueCrossesLine.sol";
+import {RepayLoan} from "src/blocks/actions/RepayLoan.sol";
 
 interface IShieldPool {
     function position(address user) external view returns (uint256 collateral, uint256 debt, uint256 nonce, uint256 hf);
@@ -15,8 +17,11 @@ interface IShieldToken {
     function transfer(address to, uint256 amount) external returns (bool);
 }
 
-/// @title PartialRepayShield
-/// @notice A caller-pays rule contract (Core mode 1) that keeps `user`'s loan on `pool` healthy. The rule contract holds a reserve
+/// @title Auto-Repay Loan (example build)
+/// @notice Built from blocks: Value Crosses A Line (the loan's health factor below a threshold, read from the pool),
+///         Repay A Loan (a quarter of the debt from a reserve) and Payer Gets Rewarded (the CallerPays payer).
+///
+///         A caller-pays build (Core mode 1) that keeps `user`'s loan on `pool` healthy. The rule contract holds a reserve
 ///         of the debt token (the user sends it there). When the loan is unhealthy, ANYONE can trigger it and pay the gas: the
 ///         rule contract repays a quarter of the debt from its reserve and pays the triggerer (the payer Core passed in) a reward of
 ///         0.5% of the repaid amount. No keeper, no owner call.
@@ -46,7 +51,7 @@ interface IShieldToken {
 ///         be STAKED for the sidecar (built-in stake trigger, `stakeAmount` > 0), and public ethrex never includes it
 ///         (StorageReadNonSender): it is included on a devnet whose sidecar relays staked triggers.
 ///         Every external read in VERIFY has a fixed gas stipend (no GAS opcode) and fails closed.
-contract PartialRepayShield is CallerPays {
+contract AutoRepayLoan is ValueCrossesLine, RepayLoan, CallerPays {
     /// @dev keccak256("popcorn.shield.positionKey")
     bytes32 public constant SHIELD_KEY_DOMAIN = keccak256("popcorn.shield.positionKey");
     uint256 public constant POSITION_READ_GAS = 25_000;
@@ -131,14 +136,8 @@ contract PartialRepayShield is CallerPays {
         _sstore(RESCUE_EPOCH_SLOT, epoch);
         (bool ok, uint256 hf, uint256 amount, uint256 reward) = _rescue();
         if (!ok || _reserve() < amount + reward) return _skip(payer_, epoch, 1);
-        (bool a,) = address(token).call(abi.encodeWithSelector(IShieldToken.approve.selector, address(pool), amount));
-        if (!a) return _skip(payer_, epoch, 2);
-        (bool r,) = address(pool).call(abi.encodeWithSelector(IShieldPool.repayFor.selector, user, amount));
-        if (!r) {
-            (bool z,) = address(token).call(abi.encodeWithSelector(IShieldToken.approve.selector, address(pool), 0));
-            z; // best effort: clear the allowance
-            return _skip(payer_, epoch, 3);
-        }
+        RepayFailure f = _repayLoan(address(pool), address(token), user, amount);
+        if (f != RepayFailure.None) return _skip(payer_, epoch, f == RepayFailure.ApproveFailed ? 2 : 3);
         _payReward(address(token), reward);
         emit Rescued(user, payer_, amount, reward, hf, epoch);
     }
@@ -153,15 +152,15 @@ contract PartialRepayShield is CallerPays {
 
     // ------------------------------------------------------------------ views (also for simulate()/the demo)
 
-    /// @notice (rescuable, healthFactor, amount to repay, reward). Fails closed on any failed read.
+    /// @notice (rescuable, healthFactor, amount to repay, reward). One read of position(user); Value Crosses A Line decides
+    ///         "health factor below the threshold"; a failed read is unknown, which is never rescuable.
     function _rescue() internal view returns (bool ok, uint256 hf, uint256 amount, uint256 reward) {
-        (bool s, bytes memory ret) =
-            address(pool).staticcall{gas: POSITION_READ_GAS}(abi.encodeWithSelector(IShieldPool.position.selector, user));
-        if (!s || ret.length != 128) return (false, 0, 0, 0);
+        (bool s, bytes memory ret) = _readWords(address(pool), abi.encodeWithSelector(IShieldPool.position.selector, user), 4, POSITION_READ_GAS);
+        if (!s) return (false, 0, 0, 0);
         (, uint256 debt,, uint256 h) = abi.decode(ret, (uint256, uint256, uint256, uint256));
         amount = debt * repayBps / 10_000;
         reward = amount * rewardBps / 10_000;
-        ok = debt > 0 && amount > 0 && h < threshold;
+        ok = debt > 0 && amount > 0 && _crossesLine(h, threshold, Side.Below).isYes();
         hf = h;
     }
 
@@ -173,6 +172,6 @@ contract PartialRepayShield is CallerPays {
 
     /// @notice Pure rule, for tests and the UI: would a loan at health factor `hf` be rescued?
     function rescuableAt(uint256 hf) external view returns (bool) {
-        return hf < threshold;
+        return _crossesLine(hf, threshold, Side.Below).isYes();
     }
 }

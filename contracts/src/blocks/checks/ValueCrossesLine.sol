@@ -55,6 +55,14 @@ abstract contract ValueCrossesLine is RuleContract {
         return (true, v);
     }
 
+    /// @notice Everything `target` returns for `callData`, read with at most `gasCap` gas, when it is exactly `words` words
+    ///         long (a struct-like getter such as position(user) -> (collateral, debt, nonce, healthFactor)). ok is false
+    ///         otherwise. One read for several numbers.
+    function _readWords(address target, bytes memory callData, uint256 words, uint256 gasCap) internal view returns (bool ok, bytes memory ret) {
+        (ok, ret) = target.staticcall{gas: gasCap}(callData);
+        ok = ok && ret.length == 32 * words;
+    }
+
     /// @notice The getter read and the line in one: unknown when the read fails.
     function _getterCrossesLine(address target, bytes memory callData, uint256 index, uint256 gasCap, uint256 line, Side side)
         internal

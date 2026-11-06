@@ -5,7 +5,7 @@ import {CoreHarness} from "test/CoreHarness.sol";
 import {DemoToken} from "src/mocks/DemoToken.sol";
 import {MockOracle} from "src/mocks/MockOracle.sol";
 import {SimpleLendingPool, IPriceOracle, IERC20Min} from "src/mocks/SimpleLendingPool.sol";
-import {PartialRepayShield, IShieldPool, IShieldToken} from "src/templates/PartialRepayShield.sol";
+import {AutoRepayLoan, IShieldPool, IShieldToken} from "src/builds/AutoRepayLoan.sol";
 import {RewardRule} from "src/mocks/RewardRule.sol";
 import {CallerPays} from "src/payers/CallerPays.sol";
 
@@ -88,7 +88,7 @@ contract BlockingToken {
 /// Gate 6 unit tests (Foundry, CoreHarness in caller-pays mode): the shield's condition flips exactly at health factor
 /// 1.1, the action repays a quarter of the debt and pays 0.5% to the payer Core passed in, and CallerPays never pays an
 /// address taken from popArgs.
-contract PartialRepayShieldTest {
+contract AutoRepayLoanTest {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     uint256 constant CONDITION_GAS = 40_000; // the demo rule contract's conditionGas
 
@@ -96,7 +96,7 @@ contract PartialRepayShieldTest {
     MockOracle oracle;
     SimpleLendingPool pool;
     User user;
-    PartialRepayShield logic;
+    AutoRepayLoan logic;
     CoreHarness k; // plays the rule contract
 
     function setUp() public {
@@ -108,7 +108,7 @@ contract PartialRepayShieldTest {
         vm.deal(address(this), 10 ether);
         // 1 ETH collateral, 800 dUSD debt: HF = price * 0.8 / 800 = price / 1000 -> 2.0 now, 1.1 at price 1,100
         user.open{value: 1 ether}(pool, 800e18);
-        logic = new PartialRepayShield(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0.02 ether, 86_400);
+        logic = new AutoRepayLoan(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0.02 ether, 86_400);
         k = new CoreHarness(address(logic), CONDITION_GAS);
         token.mint(address(k), 1_000e18); // the shield's reserve
     }
@@ -162,14 +162,14 @@ contract PartialRepayShieldTest {
         require(k.condition("", ""), "rescuable");
         require(!k.condition(abi.encode(address(0xBAD)), ""), "non-empty popArgs: invalid");
         // reserve below amount * 1.005: 200 + 1 needed
-        PartialRepayShield l2 = new PartialRepayShield(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
+        AutoRepayLoan l2 = new AutoRepayLoan(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
         CoreHarness k2 = new CoreHarness(address(l2), CONDITION_GAS);
         token.mint(address(k2), 201e18 - 1);
         require(!k2.condition("", ""), "reserve 200.99..: not covered");
         token.mint(address(k2), 1);
         require(k2.condition("", ""), "reserve 201: covered");
         // no debt
-        PartialRepayShield l3 = new PartialRepayShield(IShieldPool(address(pool)), IShieldToken(address(token)), address(0x1234), 1.1e18, 2_500, 50, 0, 0);
+        AutoRepayLoan l3 = new AutoRepayLoan(IShieldPool(address(pool)), IShieldToken(address(token)), address(0x1234), 1.1e18, 2_500, 50, 0, 0);
         CoreHarness k3 = new CoreHarness(address(l3), CONDITION_GAS);
         token.mint(address(k3), 1_000e18);
         require(!k3.condition("", ""), "no debt: nothing to rescue");
@@ -196,7 +196,7 @@ contract PartialRepayShieldTest {
     /// no revert; the shield is not bricked (the next epoch is valid).
     function test_repayFails_actionSkips_notBricked() public {
         BrokenPool bp = new BrokenPool();
-        PartialRepayShield l2 = new PartialRepayShield(IShieldPool(address(bp)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
+        AutoRepayLoan l2 = new AutoRepayLoan(IShieldPool(address(bp)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
         CoreHarness k2 = new CoreHarness(address(l2), CONDITION_GAS);
         token.mint(address(k2), 1_000e18);
         require(k2.condition("", ""), "rescuable per the pool");
@@ -227,7 +227,7 @@ contract PartialRepayShieldTest {
 
     /// Reserve exactly amount + reward: rescuable, rescued, reserve 0.
     function test_reserveExactlyAmountPlusReward() public {
-        PartialRepayShield l2 = new PartialRepayShield(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
+        AutoRepayLoan l2 = new AutoRepayLoan(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
         CoreHarness k2 = new CoreHarness(address(l2), CONDITION_GAS);
         token.mint(address(k2), 201e18);
         oracle.setPrice(1_080e18);
@@ -254,9 +254,9 @@ contract PartialRepayShieldTest {
 
     /// The reserve is the user's: only `user` withdraws it (forwarded).
     function test_withdrawReserve_onlyUser() public {
-        (bool ok, bytes memory r) = address(k).call(abi.encodeCall(PartialRepayShield.withdrawReserve, (address(this), 1e18)));
-        require(!ok && bytes4(r) == PartialRepayShield.NotUser.selector, "stranger refused");
-        (ok,) = user.exec(address(k), abi.encodeCall(PartialRepayShield.withdrawReserve, (address(user), 400e18)));
+        (bool ok, bytes memory r) = address(k).call(abi.encodeCall(AutoRepayLoan.withdrawReserve, (address(this), 1e18)));
+        require(!ok && bytes4(r) == AutoRepayLoan.NotUser.selector, "stranger refused");
+        (ok,) = user.exec(address(k), abi.encodeCall(AutoRepayLoan.withdrawReserve, (address(user), 400e18)));
         require(ok && token.balanceOf(address(user)) == 800e18 + 400e18 && token.balanceOf(address(k)) == 600e18, "user withdrew");
     }
 
@@ -267,7 +267,7 @@ contract PartialRepayShieldTest {
         bt.mint(address(p2), 1_000_000e18);
         User u2 = new User();
         u2.open{value: 1 ether}(p2, 800e18);
-        PartialRepayShield l2 = new PartialRepayShield(IShieldPool(address(p2)), IShieldToken(address(bt)), address(u2), 1.1e18, 2_500, 50, 0, 0);
+        AutoRepayLoan l2 = new AutoRepayLoan(IShieldPool(address(p2)), IShieldToken(address(bt)), address(u2), 1.1e18, 2_500, 50, 0, 0);
         CoreHarness k2 = new CoreHarness(address(l2), CONDITION_GAS);
         bt.mint(address(k2), 1_000e18);
         oracle.setPrice(1_080e18);
@@ -279,10 +279,10 @@ contract PartialRepayShieldTest {
     }
 
     function test_thresholdMustExceedOne() public {
-        try new PartialRepayShield(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1e18, 2_500, 50, 0, 0) {
+        try new AutoRepayLoan(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1e18, 2_500, 50, 0, 0) {
             revert("must refuse");
         } catch (bytes memory r) {
-            require(bytes4(r) == PartialRepayShield.BadConfig.selector, "threshold <= 1.0 refused");
+            require(bytes4(r) == AutoRepayLoan.BadConfig.selector, "threshold <= 1.0 refused");
         }
     }
 
