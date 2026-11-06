@@ -19,7 +19,7 @@ import {RuleStake} from "src/rules/RuleStake.sol";
 ///         NONCE KEYS DECIDE HOW MANY PAID POPS EXIST. In rule-pays mode anyone can build a trigger and the rule contract pays
 ///         for each valid one, so the number of distinct keys for which condition() is true is the number of triggers anyone
 ///         can make the rule contract pay for (and run the action for). Derive the key from rule contract state that the action
-///         advances (an epoch or counter: keccak256(abi.encode("pause", pauseEpoch)), like bountyNonceKey),
+///         advances (an epoch or counter: keccak256(abi.encode("claim", pauseEpoch)), like the Proof-of-Exploit Bounty build),
 ///         or use a constant for a one-shot rule contract. Do NOT derive it from popArgs alone (the triggerer picks popArgs:
 ///         keccak256(popArgs) gives one fresh key per popArgs, i.e. unlimited paid triggers once the condition is true).
 ///         `_hashKey(popArgs)` is only safe when each popArgs can be valid once by construction, e.g. it names a claim
