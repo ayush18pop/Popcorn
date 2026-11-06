@@ -9,8 +9,9 @@
 // reads, (2) DELEGATECALLs the logic's __nonceKey(triggerData) with Core's NONCE_KEY_GAS, (3) returns its return data.
 // The slots are found with debug_traceCall + prestateTracer (storage read at the shadow address) and fetched with
 // eth_getStorageAt from the rule contract, iterated until no new slot appears. msg.sender inside the logic is 0xaa as in
-// VERIFY; other contracts' state is the real state. Differences from VERIFY: ADDRESS/SELFBALANCE are the shadow's
-// (keys derived from them are not supported; pass `nonceKey`). The result is never trusted blindly: trigger()/canTrigger()
+// VERIFY; other contracts' state is the real state. Differences from VERIFY: ADDRESS/SELFBALANCE are the shadow's.
+// That is why deriveNonceKey first asks the rule contract's own popcornNonceKey view and uses the shadow only as a
+// fallback for logic built before the view existed. The result is never trusted blindly: trigger()/canTrigger()
 // always simulate the full trigger on ethrex, and a wrong key shows up as Core 0x1e NONCE_KEY_MISMATCH.
 import { concat, encodeFunctionData, getContractAddress, numberToHex, pad, parseAbi, size, type Address, type Hex } from "viem";
 import { NonceKeyUnavailable, RpcError } from "./errors.ts";
@@ -18,6 +19,7 @@ import { ENTRY_POINT } from "./types.ts";
 
 export const coreLogicAbi = parseAbi([
   "function __nonceKey(bytes triggerData) view returns (uint256)",
+  "function popcornNonceKey(bytes triggerData) view returns (uint256)",
   "function __condition(bytes triggerData, bytes verifyData) view returns (bool)",
   "function __action(bytes triggerData, address payer)",
 ]);
@@ -96,8 +98,24 @@ export async function shadowDelegateCall(rpc: RpcFn, ruleContract: Address, logi
   }
 }
 
-/** The logic's `__nonceKey(triggerData)` as Core would compute it for `ruleContract` now. */
+/** A neutral EOA-shaped caller for the forwarded view (never 0xaa, which Core routes to VERIFY; never the rule contract). */
+const VIEW_CALLER: Address = "0x000000000000000000000000000000000000dEaD";
+
+/**
+ * The logic's `__nonceKey(triggerData)` as Core would compute it for `ruleContract` now.
+ *
+ * First asks the rule contract itself: `popcornNonceKey(bytes)` is a forwarded view on every RuleContract, so Core runs
+ * the logic inside the rule contract, with its real address and storage, the context VERIFY runs in. Rule contracts
+ * whose logic predates that view fall back to the shadow run, which cannot reproduce keys derived from address(this).
+ */
 export async function deriveNonceKey(rpc: RpcFn, ruleContract: Address, logic: Address, triggerData: Hex, nonceKeyGas: bigint, block?: string): Promise<bigint> {
+  const view = encodeFunctionData({ abi: coreLogicAbi, functionName: "popcornNonceKey", args: [triggerData] });
+  try {
+    const out = await rpc<Hex>("eth_call", [{ from: VIEW_CALLER, to: ruleContract, data: view, gas: SHADOW_GAS }, block ?? "latest"]);
+    if (size(out) === 32) return BigInt(out);
+  } catch {
+    // no popcornNonceKey on this logic (older build), or it reverted: fall back to the shadow run below
+  }
   const cd = encodeFunctionData({ abi: coreLogicAbi, functionName: "__nonceKey", args: [triggerData] });
   const r = await shadowDelegateCall(rpc, ruleContract, logic, cd, Number(nonceKeyGas), block);
   if (!r.ok) throw new NonceKeyUnavailable(`__nonceKey reverted in the shadow run (data ${r.data}); pass { nonceKey } explicitly`);

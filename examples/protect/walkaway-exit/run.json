@@ -1,0 +1,212 @@
+{
+  "recorded": true,
+  "module": "walkaway-exit",
+  "network": {
+    "name": "local",
+    "chainId": 1338
+  },
+  "title": "When control is contested, the money walks away to the owner",
+  "actors": {
+    "caller": "a key with no ETH",
+    "ruleContract": "account",
+    "payer": "the account"
+  },
+  "contracts": {
+    "account": "0xe7D2dca6D39994946b1680b3D1607FC1fd7979e9"
+  },
+  "steps": [
+    {
+      "stage": "build",
+      "frames": [
+        {
+          "mode": "VERIFY",
+          "flags": 3,
+          "target": "account",
+          "gasLimit": 2048846,
+          "data": "0x",
+          "explain": "the account sees it is contested and approves; no signature needed"
+        },
+        {
+          "mode": "SENDER",
+          "flags": 0,
+          "target": "account",
+          "gasLimit": 2200000,
+          "data": "0xd9292504…(100 bytes)",
+          "explain": "sends every wei to the committed exit address"
+        }
+      ],
+      "world": {
+        "account balance": "3.207470713990107299 ETH",
+        "exit address": "0 ETH"
+      }
+    },
+    {
+      "stage": "validate",
+      "reads": [
+        {
+          "label": "validation (frame 0)",
+          "value": "READY",
+          "gas": 36150
+        }
+      ],
+      "result": "READY",
+      "gasUsed": 36150
+    },
+    {
+      "stage": "admit",
+      "report": {
+        "mempool": "alternative mempool (ERC-8421 sidecar)",
+        "outcome": "accepted",
+        "entity": {
+          "name": "account",
+          "staked": true,
+          "budget": 2500000,
+          "used": 2048846
+        },
+        "checks": [
+          {
+            "rule": "CORE",
+            "verdict": "pass",
+            "detail": "Core's checks passed and the rule's condition returned true"
+          },
+          {
+            "rule": "CANONICAL",
+            "verdict": "warn",
+            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 2048846 > 250000 (MAX_VERIFY_GAS)"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "include",
+      "tx": "0xe1df8c1380470ceef6970d4b9b8f4f843d550fbb305cbe27eb766ff4e62899d1",
+      "block": 972,
+      "status": "success",
+      "payer": "account",
+      "gasUsed": 362324
+    },
+    {
+      "stage": "act",
+      "before": {
+        "account balance": "3.207470713990107299 ETH",
+        "exit address": "0 ETH"
+      },
+      "after": {
+        "account balance": "0.008976072065368772 ETH",
+        "exit address": "3.197769993922202259 ETH"
+      },
+      "events": [
+        "account: 0x920bb94e",
+        "0xfffffffffffffffffffffffffffffffffffffffe: 0xddf252ad",
+        "account: 0x737c6922"
+      ]
+    }
+  ],
+  "failing": {
+    "result": "CONDITION_FALSE",
+    "core": "0x22",
+    "steps": [
+      {
+        "stage": "build",
+        "frames": [
+          {
+            "mode": "VERIFY",
+            "flags": 3,
+            "target": "account",
+            "gasLimit": 2048846,
+            "data": "0x"
+          },
+          {
+            "mode": "SENDER",
+            "flags": 0,
+            "target": "account",
+            "gasLimit": 2200000,
+            "data": "0xd9292504…(100 bytes)"
+          }
+        ],
+        "world": {
+          "account balance": "3.209507447997235868 ETH",
+          "contested": "false"
+        }
+      },
+      {
+        "stage": "validate",
+        "reads": [
+          {
+            "label": "frame 0",
+            "value": "the word is exactly 1",
+            "gas": 0
+          }
+        ],
+        "result": "CONDITION_FALSE",
+        "gasUsed": 0
+      },
+      {
+        "stage": "admit",
+        "report": {
+          "mempool": "alternative mempool (ERC-8421 sidecar)",
+          "outcome": "rejected",
+          "checks": [
+            {
+              "rule": "0x22",
+              "verdict": "fail",
+              "detail": "the word is exactly 1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "story": [
+    {
+      "module": "forced-exit",
+      "role": "commit",
+      "title": "The owner commits an exit address when the account is created",
+      "tx": "0xc360c33372ddeebdec6dabe98b5f9d4b324f933bf42dd1fa06365c3e5ec730f5",
+      "block": 961,
+      "gasUsed": 684480,
+      "status": "success"
+    },
+    {
+      "module": "hidden-guardians",
+      "role": "vote",
+      "title": "A guardian votes to hand the account to a new key",
+      "tx": "0x7c63c0f23530232ca54d33909e0f15fe8a7b9dc6aad0d4050826d278fc81b794",
+      "block": 967,
+      "gasUsed": 391173,
+      "status": "success"
+    },
+    {
+      "module": "hidden-guardians",
+      "role": "quorum",
+      "title": "A second vote reaches the quorum: the takeover waits out its delay",
+      "tx": "0x7ec14f2fb90ea5f68d9746196348932197dfa06affbda0b2e70e2713753a507e",
+      "block": 969,
+      "gasUsed": 627194,
+      "status": "success"
+    },
+    {
+      "module": "forced-exit",
+      "role": "contest",
+      "title": "The real owner signs that this was not them: the account is contested",
+      "tx": "0x2fe79ba7801beea0835dd0f8dce44ef9c91ad64d8b549f00822f3d69b9b082d5",
+      "block": 970,
+      "gasUsed": 150073,
+      "status": "success"
+    },
+    {
+      "module": "forced-exit",
+      "role": "exit",
+      "title": "Anyone, here a key with no ETH, sends the funds to the owner's committed exit address",
+      "tx": "0xe1df8c1380470ceef6970d4b9b8f4f843d550fbb305cbe27eb766ff4e62899d1",
+      "block": 972,
+      "gasUsed": 362324,
+      "status": "success"
+    }
+  ],
+  "sources": {
+    "simulation": "ethrex_simulateFrameTransaction",
+    "admission": "ERC-8421 sidecar (eth_sendFrameTransaction)",
+    "receipt": "eth_getTransactionReceipt"
+  }
+}

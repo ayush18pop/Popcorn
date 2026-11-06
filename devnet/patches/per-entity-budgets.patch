@@ -2,7 +2,7 @@ diff --git a/packages/executor/src/services/UserOpValidation/utils/validationPre
 index 8a34f88..6e5aea1 100644
 --- a/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
 +++ b/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
-@@ -9,6 +9,44 @@ import { getAddress } from "viem";
+@@ -9,6 +9,46 @@ import { getAddress } from "viem";
   */
  export const MAX_VERIFY_GAS = BigInt(100_000);
  
@@ -10,9 +10,11 @@ index 8a34f88..6e5aea1 100644
 + * ERC-8421 BUDGET-010 (values from the altmempool.wtf landing page, which
 + * the ERC draft marks TBD): each entity's own validation frames may use up
 + * to this much execution gas, replacing EIP-8141's single MAX_VERIFY_GAS.
++ * SIDECAR_UNSTAKED_BUDGET / SIDECAR_STAKED_BUDGET override them (the public
++ * devnet's sidecar runs without a limit).
 + */
-+export const MAX_VERIFY_GAS_PER_ENTITY = BigInt(250_000);
-+export const MAX_VERIFY_GAS_STAKED_ENTITY = BigInt(2_500_000);
++export const MAX_VERIFY_GAS_PER_ENTITY = BigInt(process.env.SIDECAR_UNSTAKED_BUDGET ?? 250_000);
++export const MAX_VERIFY_GAS_STAKED_ENTITY = BigInt(process.env.SIDECAR_STAKED_BUDGET ?? 2_500_000);
 +
 +/**
 + * BUDGET-010: sums `limits.execution` per entity address over that

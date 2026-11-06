@@ -8,6 +8,8 @@ import { SnippetCopyButton } from "@/components/kibo-ui/snippet";
 import { Reveal } from "@/components/motion";
 import { useScramble } from "@/lib/useScramble";
 import { cn } from "@/lib/utils";
+import { RUNS, fmt, step, type Run, type RunStep } from "@/lib/runs";
+import { PROJECTS } from "@/lib/catalog";
 
 // Read-only views of a devnet, straight from the browser. Nothing here signs or sends a transaction.
 
@@ -154,6 +156,8 @@ export default function Explorer() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        <Lanes />
 
         {/* triggers */}
         <section className="mt-20">
@@ -308,4 +312,87 @@ function Result({ r, devnet }: { r: Lookup; devnet: DevnetName }) {
       </div>
     </div>
   );
+}
+
+/* ------------------------------------------------- three lanes (decision 66) */
+
+// A transaction's path in three lanes: what the rule decided (validation), what the network decided (admission), what
+// happened (inclusion and its effect). Shown for each example's recorded transaction and its recorded refusal.
+function Lanes() {
+  const keys = PROJECTS.map((p) => p.key).filter((k) => RUNS[k]?.recorded);
+  const [key, setKey] = useState(keys[0] ?? "");
+  const [refused, setRefused] = useState(false);
+  const run = RUNS[key];
+  if (!run) return null;
+  const steps = refused ? run.failing.steps : run.steps;
+  return (
+    <section className="mt-20">
+      <p className="label-mono mb-3">Recorded transactions</p>
+      <h2 className="text-[24px] font-semibold tracking-tight">Every transaction in three lanes.</h2>
+      <p className="mt-2 max-w-[620px] text-[13px] leading-relaxed text-muted-foreground">What the rule decided, what the network decided, and what happened, for each example recorded on the local devnet. Switch to the refused case to see where it stopped and why.</p>
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        {keys.map((k) => (
+          <button key={k} onClick={() => setKey(k)} className={cn("rounded-full border px-3 py-1.5 text-[12px]", k === key ? "border-foreground/40 text-foreground" : "border-[var(--glass-border)] text-muted-foreground hover:text-foreground")}>
+            {PROJECTS.find((p) => p.key === k)?.name ?? k}
+          </button>
+        ))}
+        <button onClick={() => setRefused(!refused)} className={cn("ml-auto rounded-full px-4 py-1.5 text-[12px]", refused ? "bg-foreground text-background" : "glass text-muted-foreground hover:text-foreground")}>
+          {refused ? "Showing the refused case" : "Show the refused case"}
+        </button>
+      </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <Lane title="What the rule decided" body={ruleLane(steps)} />
+        <Lane title="What the network decided" body={networkLane(steps)} />
+        <Lane title="What happened" body={refused ? [["Result", `${run.failing.result}${run.failing.core ? ` (${run.failing.core})` : ""}`], ["Cost", "nothing: the transaction was never valid"]] : happenedLane(run)} />
+      </div>
+    </section>
+  );
+}
+
+function Lane({ title, body }: { title: string; body: [string, string][] }) {
+  return (
+    <motion.div layout className="glass rounded-[22px] p-5">
+      <p className="label-mono mb-3">{title}</p>
+      <dl className="space-y-2">
+        {body.map(([k, v], i) => (
+          <div key={k + i} className="grid grid-cols-[96px_1fr] gap-3 text-[12.5px]">
+            <dt className="font-mono text-[10.5px] uppercase tracking-[0.05em] text-faint">{k}</dt>
+            <dd className="break-words text-foreground/90">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </motion.div>
+  );
+}
+
+function ruleLane(steps: RunStep[]): [string, string][] {
+  const b = step(steps, "build");
+  const v = step(steps, "validate");
+  return [
+    ["Frames", b ? b.frames.map((f) => `${f.mode} ${f.flags}`).join(" · ") : "—"],
+    ["Verdict", v?.result ?? "—"],
+    ...(v?.reads ?? []).map((r) => [r.label, `${r.value}${r.gas ? ` · ${fmt(r.gas)} gas` : ""}`] as [string, string]),
+  ];
+}
+
+function networkLane(steps: RunStep[]): [string, string][] {
+  const a = step(steps, "admit");
+  if (!a) return [["Outcome", "—"]];
+  return [
+    ["Mempool", a.report.mempool],
+    ["Outcome", a.report.outcome],
+    ...(a.report.entity ? [["Entity", `${a.report.entity.name} · ${a.report.entity.staked ? "staked" : "unstaked"} · declared ${fmt(a.report.entity.used)} gas`] as [string, string]] : []),
+    ...a.report.checks.map((c) => [c.rule, `${c.verdict}: ${c.detail}`] as [string, string]),
+  ];
+}
+
+function happenedLane(run: Run): [string, string][] {
+  const i = step(run.steps, "include");
+  const a = step(run.steps, "act");
+  return [
+    ["Included", i ? `block ${fmt(i.block)} · ${i.status}` : "—"],
+    ["Gas", i ? `${fmt(i.gasUsed)}, paid by ${i.payer}` : "—"],
+    ["Tx", i ? `${i.tx.slice(0, 12)}…${i.tx.slice(-6)}` : "—"],
+    ...Object.entries(a?.after ?? {}).map(([k, v]) => [k, `${a?.before[k] ?? "—"} → ${v}`] as [string, string]),
+  ];
 }

@@ -1,9 +1,10 @@
 ---
 name: "P-256 and WebAuthn passkeys"
-corner: sign
+group: sign
 trigger: people
+priority: 6
 status: built
-mempool: { public: false, alt: unstaked }
+runsOn: [alternative]
 gas: null
 example: null
 related: [signed-intent, multisig-signer]
@@ -24,9 +25,9 @@ When a signed intent for this rule contract, this rule and its current epoch ver
 
 The rule's action runs and the epoch advances, so the same signature can never be replayed.
 
-## Mempool
+## Runs on
 
-Validation goes above the public 100,000; the local devnet's 250,000 budget admits it.
+The alternative mempool, which admits validation of any size.
 
 ## Code
 
@@ -39,5 +40,4 @@ const hash = await anyone.trigger(ruleContract, { triggerData, verifyData: signa
 
 ## Limits
 
-- Above the public 100,000 gas: run it on the local devnet or a network with a larger budget.
 - Reviewed by us, not externally audited.

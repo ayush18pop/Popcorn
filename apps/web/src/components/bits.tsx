@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Pill, PillIndicator } from "@/components/kibo-ui/pill";
 import { CodeBlock, CodeBlockBody, CodeBlockContent, CodeBlockCopyButton, CodeBlockFilename, CodeBlockFiles, CodeBlockHeader, CodeBlockItem } from "@/components/kibo-ui/code-block";
 import { Reveal } from "@/components/motion";
-import type { Module, Status } from "@/lib/catalog";
+import { RUNS_ON_TEXT, type Module, type Status } from "@/lib/catalog";
 import { monoThemes } from "@/lib/mono-theme";
 import { cn } from "@/lib/utils";
 
@@ -19,19 +19,17 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   );
 }
 
-/** Which mempools admit the module, with the plain-English reason on hover. */
+/** Where the module runs, as positive chips (decision 67), with the reason on hover. */
 export function MempoolBadges({ m, className }: { m: Module; className?: string }) {
-  const why = m.sections["Mempool"];
+  const why = m.sections["Runs on"];
   return (
     <div className={cn("flex flex-wrap gap-1.5 font-mono text-[11px]", className)} title={why}>
-      <span className={cn("rounded-full border px-2.5 py-1", m.mempool.public ? "border-foreground/30 text-foreground" : "border-[var(--glass-border)] text-faint line-through decoration-foreground/30")}>
-        {m.mempool.public ? "✓" : "✕"} public
-      </span>
-      {m.mempool.alt !== "none" && (
-        <span className="rounded-full border border-foreground/30 px-2.5 py-1 text-foreground">
-          ✓ alt · {m.mempool.alt}
+      {m.runsOn.map((r) => (
+        <span key={r} className="rounded-full border border-foreground/30 px-2.5 py-1 text-foreground">
+          ✓ {RUNS_ON_TEXT[r]}
         </span>
-      )}
+      ))}
+      {m.usedIn.includes("defi") && <span className="rounded-full border border-[var(--glass-border)] px-2.5 py-1 text-muted-foreground">used in DeFi</span>}
     </div>
   );
 }
@@ -40,7 +38,7 @@ export function GasTag({ m }: { m: Module }) {
   if (!m.gas) return <span className="font-mono text-[11px] text-faint">gas · not measured yet</span>;
   return (
     <span className="font-mono text-[11px] text-muted-foreground">
-      ~{m.gas.validation.toLocaleString("en-US")} gas · <span className="text-foreground">{m.gas.tag}</span>
+      {m.gas.total !== undefined ? `${m.gas.total.toLocaleString("en-US")} gas per transaction` : `~${(m.gas.validation ?? 0).toLocaleString("en-US")} validation gas`} · <span className="text-foreground">{m.gas.tag}</span>
       {m.gas.tag === "measured" && ` · ${m.gas.network}`}
     </span>
   );

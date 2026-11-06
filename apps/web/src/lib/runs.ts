@@ -28,6 +28,10 @@ export interface Run {
   steps: RunStep[];
   failing: { result: string; core?: string; steps: RunStep[] };
   sources: Record<string, string>;
+  /** Every transaction of a project, in order, with the module and its role (recorded runs). */
+  story?: { module: string; role: string; title: string; tx: string; block: number; gasUsed: number; status: string }[];
+  contracts?: Record<string, string>;
+  owner?: string;
 }
 
 /** key: "<corner>/<module dir>" */

@@ -24,10 +24,13 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 | [`contracts/`](contracts) | Core (Yul), the rule contract base, factory, stake and owner, conditions, signers, the rule-set engine, payers, templates |
 | [`packages/sdk`](packages/sdk) | `@popcorn/sdk`: a viem extension (`deployRule`, `canTrigger`, `trigger`, `simulate`, `watch`) and every signer |
 | [`packages/simulator`](packages/simulator) | `@popcorn/simulator`: which mempool will accept a transaction, which rule blocks it, and the fix |
+| [`packages/zk`](packages/zk) | `@popcorn/zk`: the membership, withdraw and stealth circuits (Groth16), their development keys and proving helpers |
+| [`packages/mcp`](packages/mcp) | `@popcorn/mcp`: a read-only MCP server (catalog, examples, refusal codes, simulate, unsigned triggers) |
+| [`.claude/skills`](.claude/skills) | Claude skills: `popcorn-build` (problem to running project) and `popcorn-debug` (why a trigger was refused) |
 | [`devnet/`](devnet) | A local devnet with per-entity validation budgets, started by one command |
-| [`apps/web`](apps/web) | The developer site: module catalog, example player, explorer, docs |
-| [`docs/catalog/`](docs/catalog) | One file per module: what it does, when it fires, mempool, gas, code, limits |
-| [`examples/`](examples) | Runs the site's player replays, one `run.json` per example |
+| [`apps/web`](apps/web) | The developer site: modules in five use-case groups, example projects, explorer, docs |
+| [`docs/catalog/`](docs/catalog) | One file per module, in five use-case groups: what it does, when it fires, where it runs, code, limits |
+| [`examples/`](examples) | Example projects: `project.md` (problem, modules and roles) and `run.json` recorded on the local devnet |
 | [`journal/`](journal) | The decisions behind the design |
 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | Project context for a new contributor or agent |
 
@@ -39,7 +42,11 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 | Conditions | threshold on another contract's value, proof of a statement (Groth16), rule sets (AND / OR / NOT / k-of-n over compare, range, crossing, delta, ratio, balance, code hash, flag, with an action per rule) | public mempool for the rule contract's own storage; alternative mempool, staked, for reads of other contracts |
 | Signers | ECDSA, P256 / WebAuthn passkeys, WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon-512, hybrids, M-of-N multisig, k-of-n attested facts | alternative mempool (all schemes); public mempool for ECDSA and WOTS+ |
 | Templates | a vault that pauses itself when its invariant breaks and pays a whitehat for a zero-knowledge proof of its bug; a loan shield that repays when health falls | alternative mempool |
-| Tooling | simulator, SDK, local devnet, developer site | |
+| Privacy | a private pool whose withdrawals pay their own gas, with association sets; stealth payments announced with ML-KEM-768 | alternative mempool, staked |
+| Gas | an open sponsor: a payer contract with a public policy (budgets, fee cap, allowlists, a private membership gate) | alternative mempool, staked |
+| Accounts | the Sovereign Account: ECDSA + Falcon owner, hidden guardians, a quantum switch with a committed post-quantum backup key, a forced exit | alternative mempool, staked |
+| Examples | five projects recorded on the local devnet: private payroll, open gas network, quantum-ready treasury, walkaway exit, Sovereign Account | |
+| Tooling | simulator, SDK, ZK circuits, local devnet, recorder, read-only MCP server, Claude skills, developer site | |
 
 Planned, in this order: an action library (pause, repay, exit, reward pool), pause modules for common invariants, position
 protection and exits, fair liquidation with keyed-nonce tickets, safe gas sponsorship, ERC-8286 wallet validators, a CLI,
@@ -70,7 +77,7 @@ with no account and no ETH. See [`packages/sdk/README.md`](packages/sdk/README.m
 | | Public devnet | Local devnet |
 |---|---|---|
 | Chain id | 1337 | 1338 |
-| Alternative-mempool sidecar | `https://altmempool.forshtat.com/rpc`, no validation limit | `http://127.0.0.1:14338/rpc`, 250,000 unstaked / 2,500,000 staked per entity |
+| Alternative-mempool sidecar | `https://altmempool.forshtat.com/rpc`, no validation limit | `http://127.0.0.1:14338/rpc`, 250,000 unstaked / 2,500,000 staked per entity by default; `SIDECAR_UNSTAKED_BUDGET` raises it (decision 73) |
 | Canonical mempool (the node's own) | 100,000 gas | 250,000 gas |
 
 Every module runs on the public devnet through its alternative-mempool sidecar; the local devnet is a reproducible copy

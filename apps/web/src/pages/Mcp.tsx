@@ -4,34 +4,44 @@ import { KeyRound, Lock, Play, ShieldCheck } from "lucide-react";
 import { Snippet, SnippetCopyButton, SnippetHeader, SnippetTabsContent, SnippetTabsList, SnippetTabsTrigger } from "@/components/kibo-ui/snippet";
 import { Reveal, Spotlight } from "@/components/motion";
 import { StatusBadge, TAB } from "@/components/bits";
-import { MODULES } from "@/lib/catalog";
+import { MODULES, PROJECTS } from "@/lib/catalog";
+import { RUNS } from "@/lib/runs";
 import { cn } from "@/lib/utils";
 
-// The MCP server is planned (docs/ui-handoff.md "MCP page"). The tool list and the safety model are the design. The
-// inspector runs the two catalog tools for real against the catalog this site ships; the rest need the server.
+// The MCP server (packages/mcp) is read-only: it never holds a key and never sends. In the browser, this inspector runs
+// the catalog and example tools against the files this site ships; the devnet tools run in the server.
 
 const TOOLS: { name: string; does: string; input: string; local?: (arg: string) => unknown }[] = [
   {
-    name: "list_modules", does: "The catalog, filterable by corner, trigger and status.", input: `{ "corner": "pause" }`,
+    name: "list_modules", does: "The modules, optionally for one use-case group.", input: `{ "group": "private" }`,
     local: (a) => {
-      const f = safe(a) as { corner?: string; trigger?: string; status?: string };
-      return MODULES.filter((m) => (!f.corner || m.corner === f.corner) && (!f.trigger || m.trigger === f.trigger) && (!f.status || m.status === f.status)).map((m) => ({ id: m.id, name: m.name, corner: m.corner, trigger: m.trigger, status: m.status }));
+      const f = safe(a) as { group?: string };
+      return MODULES.filter((m) => !f.group || m.group === f.group).map((m) => ({ id: m.id, name: m.name, group: m.group, status: m.status, runsOn: m.runsOn, postQuantum: m.postQuantum }));
     },
   },
   {
-    name: "get_module", does: "One module: what it does, when it fires, mempool, gas, code and limits.", input: `{ "id": "partial-repay-shield" }`,
+    name: "get_module", does: "One module's page: what it does, when it fires, where it runs, code, limits.", input: `{ "id": "open-sponsor" }`,
     local: (a) => {
       const m = MODULES.find((x) => x.id === (safe(a) as { id?: string }).id);
-      return m ? { ...m, sections: undefined, whatItDoes: m.summary, limits: m.sections["Limits"] } : { error: "no such module" };
+      return m ? { id: m.id, name: m.name, status: m.status, runsOn: m.runsOn, whatItDoes: m.summary, whenItFires: m.sections["When it fires"], limits: m.sections["Limits"], code: m.code } : { error: "no such module" };
     },
   },
-  { name: "plan_rule", does: "A plain description to a rule file.", input: `{ "description": "pause if assets per share < 0.8" }` },
-  { name: "check_rule", does: "Each mempool's verdict for a rule file, with the rule that blocks it.", input: `{ "rule": "vault-floor.rule.yaml" }` },
-  { name: "explain_rule", does: "Live result of each condition node, and the reason when false.", input: `{ "ruleContract": "0x…", "devnet": "local" }` },
-  { name: "rule_status", does: "Whether a trigger would be accepted now (canTrigger).", input: `{ "ruleContract": "0x…" }` },
-  { name: "decode_frame_tx", does: "A raw frame transaction, frame by frame, in plain names.", input: `{ "raw": "0x06…" }` },
-  { name: "admission_report", does: "The sidecar's per-rule admission checks for a transaction.", input: `{ "hash": "0x…" }` },
-  { name: "build_trigger_tx", does: "An unsigned trigger transaction. Signing happens in your CLI or wallet.", input: `{ "ruleContract": "0x…" }` },
+  {
+    name: "list_examples", does: "The example projects, their modules and roles, recorded or not.", input: `{}`,
+    local: () => PROJECTS.map((p) => ({ id: p.id, name: p.name, problem: p.problem, modules: p.modules.map((m) => m.id), recorded: Boolean(RUNS[p.key]?.recorded) })),
+  },
+  {
+    name: "get_example", does: "One project: every recorded transaction, the featured one's five stages and its refusal.", input: `{ "id": "private-payroll" }`,
+    local: (a) => {
+      const p = PROJECTS.find((x) => x.id === (safe(a) as { id?: string }).id);
+      return p ? { name: p.name, modules: p.modules, story: RUNS[p.key]?.story, refused: RUNS[p.key]?.failing.result } : { error: "no such example" };
+    },
+  },
+  { name: "how_to_build", does: "The modules, roles and SDK calls to build a project like an example.", input: `{ "id": "sovereign-account" }` },
+  { name: "explain_code", does: "A Core code (frame 0) or an Open Sponsor code (frame 1) in plain words, and who paid.", input: `{ "code": "0x6c", "frame": "payer" }` },
+  { name: "rule_contract_info", does: "A deployed rule contract's logic, mode, caps and balance.", input: `{ "network": "local", "ruleContract": "0x…" }` },
+  { name: "can_trigger", does: "Simulates a trigger on the devnet: would it be accepted now, and if not which frame refused it.", input: `{ "network": "local", "ruleContract": "0x…", "triggerData": "0x…", "verifyData": "0x…" }` },
+  { name: "build_trigger", does: "The exact frame transaction, unsigned, with its frames explained. A rule-pays trigger needs no signature: you send it.", input: `{ "network": "local", "ruleContract": "0x…" }` },
 ];
 
 function safe(s: string): unknown {
@@ -43,8 +53,8 @@ function safe(s: string): unknown {
 }
 
 const INSTALL = [
-  { id: "claude", label: "Claude Code", cmd: "claude mcp add popcorn -- bunx @popcorn/mcp --devnet local   # planned package" },
-  { id: "json", label: "other clients", cmd: `{ "mcpServers": { "popcorn": { "command": "bunx", "args": ["@popcorn/mcp", "--devnet", "local"] } } }   // planned` },
+  { id: "claude", label: "Claude Code", cmd: "claude mcp add popcorn -- bun /path/to/Popcorn/packages/mcp/src/index.ts   # or open the repo: .mcp.json adds it" },
+  { id: "json", label: "other clients", cmd: `{ "mcpServers": { "popcorn": { "command": "bun", "args": ["/path/to/Popcorn/packages/mcp/src/index.ts"] } } }` },
 ];
 
 export default function Mcp() {
@@ -59,7 +69,7 @@ export default function Mcp() {
     setInput(n.input);
     setOut(null);
   };
-  const run = () => setOut(t.local ? JSON.stringify(t.local(input), null, 2) : "This tool needs the Popcorn MCP server, which is planned. Nothing was sent anywhere.");
+  const run = () => setOut(t.local ? JSON.stringify(t.local(input), null, 2) : "This tool talks to a devnet, so it runs in the MCP server (packages/mcp), not in the browser. It simulates or builds; it never signs or sends.");
   const lines = useMemo(() => (out ?? "").split("\n"), [out]);
 
   return (
@@ -69,7 +79,7 @@ export default function Mcp() {
         <Reveal>
           <div className="flex items-center gap-3">
             <p className="label-mono">MCP server</p>
-            <StatusBadge status="planned" />
+            <StatusBadge status="built" />
           </div>
           <h1 className="text-chrome mt-4 max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Tools that read. Never a key.</h1>
           <p className="mt-5 max-w-[600px] text-[16px] leading-relaxed text-muted-foreground">

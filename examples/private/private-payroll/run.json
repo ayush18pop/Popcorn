@@ -1,0 +1,211 @@
+{
+  "recorded": true,
+  "module": "private-payroll",
+  "network": {
+    "name": "local",
+    "chainId": 1338
+  },
+  "title": "Salary that nobody can trace to the employee",
+  "actors": {
+    "caller": "a key with no ETH",
+    "ruleContract": "stealth vault",
+    "payer": "the stealth vault"
+  },
+  "contracts": {
+    "stealthVault": "0x77347A56A301eBD72328182D836C9Ab9E5d4A2d7",
+    "privatePool": "0x23db6F6776297520C72170D4a983591d1D729eff"
+  },
+  "steps": [
+    {
+      "stage": "build",
+      "frames": [
+        {
+          "mode": "VERIFY",
+          "flags": 3,
+          "target": "stealth vault",
+          "gasLimit": 263181,
+          "data": "0x1ff4e248…(256 bytes)",
+          "explain": "the vault checks the spend proof for this commitment, recipient and fee, then approves execution and payment"
+        },
+        {
+          "mode": "SENDER",
+          "flags": 0,
+          "target": "stealth vault",
+          "gasLimit": 300000,
+          "data": "0xd9292504…(164 bytes)",
+          "explain": "pays balance - fee to the recipient"
+        }
+      ],
+      "world": {
+        "employee address balance": "0 ETH",
+        "stealth vault balance": "1.219885551997236932 ETH"
+      }
+    },
+    {
+      "stage": "validate",
+      "reads": [
+        {
+          "label": "validation (frame 0)",
+          "value": "READY",
+          "gas": 239256
+        }
+      ],
+      "result": "READY",
+      "gasUsed": 239256
+    },
+    {
+      "stage": "admit",
+      "report": {
+        "mempool": "alternative mempool (ERC-8421 sidecar)",
+        "outcome": "accepted",
+        "entity": {
+          "name": "stealth vault",
+          "staked": true,
+          "budget": 2500000,
+          "used": 263181
+        },
+        "checks": [
+          {
+            "rule": "CORE",
+            "verdict": "pass",
+            "detail": "Core's checks passed and the rule's condition returned true"
+          },
+          {
+            "rule": "CANONICAL",
+            "verdict": "warn",
+            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 263181 > 250000 (MAX_VERIFY_GAS)"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "include",
+      "tx": "0xf505140818d6d2c93fa844eb0694acab905b6a88bc05b8a81d2d502648797604",
+      "block": 791,
+      "status": "success",
+      "payer": "stealth vault",
+      "gasUsed": 460335
+    },
+    {
+      "stage": "act",
+      "before": {
+        "employee address balance": "0 ETH",
+        "stealth vault balance": "1.219885551997236932 ETH"
+      },
+      "after": {
+        "employee address balance": "1.1896625 ETH",
+        "stealth vault balance": "0.029302381994014587 ETH"
+      },
+      "events": [
+        "stealth vault: 0xc1adca96",
+        "0xfffffffffffffffffffffffffffffffffffffffe: 0xddf252ad",
+        "stealth vault: 0x737c6922"
+      ]
+    }
+  ],
+  "failing": {
+    "result": "NONCE_USED",
+    "steps": [
+      {
+        "stage": "build",
+        "frames": [
+          {
+            "mode": "VERIFY",
+            "flags": 3,
+            "target": "stealth vault",
+            "gasLimit": 251070,
+            "data": "0x1ff4e248…(256 bytes)"
+          },
+          {
+            "mode": "SENDER",
+            "flags": 0,
+            "target": "stealth vault",
+            "gasLimit": 300000,
+            "data": "0xd9292504…(164 bytes)"
+          }
+        ],
+        "world": {
+          "stealth vault balance": "0.029302381994014587 ETH"
+        }
+      },
+      {
+        "stage": "validate",
+        "reads": [
+          {
+            "label": "frame 0",
+            "value": "Invalid Transaction: Nonce mismatch: expected 1, got 0",
+            "gas": 0
+          }
+        ],
+        "result": "NONCE_USED",
+        "gasUsed": 0
+      },
+      {
+        "stage": "admit",
+        "report": {
+          "mempool": "alternative mempool (ERC-8421 sidecar)",
+          "outcome": "rejected",
+          "checks": [
+            {
+              "rule": "NONCE_USED",
+              "verdict": "fail",
+              "detail": "Invalid Transaction: Nonce mismatch: expected 1, got 0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "story": [
+    {
+      "module": "stealth-address",
+      "role": "receive",
+      "title": "The employer pays the salary to a stealth address only the employee can recognise (ML-KEM announcement)",
+      "tx": "0x2015ae07916d21e39f6960dae20e457940b079fd02b7471cda93a2d02e7f29d2",
+      "block": 787,
+      "gasUsed": 165764,
+      "status": "success"
+    },
+    {
+      "module": "stealth-address",
+      "role": "spend",
+      "title": "The employee moves it to a fresh address with no ETH; the vault pays the gas",
+      "tx": "0xf505140818d6d2c93fa844eb0694acab905b6a88bc05b8a81d2d502648797604",
+      "block": 791,
+      "gasUsed": 460335,
+      "status": "success"
+    },
+    {
+      "module": "private-pool",
+      "role": "hold",
+      "title": "Savings go into the private pool as a note",
+      "tx": "0x67b383c54d2e89b352a56b731e4c63504ca28dfe95e6fd60473f510ee5eb1bdb",
+      "block": 792,
+      "gasUsed": 3166356,
+      "status": "success"
+    },
+    {
+      "module": "association-set",
+      "role": "vouch",
+      "title": "The association-set provider accepts the deposit",
+      "tx": "0x190b4316dfa16b7666e70c0fd2fccb4f4ab4b3ae62b6916807c3a85bad90d122",
+      "block": 793,
+      "gasUsed": 131372,
+      "status": "success"
+    },
+    {
+      "module": "private-pool",
+      "role": "withdraw",
+      "title": "A withdrawal to a fresh address, paid by the pool, sent by a key with no ETH",
+      "tx": "0x5215c296ce6e6233ab77998fffaef29dc03c75d007803bcccebfcd562fc18c0e",
+      "block": 798,
+      "gasUsed": 486648,
+      "status": "success"
+    }
+  ],
+  "sources": {
+    "simulation": "ethrex_simulateFrameTransaction",
+    "admission": "ERC-8421 sidecar (eth_sendFrameTransaction)",
+    "receipt": "eth_getTransactionReceipt"
+  }
+}

@@ -124,25 +124,13 @@ export default function ModulePage({ corner, id }: { corner: string; id: string 
             </section>
           )}
 
-          {/* mempool + gas */}
+          {/* where it runs (decision 67: positive chips only) */}
           <section id="mempool" className="mt-20 scroll-mt-28">
             <Reveal>
-              <p className="label-mono mb-3">Mempool</p>
+              <p className="label-mono mb-3">Runs on</p>
               <div className="glass rounded-[24px] p-6">
                 <MempoolBadges m={m} />
-                <p className="mt-4 text-[14px] leading-relaxed text-foreground/85">{prose(m.sections["Mempool"])}</p>
-                <div className="mt-6 grid gap-2 font-mono text-[11.5px] sm:grid-cols-3">
-                  {[
-                    ["public EIP-8141", m.mempool.public ? "admits" : "refuses"],
-                    ["alt ERC-8421 unstaked", m.mempool.alt === "unstaked" ? "admits" : m.mempool.alt === "staked" ? "needs stake" : "refuses"],
-                    ["alt ERC-8421 staked", m.mempool.alt === "none" ? "refuses" : "admits"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="rounded-2xl border border-[var(--glass-border)] px-4 py-3">
-                      <p className="text-faint">{k}</p>
-                      <p className={cn("mt-1", v === "admits" ? "text-foreground" : "text-muted-foreground")}>{v === "admits" ? "✓ " : "✕ "}{v}</p>
-                    </div>
-                  ))}
-                </div>
+                <p className="mt-4 text-[14px] leading-relaxed text-foreground/85">{prose(m.sections["Runs on"])}</p>
               </div>
             </Reveal>
           </section>

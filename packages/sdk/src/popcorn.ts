@@ -14,6 +14,7 @@ import {
   deployRule,
   canTrigger,
   trigger,
+  triggerAndWait,
   triggerDetailed,
   readRuleContract,
   resolveVia,
@@ -50,6 +51,8 @@ export type PopcornActions = {
   triggerDetailed(ruleContract: Address, o?: TriggerSendOptions): Promise<TriggerResult>;
   /** Raw verdicts for the trigger trigger() would send: ethrex simulate + local sidecar. */
   simulate(ruleContract: Address, o?: SimulateOptions): Promise<SimulateResult>;
+  /** trigger() + watch() until included, resending a dropped trigger that is still valid (at most twice by default). */
+  triggerAndWait(ruleContract: Address, o?: TriggerSendOptions, w?: { resends?: number; watch?: WatchOptions }): Promise<{ hash: Hex; status: FinalWatchStatus; attempts: number }>;
   /** Follows a tx to included / dropped. */
   watch(hash: Hex, o?: WatchOptions): Promise<FinalWatchStatus>;
   /** Runs the rule contract's built-in stake trigger and waits for it (caller-pays: pass the payer). */
@@ -78,6 +81,7 @@ export function popcorn(config: PopcornConfig = {}) {
       triggerDetailed: (k, o) => triggerDetailed(ctx, k, o),
       simulate: (k, o) => simulate(ctx, k, o),
       watch: (h, o) => watch(ctx, h, o),
+      triggerAndWait: (k, o, w) => triggerAndWait(ctx, k, o, w),
       stakeRule: (k, o) => stakeRule(ctx, k, o),
       ownerAction: (k, c, s, o) => ownerAction(ctx, k, c, s, o),
       readOwnerState: (k) => readOwnerState(ctx, k),

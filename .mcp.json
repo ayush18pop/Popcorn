@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "popcorn": {
+      "command": "bun",
+      "args": ["packages/mcp/src/index.ts"]
+    }
+  }
+}

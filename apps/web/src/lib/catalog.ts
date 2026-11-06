@@ -1,31 +1,33 @@
-// The module catalog. docs/catalog/<corner>/<module>.md is the single source: front matter for the facts the site
-// filters and badges on, Markdown sections for the page. Nothing here restates a module; it only parses.
+// The module catalog and the example projects. docs/catalog/<group>/<module>.md and examples/<group>/<id>/project.md are
+// the single sources: front matter for the facts the site filters and badges on, Markdown sections for the page.
 import { parse as parseYaml } from "yaml";
 
 const files = import.meta.glob("../../../../docs/catalog/*/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const projectFiles = import.meta.glob("../../../../examples/*/*/project.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
-export type CornerId = "pause" | "repay" | "exit" | "payout" | "liquidate" | "gas" | "sign" | "build";
+export type GroupId = "private" | "gas" | "protect" | "sign" | "prove";
+/** Kept for the pages that still say corner. */
+export type CornerId = GroupId;
 export type Trigger = "invariant" | "market" | "dependency" | "people" | "proof" | "tickets" | "payment" | "tooling";
 export type Status = "built" | "planned" | "research";
+export type RunsOn = "public" | "alternative" | "alternative-staked";
 
-export interface Corner {
-  id: CornerId;
+export interface Group {
+  id: GroupId;
   name: string;
   does: string;
   triggers: Trigger[];
 }
 
-/** The eight corners (docs/ui-handoff.md, "The 8 corners"). */
-export const CORNERS: Corner[] = [
-  { id: "pause", name: "Pause", does: "Stop the protocol or part of it", triggers: ["invariant", "market", "dependency", "people", "proof"] },
-  { id: "repay", name: "Repay and Top-Up", does: "Rescue a position before liquidation", triggers: ["invariant"] },
-  { id: "exit", name: "Exit", does: "Get funds out before losses", triggers: ["market", "invariant"] },
-  { id: "payout", name: "Pay Out", does: "Bounties and rewards", triggers: ["proof", "people"] },
-  { id: "liquidate", name: "Liquidate Fairly", does: "One winner, losers pay nothing", triggers: ["tickets"] },
-  { id: "gas", name: "Pay Gas", does: "Sponsor gas safely", triggers: ["payment", "invariant", "market"] },
-  { id: "sign", name: "Approve and Sign", does: "Who may authorise: signers and wallet validators", triggers: ["people"] },
-  { id: "build", name: "Build and Check", does: "Core, conditions, simulator, SDK, devnet", triggers: ["tooling"] },
+/** The five use-case groups (decisions 68 and 72), in priority order. */
+export const GROUPS: Group[] = [
+  { id: "protect", name: "Protect a position or protocol", does: "Pause, pay a whitehat, repay or exit before losses, with no keeper", triggers: ["invariant", "market", "dependency", "people", "tickets"] },
+  { id: "private", name: "Move money privately", does: "Receive, hold and send without linking your addresses", triggers: ["proof"] },
+  { id: "gas", name: "Pay for gas", does: "Who pays, without a server or a relayer in the way", triggers: ["payment"] },
+  { id: "sign", name: "Sign and recover", does: "Who may act: keys, post-quantum signatures, guardians", triggers: ["people", "proof"] },
+  { id: "prove", name: "Prove and publish", does: "Evidence a contract can check: proofs, attestations, membership", triggers: ["proof", "people"] },
 ];
+export const CORNERS = GROUPS;
 
 export const TRIGGER_TEXT: Record<Trigger, string> = {
   invariant: "the protocol's own math broke",
@@ -38,51 +40,79 @@ export const TRIGGER_TEXT: Record<Trigger, string> = {
   tooling: "build and test",
 };
 
+export const RUNS_ON_TEXT: Record<RunsOn, string> = {
+  public: "Public mempool",
+  alternative: "Alternative mempool",
+  "alternative-staked": "Alternative mempool, staked",
+};
+
 export interface Module {
   id: string;
   name: string;
-  corner: CornerId;
+  group: GroupId;
+  /** Same as group (older pages). */
+  corner: GroupId;
   trigger: Trigger;
   status: Status;
-  mempool: { public: boolean; alt: "unstaked" | "staked" | "none" };
-  gas: { validation: number; tag: "measured" | "estimated"; network: string } | null;
-  example: string | null; // e.g. "pause/guarded-vault"
+  /** Order within its group (1 = first). */
+  priority: number;
+  runsOn: RunsOn[];
+  usedIn: string[];
+  properties: string[];
+  gas: { validation?: number; total?: number; tag: "measured" | "estimated"; network: string } | null;
+  example: string | null; // e.g. "private/private-payroll"
   related: string[];
   code: string[];
   postQuantum: boolean;
+  schemes: string[];
   /** Markdown sections by heading ("What it does", "When it fires", ...). */
   sections: Record<string, string>;
   summary: string;
 }
 
-function parseFile(path: string, raw: string): Module {
+function split(path: string, raw: string) {
   const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(raw);
-  if (!m) throw new Error(`catalog file without front matter: ${path}`);
-  const fm = parseYaml(m[1]) as Record<string, unknown>;
-  const id = path.split("/").pop()!.replace(/\.md$/, "");
+  if (!m) throw new Error(`file without front matter: ${path}`);
+  return { fm: parseYaml(m[1]!) as Record<string, unknown>, body: m[2]! };
+}
+
+function sectionsOf(body: string) {
   const sections: Record<string, string> = {};
   let cur = "";
-  for (const line of m[2].split("\n")) {
+  for (const line of body.split("\n")) {
     const h = /^## (.+)$/.exec(line);
     if (h) {
-      cur = h[1];
+      cur = h[1]!;
       sections[cur] = "";
     } else if (cur) sections[cur] += line + "\n";
   }
-  for (const k of Object.keys(sections)) sections[k] = sections[k].trim();
+  for (const k of Object.keys(sections)) sections[k] = sections[k]!.trim();
+  return sections;
+}
+
+function parseFile(path: string, raw: string): Module {
+  const { fm, body } = split(path, raw);
+  const id = path.split("/").pop()!.replace(/\.md$/, "");
+  const sections = sectionsOf(body);
   const example = typeof fm.example === "string" ? fm.example.replace(/^examples\//, "").replace(/\/run\.json$/, "") : null;
+  const group = fm.group as GroupId;
   return {
     id,
     name: String(fm.name),
-    corner: fm.corner as CornerId,
+    group,
+    corner: group,
     trigger: fm.trigger as Trigger,
     status: fm.status as Status,
-    mempool: fm.mempool as Module["mempool"],
+    priority: Number(fm.priority ?? 99),
+    runsOn: (fm.runsOn as RunsOn[]) ?? [],
+    usedIn: (fm.usedIn as string[]) ?? [],
+    properties: (fm.properties as string[]) ?? [],
     gas: (fm.gas as Module["gas"]) ?? null,
     example,
     related: (fm.related as string[]) ?? [],
     code: (fm.code as string[]) ?? [],
     postQuantum: Boolean(fm.postQuantum),
+    schemes: (fm.schemes as string[]) ?? [],
     sections,
     summary: sections["What it does"] ?? "",
   };
@@ -90,10 +120,54 @@ function parseFile(path: string, raw: string): Module {
 
 export const MODULES: Module[] = Object.entries(files)
   .map(([p, raw]) => parseFile(p, raw))
-  .sort((a, b) => CORNERS.findIndex((c) => c.id === a.corner) - CORNERS.findIndex((c) => c.id === b.corner) || (a.status === b.status ? 0 : a.status === "built" ? -1 : 1) || a.name.localeCompare(b.name));
+  .sort((a, b) => GROUPS.findIndex((c) => c.id === a.group) - GROUPS.findIndex((c) => c.id === b.group) || a.priority - b.priority);
 
 export const moduleById = (id: string) => MODULES.find((m) => m.id === id);
-export const cornerById = (id: string) => CORNERS.find((c) => c.id === id);
+export const groupById = (id: string) => GROUPS.find((c) => c.id === id);
+export const cornerById = groupById;
+
+// ---------------------------------------------------------------- example projects (decision 70)
+
+export interface Project {
+  /** "<group>/<id>", the run's key too. */
+  key: string;
+  id: string;
+  group: GroupId;
+  name: string;
+  problem: string;
+  modules: { id: string; role: string }[];
+  featured: string;
+  flagship: boolean;
+  order: number;
+  summary: string;
+  /** Built when every module it names is built. */
+  status: Status;
+}
+
+export const PROJECTS: Project[] = Object.entries(projectFiles)
+  .map(([p, raw]) => {
+    const { fm, body } = split(p, raw);
+    const [group, id] = p.split("/").slice(-3, -1) as [GroupId, string];
+    const modules = (fm.modules as { id: string; role: string }[]) ?? [];
+    const project: Project = {
+      key: `${group}/${id}`,
+      id,
+      group,
+      name: String(fm.name),
+      problem: String(fm.problem ?? ""),
+      modules,
+      featured: String(fm.featured ?? ""),
+      flagship: Boolean(fm.flagship),
+      order: Number(fm.order ?? 99),
+      summary: body.trim(),
+      status: modules.every((m) => moduleById(m.id)?.status === "built") ? "built" : "planned",
+    };
+    return project;
+  })
+  .sort((a, b) => a.order - b.order);
+
+export const projectByKey = (key: string) => PROJECTS.find((p) => p.key === key);
+export const projectsUsing = (moduleId: string) => PROJECTS.filter((p) => p.modules.some((m) => m.id === moduleId));
 
 export const REPO = "https://github.com/ayush18pop/Popcorn";
 export const repoFile = (path: string) => `${REPO}/blob/main/${path}`;

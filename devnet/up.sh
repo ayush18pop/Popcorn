@@ -10,6 +10,8 @@
 #   POPCORN_KEYS_DIR       extra keys dir whose *.json addresses get premined (default <repo>/keys if present)
 #   LOCAL_LIBRARY=0        skip replaying the organisers' mainnet contract library (LINK, USDT, ..., Railgun)
 #   LOCAL_LIBRARY=bg       replay it in the background (log: data/predeploy.log) instead of waiting
+#   SIDECAR_UNSTAKED_BUDGET / SIDECAR_STAKED_BUDGET  per-entity validation budgets (default 250000 / 2500000;
+#                          SIDECAR_UNSTAKED_BUDGET=10000000 behaves like the public devnet's sidecar, which has no limit)
 #   LOCAL_GENESIS_DELAY    seconds between genesis and slot 0 (default 30)
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -140,7 +142,7 @@ else
   relayer="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[0]["private_key"])' "$KEYS/dev-9.json")"
   (umask 077; sed -e "s/__RELAYER_KEY__/$relayer/" -e "s#__RPC__#http://127.0.0.1:$RPC_PORT#g" \
       "$here/sidecar-config.json" > "$DATA/sidecar/config.json")
-  (cd "$SIDECAR_DIR" || exit 1; nohup ./skandha standalone --configFile "$DATA/sidecar/config.json" --dataDir "$DATA/sidecar/db" \
+  (cd "$SIDECAR_DIR" || exit 1; SIDECAR_UNSTAKED_BUDGET="${SIDECAR_UNSTAKED_BUDGET:-250000}" SIDECAR_STAKED_BUDGET="${SIDECAR_STAKED_BUDGET:-2500000}" nohup ./skandha standalone --configFile "$DATA/sidecar/config.json" --dataDir "$DATA/sidecar/db" \
      --api.address 127.0.0.1 --api.port "$SIDECAR_PORT" --api.wsPort "$SIDECAR_PORT" \
      --executor.bundlingMode auto --redirectRpc --explorer.enable >"$DATA/sidecar/sidecar.log" 2>&1 &
    echo $! > "$DATA/sidecar/sidecar.pid")

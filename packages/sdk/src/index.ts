@@ -231,3 +231,7 @@ export {
   type RuleSetSpec,
   type RuleSpec,
 } from "./ruleset/index.ts";
+export * from "./sponsor.ts";
+export * from "./privacy.ts";
+export * from "./account.ts";
+export * from "./record.ts";

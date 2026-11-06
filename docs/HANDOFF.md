@@ -83,14 +83,22 @@ proofs and post-quantum signatures.
 - **`packages/simulator`** (152 tests) and **`packages/sdk`** (303 offline tests, examples 01 to 10, network suites for
   signed intents, post-quantum and rule sets).
 - **`devnet/`**: one command local devnet with per-entity budgets.
-- **`apps/web`**: the developer site from an earlier shape (eight corners, 37 catalog modules, sample runs).
+- **Privacy, gas and account modules**: private pool (Groth16 withdrawals, association sets, the pool pays the gas),
+  stealth vault (ML-KEM-768 announcements), open sponsor (Yul payer with a public policy and a membership gate), hidden
+  guardians, quantum switch, forced exit, and the Sovereign Account that assembles them. Forge tests with real proofs;
+  devnet suites `sponsor`, `privacy`, `account`.
+- **`packages/zk`**: membership, withdraw and stealth circuits, a development trusted setup, generated verifiers.
+- **Examples**: five projects recorded on the local devnet by `packages/sdk/scripts/record-examples.ts`.
+- **`packages/mcp`** (read-only) and the `.claude/skills` `popcorn-build` and `popcorn-debug`.
+- **`apps/web`**: modules in five use-case groups, example projects with their recorded transactions.
 
 ## What is not done
 
-1. Rework the site and catalog from eight corners to use-case modules and project examples (decisions 68 to 71).
-2. Build the new modules, starting with the smaller examples or the flagship's parts (undecided; ask).
-3. A recorder that replaces sample runs with real runs, and a CI check that each run matches its contract.
-4. The CLI, the Claude skills and a read-only MCP server (never holds a key; returns unsigned transactions).
+1. Record the Sovereign Account with its ECDSA + Falcon owner: the Falcon signer needs the `polyntt` Python package
+   from ZKNox's repository (installing it needs the owner's approval); the test is written and skips without it.
+2. A CI check that each recorded run matches its contract; a proof-of-exploit bounty example (the exploit witness
+   tooling is not yet in this repository).
+3. The CLI; the Explorer's three lanes for any live transaction (it shows them for the recorded runs today).
 5. Run `client.network.test.ts` against the public devnet; measure the gateway's limit.
 6. Inputs still owed by the owner: the judge's explorer link, final module names and groups.
 

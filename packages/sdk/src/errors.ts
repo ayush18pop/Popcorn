@@ -196,3 +196,14 @@ export class InsufficientPayerBalance extends PopcornError {
     super(`payer ${payer}: balance ${balance} wei < this trigger's max cost ${required} wei`);
   }
 }
+
+/**
+ * deployRule({ stake: true }) ran the stake trigger and it was included, but the registry does not count the rule contract
+ * as staked (its balance during the action was below the stake amount plus the reserved max cost, or the registry refused).
+ * The rule contract exists (`ruleContract`); fund it and call stakeRule(ruleContract).
+ */
+export class StakeNotCounted extends PopcornError {
+  constructor(readonly ruleContract: `0x${string}`, readonly stakeAfter: bigint, readonly amount: bigint, readonly txHash: `0x${string}`) {
+    super(`rule contract ${ruleContract}: stake trigger ${txHash} was included but the registry holds ${stakeAfter} of ${amount} wei; fund it with at least the stake plus one trigger's max cost and call stakeRule(ruleContract)`);
+  }
+}

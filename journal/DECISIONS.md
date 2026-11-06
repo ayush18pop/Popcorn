@@ -638,3 +638,66 @@ owner; and makes every rule public and simulated before signing. Its working nam
 
 **Why.** It is the one example that exercises almost every module, so it shows the library as a whole, and it is built
 last, from modules that each ship and are tested on their own.
+
+## 72. Keep the existing modules, sorted into the five use-case groups
+
+**Context.** Decision 68 grouped modules by use case. The catalog still had 37 entries in eight DeFi corners, some of
+them tooling or small building pieces rather than something a developer would choose.
+
+**Choice.** Every existing module stays and moves into one of the five groups: move money privately, pay for gas,
+protect a position or protocol, sign and recover, prove and publish. Only entries that are not modules leave the list:
+the tooling (Core, SDK, simulator, local devnet, rule sets, CLI, watch bot, storage maps) moves to the SDK and docs
+pages, and the threshold condition stays in the SDK as a block (decision 69). The five post-quantum signers (Falcon,
+WOTS+, FORS, XMSS-style, SPHINCS+-style) become one post-quantum signer module with the scheme as an option, the ECDSA
+signer folds into signed intent, and the reward pool folds into the proof-of-exploit bounty. Their code and tests are
+unchanged.
+
+CROPS stays the reason the library exists and shows as module properties and a line on the landing page, never as
+navigation or as the headline.
+
+**Why.** A developer arrives with a problem, not a property. Five near-identical signer pages, tooling in the module list
+and a vague reward pool made the library look like a pile instead of a set of answers.
+
+## 73. The local sidecar's budgets are settings, and proof modules run with the public devnet's
+
+**Context.** Core requires every trigger's validation frame to declare at least the rule's floor, which includes its
+whole conditionGas. A rule contract that checks a Groth16 proof therefore declares about 280,000 gas on every trigger,
+including its own stake trigger. The local sidecar caps an unstaked entity at 250,000, so such a contract could never
+send the transaction that stakes it. The public devnet's sidecar has no validation limit.
+
+**Choice.** The patched sidecar reads its per-entity budgets from `SIDECAR_UNSTAKED_BUDGET` and `SIDECAR_STAKED_BUDGET`
+(defaults unchanged: 250,000 and 2,500,000). The proof modules (private pool, stealth vault, Sovereign Account, the
+sponsor's membership gate) are tested with `SIDECAR_UNSTAKED_BUDGET=10000000`, which behaves like the public devnet. They
+still stake, because their validation calls a verifier contract and the alternative mempool's storage rules want stake
+for that.
+
+**Why.** It is a gas-limit change only, which the scope rule allows, and it makes the local devnet match the network the
+modules will run on instead of a stricter draft value.
+
+## 74. The MCP server is read-only and the skills ship in the repository
+
+**Choice.** `packages/mcp` reads the catalog, the example projects and their recorded runs, explains Core and sponsor
+codes, and talks to a devnet only to simulate a trigger or to build it unsigned. It holds no key and sends nothing: a
+rule-pays trigger it builds needs no signature, so the user's own wallet or script sends it. The Claude skills
+(`popcorn-build`, `popcorn-debug`) live in `.claude/skills/`, and `.mcp.json` registers the server, so opening the
+repository in Claude Code gives both.
+
+**Why.** An agent that can deploy and sign is a key-management problem; one that can explain and prepare is not. Keeping
+the skills next to the code they describe keeps them in step with it.
+
+## 75. Rule contracts expose their nonce key as a forwarded view
+
+**Context.** The SDK derived a trigger's nonce key by re-running the logic's `__nonceKey` in a shadow contract created by
+eth_call, because Core runs VERIFY only inside a frame transaction and ethrex offers no state override. In the shadow,
+`address(this)` is the shadow's address, so any key derived from the rule contract's address (the guarded vault's bounty
+key) came out wrong and the trigger failed with Core 0x1e. Calling from the rule contract's address is not possible
+either: nodes refuse an eth_call whose sender has code (EIP-3607), even though a frame transaction may have a contract
+sender.
+
+**Choice.** `RuleContract` gains `popcornNonceKey(bytes popArgs)`, an ordinary forwarded view. Core forwards it to the
+logic inside the rule contract, so it runs with the rule contract's real address and storage, the same context as
+VERIFY, and returns what `__nonceKey` would. The SDK reads the key from it with a plain eth_call and keeps the shadow run
+only for logic built before the view existed.
+
+**Why.** It removes a class of wrong keys instead of special-casing one, and it needs nothing from the node beyond
+eth_call.

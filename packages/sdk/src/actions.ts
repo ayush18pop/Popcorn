@@ -6,6 +6,8 @@
 //
 // Truth source: every readiness verdict comes from ethrex_simulateFrameTransaction of the EXACT trigger that trigger() would
 // send (same nonce key, limits, fees, data). The nonce key comes from the shadow run in nonceKey.ts.
+import { OPEN_SPONSOR_ERRORS } from "./sponsor.ts";
+import { StakeNotCounted } from "./errors.ts";
 import {
   BaseError,
   ContractFunctionRevertedError,
@@ -262,6 +264,8 @@ export interface TriggerOptions {
   payerGasLimit?: bigint;
   /** Mode 1: an optional DEFAULT frame after the action (frame 3), the payer's own follow-up; never the rule contract. */
   tail?: TriggerTail;
+  /** Mode 1, payer contract only: frame 1 data its code reads (e.g. an Open Sponsor membership proof). */
+  payerData?: Hex;
 }
 
 export interface PreparedTrigger {
@@ -290,7 +294,7 @@ export interface Readiness {
   ready: boolean;
   /** Core revert code (VERIFY), or null for non-Core reasons. */
   code: number | null;
-  /** CORE_ERRORS name, or READY / NONCE_USED / INSUFFICIENT_BALANCE / INVALID / ACTION_REVERTS. */
+  /** CORE_ERRORS name, or READY / NONCE_USED / INSUFFICIENT_BALANCE / INVALID / ACTION_REVERTS / PAYER_REFUSED (the payer frame said no). */
   name: string;
   reason: string;
   /** Public ethrex's canonical-mempool verdict (e.g. false for reads of another contract's storage). */
@@ -317,6 +321,11 @@ export function readinessOf(sim: SimulationResult): Readiness {
     return { ready: true, code: null, name: actionReverts ? "ACTION_REVERTS" : "READY", reason: actionReverts ? "valid, but the SENDER frame (action) reverts" : "valid", canonical, actionReverts };
   }
   const code = coreCodeOf(sim.revertData);
+  // A refusal from the payer's frame (caller-pays frame 1) is the payer's own code, not Core's: name it as such.
+  if (code !== null && sim.failedFrameIndex === 1) {
+    const sponsorReason = OPEN_SPONSOR_ERRORS[code];
+    return { ready: false, code, name: "PAYER_REFUSED", reason: sponsorReason ? `payer refused: ${sponsorReason} (0x${code.toString(16)})` : `payer refused with 0x${code.toString(16)}`, canonical, actionReverts: false };
+  }
   if (code !== null) {
     const e = coreErrorOf(code);
     return { ready: false, code, name: e?.name ?? "UNKNOWN_CORE_CODE", reason: e?.check ?? `Core revert 0x${code.toString(16)}`, canonical, actionReverts: false };
@@ -362,7 +371,7 @@ export async function prepareTrigger(ctx: PopcornContext, ruleContractAddr: Addr
   const build = async (verifyGasLimit: bigint) => {
     const base = { ruleContract: ruleContract.address, args: a, chainId: ctx.chainId, triggerData, verifyData, nonceKey, verifyGasLimit, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas, core: ruleContract.core };
     let tx = sp
-      ? buildCallerPaysTriggerTx({ ...base, payer: payerAddr!, payerGasLimit: o.payerGasLimit ?? DEFAULT_PAYER_GAS_LIMIT, payerKind: payerSigner ? "eoa" : "contract", ...(o.tail ? { tail: o.tail } : {}) })
+      ? buildCallerPaysTriggerTx({ ...base, payer: payerAddr!, payerGasLimit: o.payerGasLimit ?? DEFAULT_PAYER_GAS_LIMIT, payerKind: payerSigner ? "eoa" : "contract", ...(o.tail ? { tail: o.tail } : {}), ...(o.payerData ? { payerData: o.payerData } : {}) })
       : buildTriggerTx(base);
     if (sp && payerSigner) tx = await signSecp256k1Entry(tx, 1, payerSigner); // the payer signs the whole tx last
     const raw = serializeFrameTx(tx);
@@ -478,6 +487,22 @@ export async function triggerDetailed(ctx: PopcornContext, ruleContract: Address
  */
 export async function trigger(ctx: PopcornContext, ruleContract: Address, o: TriggerSendOptions = {}): Promise<Hex> {
   return (await triggerDetailed(ctx, ruleContract, o)).hash;
+}
+
+/**
+ * trigger() then watch() until included. A relay can give up on a valid transaction ("relayed N times without being
+ * included"); when it is dropped and the same trigger still simulates as valid, it is sent again, at most `resends`
+ * times (default 2). Anything else (refused, or dropped and no longer valid) throws with the reason.
+ */
+export async function triggerAndWait(ctx: PopcornContext, ruleContract: Address, o: TriggerSendOptions = {}, w: { resends?: number; watch?: WatchOptions } = {}): Promise<{ hash: Hex; status: FinalWatchStatus; attempts: number }> {
+  const max = w.resends ?? 2;
+  for (let attempt = 0; ; attempt++) {
+    const hash = await trigger(ctx, ruleContract, o);
+    const status = await watch(ctx, hash, w.watch);
+    if (status.state === "included") return { hash, status, attempts: attempt + 1 };
+    const again = attempt < max ? await canTrigger(ctx, ruleContract, o) : null;
+    if (!again?.ready) throw new PopcornError(`trigger ${hash} was ${status.state}${"reason" in status ? ` (${status.reason})` : ""}${again ? `; it no longer simulates as valid: ${again.name} ${again.reason}` : ""}`);
+  }
 }
 
 // ---------------------------------------------------------------- simulate
@@ -829,6 +854,10 @@ export async function deployRule(ctx: PopcornContext, o: DeployRuleOptions): Pro
   const pcap = BigInt(publicPrefixBudget(ctx.devnet));
   if (pg > pcap) warnings.push(pcap === PUBLIC_PREFIX_BUDGET ? `prefixGasAtCaps ${pg} > ${pcap}: triggers at the data caps cannot use public ethrex / the upstream sidecar (local / patched sidecars: 250k unstaked, 2.5M staked)` : `prefixGasAtCaps ${pg} > ${pcap}: triggers at the data caps cannot use ${ctx.devnet.name}'s ethrex mempool (its --mempool.max-verify-gas)`);
   const out: DeployRuleResult = { ruleContract, logic, args, argsHex, salt, txHash, logicTxHash, fund, minOperatingBalance, receipt, warnings };
-  if (o.stake) out.stake = await stakeRule(ctx, ruleContract, stakePayer ? { payer: stakePayer as HashSigner } : {});
+  if (o.stake) {
+    out.stake = await stakeRule(ctx, ruleContract, stakePayer ? { payer: stakePayer as HashSigner } : {});
+    // never report a deployment as staked when the registry says otherwise: an unstaked proof module cannot even trigger
+    if (!out.stake.staked) throw new StakeNotCounted(ruleContract, out.stake.stakeAfter, out.stake.amount, out.stake.txHash);
+  }
   return out;
 }

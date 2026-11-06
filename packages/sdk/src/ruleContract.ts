@@ -296,6 +296,8 @@ export interface CallerPaysTriggerTxInput extends TriggerTxInput {
   /** "eoa" (default): signatures = [ARBITRARY placeholder, SECP256K1 payer (unsigned; sign with signSecp256k1Entry(tx, 1, payer))].
    *  "contract": no signatures (the payer contract's code decides). */
   payerKind?: "eoa" | "contract";
+  /** Frame 1 (payer VERIFY) data, read by a payer contract (e.g. an Open Sponsor membership proof). Default empty. */
+  payerData?: Hex;
   tail?: TriggerTail;
 }
 
@@ -312,7 +314,7 @@ export const DEFAULT_PAYER_GAS_LIMIT = 30_000n;
 /**
  * The exact caller-pays trigger (contracts/core/LAYOUT.md "VERIFY, caller-pays", as in the recorded EOA-payer transaction):
  *   frame 0: VERIFY, flags 2, target null (= rule contract), exec verifyGasLimit, state 0, data verifyData   (approves execution)
- *   frame 1: VERIFY, flags 1, target payer, exec payerGasLimit, state 0, data empty                    (approves payment)
+ *   frame 1: VERIFY, flags 1, target payer, exec payerGasLimit, state 0, data payerData (default empty)                   (approves payment)
  *   frame 2: SENDER, flags 0, target null, exec = maxGasPerFrame, state = maxStateGasPerFrame, data pop(triggerData)
  *   frame 3: optional DEFAULT, flags 0, target tail.target (≠ rule contract), value 0
  *   sender = rule contract, nonce_keys [key], seq 0. EOA payer: signatures [ARBITRARY msg=PAYER_PLACEHOLDER_MSG (signed),
@@ -322,7 +324,7 @@ export const DEFAULT_PAYER_GAS_LIMIT = 30_000n;
 export function buildCallerPaysTriggerTx(i: CallerPaysTriggerTxInput): FrameTx {
   const frames: Frame[] = [
     { mode: FrameMode.VERIFY, flags: FrameFlags.APPROVE_EXECUTION, target: null, gasLimit: i.verifyGasLimit, stateGasLimit: 0n, value: 0n, data: i.verifyData },
-    { mode: FrameMode.VERIFY, flags: FrameFlags.APPROVE_PAYMENT, target: getAddress(i.payer), gasLimit: i.payerGasLimit, stateGasLimit: 0n, value: 0n, data: "0x" },
+    { mode: FrameMode.VERIFY, flags: FrameFlags.APPROVE_PAYMENT, target: getAddress(i.payer), gasLimit: i.payerGasLimit, stateGasLimit: 0n, value: 0n, data: i.payerData ?? "0x" },
     { mode: FrameMode.SENDER, flags: FrameFlags.NONE, target: null, gasLimit: i.args.maxGasPerFrame, stateGasLimit: i.args.maxStateGasPerFrame, value: 0n, data: triggerCalldata(i.triggerData, i.core) },
   ];
   if (i.tail) {
