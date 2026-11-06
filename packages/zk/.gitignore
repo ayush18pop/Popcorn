@@ -1,0 +1,4 @@
+build/
+setup/*.ptau
+node_modules/
+setup/.ptau-verified
