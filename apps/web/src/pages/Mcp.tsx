@@ -13,14 +13,14 @@ import { cn } from "@/lib/utils";
 
 const TOOLS: { name: string; does: string; input: string; local?: (arg: string) => unknown }[] = [
   {
-    name: "list_modules", does: "The blocks and ready-made builds, optionally for one shape.", input: `{ "shape": "check" }`,
+    name: "list_blocks", does: "The blocks and ready-made builds, optionally for one shape.", input: `{ "shape": "check" }`,
     local: (a) => {
       const f = safe(a) as { shape?: string };
       return CATALOG.filter((m) => !f.shape || m.shape === f.shape).map((m) => ({ id: m.id, name: m.name, shape: m.shape, tier: m.tier, status: m.status, runsOn: m.runsOn }));
     },
   },
   {
-    name: "get_module", does: "One block's page: what it does, its inputs, where it runs, code, limits.", input: `{ "id": "public-gas-sponsor" }`,
+    name: "get_block", does: "One block's page: what it does, its inputs, where it runs, code, limits.", input: `{ "id": "public-gas-sponsor" }`,
     local: (a) => {
       const m = CATALOG.find((x) => x.id === (safe(a) as { id?: string }).id);
       return m
@@ -112,7 +112,7 @@ export default function Mcp() {
             <p className="label-mono mb-3">Tool inspector</p>
             <h2 className="text-chrome text-[30px] font-semibold tracking-[-0.03em]">Try the tools.</h2>
             <p className="mt-2 max-w-[600px] text-[14px] text-muted-foreground">
-              <code className="font-mono">list_modules</code> and <code className="font-mono">get_module</code> run here, on the catalog this site ships. The others need the server.
+              <code className="font-mono">list_blocks</code> and <code className="font-mono">get_block</code> run here, on the catalog this site ships. The others need the server.
             </p>
           </Reveal>
           <Reveal delay={0.1} className="mt-8">

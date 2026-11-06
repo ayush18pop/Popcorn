@@ -12,21 +12,21 @@ import { cn } from "@/lib/utils";
 // Code loads them, together with the read-only MCP server from .mcp.json.
 
 const SKILLS: { id: string; groups: ShapeId[]; does: string; tools: string[] }[] = [
-  { id: "popcorn-build", groups: ["check", "join", "action", "payer"], does: "Turns a problem (“pay salaries privately”, “free transactions for our members”) into blocks, starts from the closest example project, deploys it on the local devnet and runs it.", tools: ["list_examples", "how_to_build", "get_module", "can_trigger", "build_trigger"] },
+  { id: "popcorn-build", groups: ["check", "join", "action", "payer"], does: "Turns a problem (“pay salaries privately”, “free transactions for our members”) into blocks, starts from the closest example project, deploys it on the local devnet and runs it.", tools: ["list_examples", "how_to_build", "get_block", "can_trigger", "build_trigger"] },
   { id: "popcorn-debug", groups: ["check", "payer"], does: "Explains why a trigger was refused: which frame said no, the code in plain words, who paid (usually nobody) and the one change that fixes it.", tools: ["can_trigger", "explain_code", "rule_contract_info"] },
 ];
 
 const CONVO = [
   { who: "you", text: "Our community wants free transactions for members, without a paymaster server that can cut people off." },
-  { who: "claude", text: "That is the Open Gas Network example: an Open Sponsor whose policy is public code, a membership proof so each member admits one account without saying who, and caller-pays for your app. I'll run it on your local devnet." },
+  { who: "claude", text: "That is the Open Gas Network example: a Public Gas Sponsor whose policy is public code, Prove You're In The Group so each member admits one account without saying who, and an app account that lets the sponsor pay. I'll run it on your local devnet." },
   { who: "claude", text: "can_trigger: ready. Sent from a key with no ETH and included; the sponsor paid, 839,489 gas. A second account from the same member is refused by the sponsor with 0x6d: nullifier already used." },
 ];
 
 const RULE = `# .claude/skills/popcorn-build/SKILL.md
 name: popcorn-build
-description: Build something with Popcorn: turn a problem into the right
-  modules, start from the closest example project, deploy it to the local
-  devnet and run it.
+description: Build something with Popcorn: turn a problem into a build
+  made of blocks, start from the closest example project, deploy it to the
+  local devnet and run it.
 
 # the commands it runs
 bun packages/sdk/scripts/record-examples.ts open-gas-network
