@@ -754,3 +754,14 @@ owner's, allowed only when None Of (below the floor) holds. The trigger formats 
 
 **Why.** Pausing and paying are each reusable on their own (an anonymous security council pauses without paying; a
 reward needs no pause), and keeping the circuit's inputs fixed avoids a new trusted setup.
+
+## 80. Sovereign Account is a composition of blocks with the same interface
+
+**Choice.** The account is Signed Instruction and Make A Call (spends), Anonymous Group Vote (the generic form of
+hidden guardians), Hand Over To A New Key (delay and contest), Switch To Quantum-Safe Only and Exit To An Address
+(forced exit and migrate). The build only wires them: a quorum flips the switch or proposes the new key, a contest opens
+the exit. Its trigger formats, rule ids and the views the SDK reads are unchanged; Auto-Repay Loan (the partial repay
+shield) is rebuilt the same way.
+
+**Why.** Keeping the interface lets the existing proofs, SDK helpers and suites check the rebuild unchanged, while every
+part becomes reusable: Walkaway Exit and the Quantum-Ready Treasury are the same blocks in other combinations.
