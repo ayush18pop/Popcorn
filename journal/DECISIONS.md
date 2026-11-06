@@ -603,3 +603,14 @@ and recover, prove and publish. CROPS stays as the library's purpose and as lang
 a navigation structure. This supersedes decision 65's grouping.
 
 **Why.** Navigation should match how a developer thinks about the problem they have.
+
+## 69. Blocks stay in the SDK; the interface shows modules and examples
+
+**Context.** The first structure had three levels: blocks, modules and examples, with five types of block.
+
+**Choice.** Blocks, the small checks and actions every module is made of, stay in the SDK and are never shown in the
+site, the Explorer or the docs navigation. The interface has two things: modules, and examples. A rule is shown as a
+sentence with a plain-language trail of steps.
+
+**Why.** Block names are internal detail. A developer choosing what to build does not need them, and showing them made the
+product look more complicated than it is.
