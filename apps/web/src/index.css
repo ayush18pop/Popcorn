@@ -1,0 +1,210 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource/geist-pixel";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Popcorn tokens: black, grey, white. Dark first. */
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --surface: #fafafa;
+  --raised: #ffffff;
+  --card: #fafafa;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #fafafa;
+  --secondary: #f1f1f1;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f1f1f1;
+  --muted-foreground: #6b6b6b;
+  --faint: #a8a8a8;
+  --accent: #f1f1f1;
+  --accent-foreground: #0a0a0a;
+  --destructive: #0a0a0a;
+  --border: #e5e5e5;
+  --border-strong: #cfcfcf;
+  --input: #e5e5e5;
+  --ring: #8a8a8a;
+  --radius: 0.5rem;
+  --hatch: rgba(0, 0, 0, 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-hi: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 40px -16px rgba(0, 0, 0, 0.18);
+}
+
+.dark {
+  --background: #060606;
+  --foreground: #ededed;
+  --surface: #111111;
+  --raised: #171717;
+  --card: #111111;
+  --card-foreground: #ededed;
+  --popover: #111111;
+  --popover-foreground: #ededed;
+  --primary: #ededed;
+  --primary-foreground: #0a0a0a;
+  --secondary: #171717;
+  --secondary-foreground: #ededed;
+  --muted: #171717;
+  --muted-foreground: #8a8a8a;
+  --faint: #5c5c5c;
+  --accent: #1c1c1c;
+  --accent-foreground: #ededed;
+  --destructive: #ededed;
+  --border: #232323;
+  --border-strong: #333333;
+  --input: #232323;
+  --ring: #5c5c5c;
+  --hatch: rgba(255, 255, 255, 0.045);
+  --glass-bg: rgba(255, 255, 255, 0.035);
+  --glass-strong: rgba(18, 18, 18, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-hi: rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 1px 1px rgba(0, 0, 0, 0.4), 0 20px 60px -20px rgba(0, 0, 0, 0.8);
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono Variable", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --animate-aurora: aurora 60s linear infinite;
+  @keyframes aurora {
+    from { background-position: 50% 50%, 50% 50%; }
+    to { background-position: 350% 50%, 350% 50%; }
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { color-scheme: dark light; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum", "cv11";
+    letter-spacing: -0.005em;
+  }
+  ::selection { background: var(--foreground); color: var(--background); }
+}
+
+/* hatched page, from the ink-orbit reference */
+.hatch {
+  background-image: repeating-linear-gradient(135deg, var(--hatch) 0 1px, transparent 1px 10px);
+}
+
+/* glass surfaces */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-hi), var(--glass-shadow);
+}
+.glass-strong {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-hi), var(--glass-shadow);
+}
+/* chrome text for small accents */
+.text-chrome {
+  background: linear-gradient(180deg, var(--foreground) 0%, var(--foreground) 45%, var(--muted-foreground) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* spotlight: a soft light and a gradient border that follow the cursor */
+.spotlight { position: relative; isolation: isolate; }
+.spotlight::before, .spotlight::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity .35s ease;
+}
+.spotlight::before {
+  z-index: -1;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--foreground) 7%, transparent), transparent 60%);
+}
+.spotlight::after {
+  padding: 1px;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--foreground) 55%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.spotlight:hover::before, .spotlight:hover::after { opacity: 1; }
+
+/* rotating gradient border */
+@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.border-spin { position: relative; }
+.border-spin::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: conic-gradient(from var(--angle), transparent 0deg, color-mix(in srgb, var(--foreground) 70%, transparent) 40deg, transparent 90deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: spin-border 6s linear infinite;
+}
+@keyframes spin-border { to { --angle: 360deg; } }
+
+/* solid offset shadow that presses on click */
+.btn-solid {
+  box-shadow: 4px 4px 0 0 var(--border-strong);
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s;
+}
+.btn-solid:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 0 var(--faint); }
+.btn-solid:active { transform: translate(4px, 4px); box-shadow: 0 0 0 0 var(--faint); }
+
+/* custom cursor: hide the native one only for fine pointers */
+@media (pointer: fine) {
+  html.has-cursor, html.has-cursor * { cursor: none !important; }
+}
+
+/* pixel numerals: chrome gradient plus a light that sweeps across now and then */
+.numeral-sheen {
+  background:
+    linear-gradient(105deg, transparent 40%, color-mix(in srgb, var(--foreground) 95%, transparent) 50%, transparent 60%) 200% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, var(--foreground) 0%, var(--foreground) 40%, var(--faint) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: sheen 5s ease-in-out infinite;
+}
+@keyframes sheen {
+  0%, 55% { background-position: 200% 0, 0 0; }
+  100% { background-position: -100% 0, 0 0; }
+}
+
+.label-mono {
+  font-family: var(--font-mono); font-size: 11px; line-height: 16px;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

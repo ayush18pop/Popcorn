@@ -10,3 +10,7 @@ keys/
 bun.lockb
 .env.local
 test/results/
+
+# site build
+apps/web/dist/
+*.tsbuildinfo
