@@ -12,8 +12,8 @@
     "payer": "the account"
   },
   "contracts": {
-    "account": "0x3274C4818a592138f330D6E87d19355B7d3fcD08",
-    "stealthVault": "0x9CBE28B22Dc2043332a3c1223dc62999f5F526b7"
+    "account": "0xb32917498b6defDb0d9217ff5d0532Dd442f8dba",
+    "stealthVault": "0x564Fb3e2b6074D978EBBb138147Ba9aac9692fc2"
   },
   "owner": "ECDSA in this run; the flagship owner is ECDSA + Falcon-512 (recorded when the Falcon signer is installed)",
   "steps": [
@@ -47,11 +47,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 53409
+          "gas": 53975
         }
       ],
       "result": "READY",
-      "gasUsed": 53409
+      "gasUsed": 53975
     },
     {
       "stage": "admit",
@@ -80,11 +80,11 @@
     },
     {
       "stage": "include",
-      "tx": "0xdeac3520c83b811e6c80f765d402093332fdd91b0aa72d2ee50c165a1627ca3b",
-      "block": 6341,
+      "tx": "0x5d22d1cb9276507e3c798134640e56a8e37bb92f330cfb5aae676dac809e338c",
+      "block": 6733,
       "status": "success",
       "payer": "sovereign account",
-      "gasUsed": 384403
+      "gasUsed": 384981
     },
     {
       "stage": "act",
@@ -92,7 +92,7 @@
         "account balance": "3.699723205654299625 ETH"
       },
       "after": {
-        "account balance": "3.5994929189369608 ETH"
+        "account balance": "3.59949257267087385 ETH"
       },
       "events": [
         "sovereign account: 0xf113539f",
@@ -125,7 +125,7 @@
           }
         ],
         "world": {
-          "account balance": "3.5994929189369608 ETH"
+          "account balance": "3.59949257267087385 ETH"
         }
       },
       {
@@ -161,8 +161,8 @@
       "module": "sovereign-account",
       "role": "set up",
       "title": "Owner key, post-quantum backup, hidden guardians and an exit address, committed once",
-      "tx": "0xc3ff40328fbc9b04338ef85c647fadc4e8204ae56940f83a71973ac451b5b6f1",
-      "block": 6330,
+      "tx": "0x9b1eeadf52700ec5d65568084a766c5e1c040e222bede451fb81d8a931938bd0",
+      "block": 6722,
       "gasUsed": 689263,
       "status": "success"
     },
@@ -170,54 +170,54 @@
       "module": "stealth-vault",
       "role": "receive",
       "title": "Someone pays the account's stealth meta-address (ML-KEM)",
-      "tx": "0x7e2bfd89ed26acef64521d1ad066ec7a7411d08556476a1e5f417467604efb62",
-      "block": 6337,
-      "gasUsed": 165728,
+      "tx": "0x85f76cb2484a0a818e3db33d039e3cf04d6507666fa275b86c46dac4d3037700",
+      "block": 6729,
+      "gasUsed": 165824,
       "status": "success"
     },
     {
       "module": "stealth-vault",
       "role": "sweep",
       "title": "The account sweeps it in; the vault pays the gas",
-      "tx": "0x45bd0498b4202964ec4f16aee8395885ae3cd22e5dc1169c81fd668c6ca3264d",
-      "block": 6339,
-      "gasUsed": 276887,
+      "tx": "0xfab5044cd0fa64b05c821f00abeb7b852e532bbff17d272e4aaa6cb657fa29df",
+      "block": 6731,
+      "gasUsed": 276899,
       "status": "success"
     },
     {
       "module": "signed-instruction",
       "role": "spend",
       "title": "The owner spends; the account pays its own gas and the sender holds no ETH",
-      "tx": "0xdeac3520c83b811e6c80f765d402093332fdd91b0aa72d2ee50c165a1627ca3b",
-      "block": 6341,
-      "gasUsed": 384403,
+      "tx": "0x5d22d1cb9276507e3c798134640e56a8e37bb92f330cfb5aae676dac809e338c",
+      "block": 6733,
+      "gasUsed": 384981,
       "status": "success"
     },
     {
       "module": "anonymous-group-vote",
       "role": "vote",
       "title": "Guardians, unnamed, vote to flip the quantum switch",
-      "tx": "0x177544c769e24023dbce220ecbfcd9104c7c642e6465ada933bc0d35bceacd38",
-      "block": 6348,
-      "gasUsed": 391498,
+      "tx": "0x92af8a4cd9f1ca8b94548e0b0d149a7f5b681099f3f42daa6485945a62cb8d03",
+      "block": 6736,
+      "gasUsed": 391486,
       "status": "success"
     },
     {
       "module": "switch-to-quantum-safe-only",
       "role": "switch",
       "title": "Quorum: owner signatures stop working",
-      "tx": "0x20dd989894269ca0538bdb3563c5fef0e76d18a461e6a26319bfe4640440300d",
-      "block": 6352,
-      "gasUsed": 514713,
+      "tx": "0x71bd83d721fedce25e2b3127663671a53dfc01d947edb63875fa3acd2ea4ec9c",
+      "block": 6738,
+      "gasUsed": 514701,
       "status": "success"
     },
     {
       "module": "exit-to-an-address",
       "role": "migrate",
       "title": "The committed post-quantum key moves everything to its new home",
-      "tx": "0x5956f5743e8317a6eab09974c952f6ae402fd4acaa8b84721ce4e78c9aa55db3",
-      "block": 6354,
-      "gasUsed": 490861,
+      "tx": "0x979175a5dfa27ddffb46f0420db0c024788efccef77d80bac05ac5e42dd8cdbe",
+      "block": 6741,
+      "gasUsed": 496463,
       "status": "success"
     }
   ],

@@ -12,7 +12,7 @@
     "payer": "the treasury"
   },
   "contracts": {
-    "treasury": "0xBA35Df259839fad21FF6424dC5a4EBD2968C38Cc"
+    "treasury": "0x30c9608b47d18F0572B0a95DA537390A55F407d6"
   },
   "steps": [
     {
@@ -36,7 +36,7 @@
         }
       ],
       "world": {
-        "treasury balance": "3.109287524634106575 ETH",
+        "treasury balance": "3.109287197538460425 ETH",
         "post-quantum target": "0 ETH"
       }
     },
@@ -46,11 +46,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 133417
+          "gas": 125003
         }
       ],
       "result": "READY",
-      "gasUsed": 133417
+      "gasUsed": 125003
     },
     {
       "stage": "admit",
@@ -79,21 +79,21 @@
     },
     {
       "stage": "include",
-      "tx": "0x021865100b40700d105df0276c86da7e21174c182249d23674d4282a18739458",
-      "block": 6321,
+      "tx": "0xe40a739add022f238cb1f36c7048053f773b19c410c1279e69a902275e88b059",
+      "block": 6713,
       "status": "success",
       "payer": "treasury",
-      "gasUsed": 501415
+      "gasUsed": 492965
     },
     {
       "stage": "act",
       "before": {
-        "treasury balance": "3.109287524634106575 ETH",
+        "treasury balance": "3.109287197538460425 ETH",
         "post-quantum target": "0 ETH"
       },
       "after": {
-        "treasury balance": "0.002632339389389059 ETH",
-        "post-quantum target": "3.106354799414288391 ETH"
+        "treasury balance": "0.002637380017166657 ETH",
+        "post-quantum target": "3.106354493885388393 ETH"
       },
       "events": [
         "treasury: 0x8b80bd19",
@@ -126,7 +126,7 @@
           }
         ],
         "world": {
-          "treasury balance": "3.109287524634106575 ETH",
+          "treasury balance": "3.109287197538460425 ETH",
           "quantum switch": "on"
         }
       },
@@ -163,8 +163,8 @@
       "module": "quantum-ready-treasury",
       "role": "set up",
       "title": "The treasury commits its owner key, a hidden post-quantum backup key and its guardians",
-      "tx": "0x06286cc921e372ad65665f666b74e437375e5ab5a424693803dcb067c96355fe",
-      "block": 6314,
+      "tx": "0x40ffca5949936ec15d52bfa66055df37dbc711a9e951a4173150d9b4525035df",
+      "block": 6702,
       "gasUsed": 689251,
       "status": "success"
     },
@@ -172,36 +172,36 @@
       "module": "signed-instruction",
       "role": "spend",
       "title": "A normal payment signed by the owner",
-      "tx": "0xf47b4d4131abf0fd6e38abdab5e84a5556d7d9aff9ab3000afde52d1f9006e5f",
-      "block": 6316,
-      "gasUsed": 384435,
+      "tx": "0x30a6571d926ed6a1969c5018d12b02ea4ee06212acfbf73d3eecc10ed47ec2c3",
+      "block": 6706,
+      "gasUsed": 384981,
       "status": "success"
     },
     {
       "module": "anonymous-group-vote",
       "role": "vote",
       "title": "A guardian votes to flip the quantum switch, without revealing who",
-      "tx": "0x8581f8a3d0a3c8292d5f2856cf1f43519bdfd5cd633ae7c3b10dea966ec4cbfd",
-      "block": 6318,
-      "gasUsed": 391498,
+      "tx": "0x9fa3ef753f42114382ce3a224a7ec27fa03bfc840a84d6501caa155b91f1052f",
+      "block": 6708,
+      "gasUsed": 391474,
       "status": "success"
     },
     {
       "module": "switch-to-quantum-safe-only",
       "role": "switch",
       "title": "The second vote reaches the quorum: from now on ECDSA alone moves nothing",
-      "tx": "0x42962045c3e4ad39cb3665d80833d767f7d56d7f7ce0ead469559b7e95b90ca0",
-      "block": 6319,
-      "gasUsed": 514689,
+      "tx": "0xc49e5ade2be6e553275cef45da336fe40b58b29d67a9119aaf5b4d161b3f4e26",
+      "block": 6711,
+      "gasUsed": 514713,
       "status": "success"
     },
     {
       "module": "exit-to-an-address",
       "role": "migrate",
       "title": "The committed WOTS+ backup key moves everything to a post-quantum account",
-      "tx": "0x021865100b40700d105df0276c86da7e21174c182249d23674d4282a18739458",
-      "block": 6321,
-      "gasUsed": 501415,
+      "tx": "0xe40a739add022f238cb1f36c7048053f773b19c410c1279e69a902275e88b059",
+      "block": 6713,
+      "gasUsed": 492965,
       "status": "success"
     }
   ],

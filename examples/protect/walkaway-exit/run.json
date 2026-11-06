@@ -12,7 +12,7 @@
     "payer": "the account"
   },
   "contracts": {
-    "account": "0xA69512Bc58A7F51e04fBe03176e0cD15F7C4EE51"
+    "account": "0x6b3e340B820Da8c0fEA2428138C7d1f7903611Ac"
   },
   "steps": [
     {
@@ -36,7 +36,7 @@
         }
       ],
       "world": {
-        "account balance": "3.209450219372565975 ETH",
+        "account balance": "3.209450240939311875 ETH",
         "exit address": "0 ETH"
       }
     },
@@ -79,8 +79,8 @@
     },
     {
       "stage": "include",
-      "tx": "0x36d5339e8222fa293440707f721778b451b588e0d2eda05ff305697ef30702c1",
-      "block": 6304,
+      "tx": "0x909b501de9d6e67ce1e0b59d5047e83ee7d301c12f15089fcea2212ea0482f95",
+      "block": 6691,
       "status": "success",
       "payer": "account",
       "gasUsed": 362276
@@ -88,12 +88,12 @@
     {
       "stage": "act",
       "before": {
-        "account balance": "3.209450219372565975 ETH",
+        "account balance": "3.209450240939311875 ETH",
         "exit address": "0 ETH"
       },
       "after": {
         "account balance": "0.00268870467855962 ETH",
-        "exit address": "3.206544483737404455 ETH"
+        "exit address": "3.206544505304150355 ETH"
       },
       "events": [
         "account: 0x920bb94e",
@@ -162,44 +162,44 @@
       "module": "exit-to-an-address",
       "role": "commit",
       "title": "The owner commits an exit address when the account is created",
-      "tx": "0x834d406a24ae6e1b86875e840e833f2645a54a2d2d6290317f557780b0f0f46d",
-      "block": 6297,
-      "gasUsed": 689263,
+      "tx": "0x20c9b7d6d9b6727b5de91c024180204f5a55100cf45956dfb580019364e5c3c3",
+      "block": 6679,
+      "gasUsed": 689251,
       "status": "success"
     },
     {
       "module": "anonymous-group-vote",
       "role": "vote",
       "title": "A guardian votes to hand the account to a new key",
-      "tx": "0x9bd36ec541ddf8f41ae14e7b05f9b3d89ea20b179283b721cff0565fab3b28d7",
-      "block": 6299,
-      "gasUsed": 391498,
+      "tx": "0xd620393fb51be448f5698847c3142054d399d3e13ab9f32d6f775154607c98ba",
+      "block": 6683,
+      "gasUsed": 391474,
       "status": "success"
     },
     {
       "module": "anonymous-group-vote",
       "role": "quorum",
       "title": "A second vote reaches the quorum: the takeover waits out its delay",
-      "tx": "0xa975653dc437cf8604db8f6ebd59ee7d1410310f357168f0b66256a7d6db89ed",
-      "block": 6301,
-      "gasUsed": 627548,
+      "tx": "0x12a966dc4429a410a20851eb70a9066e96d6d93b267d50494485ef7bd30119f9",
+      "block": 6686,
+      "gasUsed": 627536,
       "status": "success"
     },
     {
       "module": "hand-over-to-a-new-key",
       "role": "contest",
       "title": "The real owner signs that this was not them: the account is contested",
-      "tx": "0x98bc8695ab693845207622da495942696016bc5894fd5469c32807bfcee8d153",
-      "block": 6302,
-      "gasUsed": 150431,
+      "tx": "0x21e0f99e15e9f171511eb693bbb721dff768fce590997a51ae479394a13f9a1a",
+      "block": 6687,
+      "gasUsed": 150411,
       "status": "success"
     },
     {
       "module": "exit-to-an-address",
       "role": "exit",
       "title": "Anyone, here a key with no ETH, sends the funds to the owner's committed exit address",
-      "tx": "0x36d5339e8222fa293440707f721778b451b588e0d2eda05ff305697ef30702c1",
-      "block": 6304,
+      "tx": "0x909b501de9d6e67ce1e0b59d5047e83ee7d301c12f15089fcea2212ea0482f95",
+      "block": 6691,
       "gasUsed": 362276,
       "status": "success"
     }
