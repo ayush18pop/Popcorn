@@ -1,0 +1,70 @@
+{
+  "module": "guarded-vault",
+  "recorded": false,
+  "note": "Sample run in the recorder's format. Values follow contracts/docs/guarded-vault.md; gas and block numbers are placeholders until packages/sdk/scripts/record-run.ts replaces this file with a recorded run.",
+  "network": { "name": "local", "chainId": 1338 },
+  "title": "A vault pauses itself mid-drain",
+  "actors": { "caller": "reporter, 0 ETH", "ruleContract": "GuardedVault", "payer": "the vault" },
+  "steps": [
+    {
+      "stage": "build",
+      "frames": [
+        { "mode": "VERIFY", "flags": 3, "target": "rule contract", "gasLimit": 37417, "data": "0x", "explain": "Core checks the layout, the key and the condition, then approves execution and payment" },
+        { "mode": "SENDER", "flags": 0, "target": "rule contract", "gasLimit": 200000, "data": "0xd9292504…reporter", "explain": "pop(bytes): the trigger data is abi.encode(reporter)" }
+      ],
+      "world": { "caller balance": "0 ETH", "vault balance": "0.2 ETH", "paused": "false" }
+    },
+    {
+      "stage": "validate",
+      "reads": [
+        { "label": "nonce key = keccak(\"pause\", vault, pauseEpoch 0)", "value": "0x5c1f…a2", "gas": 3200 },
+        { "label": "totalAssets T", "value": "880e18", "gas": 2100 },
+        { "label": "totalSupply S", "value": "1000e18", "gas": 0 },
+        { "label": "minAssetsPerShare M", "value": "1e18", "gas": 2100 },
+        { "label": "compare T·1e18 < S·M", "value": "880e36 < 1000e36 → true", "gas": 120 }
+      ],
+      "result": "READY",
+      "gasUsed": 21840
+    },
+    {
+      "stage": "admit",
+      "report": {
+        "mempool": "public EIP-8141",
+        "outcome": "accepted",
+        "entity": { "name": "rule contract", "staked": false, "budget": 100000, "used": 21840 },
+        "checks": [
+          { "rule": "SIDECAR_STRUCTURE_ATOMIC", "verdict": "pass", "detail": "two frames, VERIFY then SENDER, both on the rule contract" },
+          { "rule": "SIDECAR_STO_FORBIDDEN_READ", "verdict": "pass", "detail": "reads only the sender's own storage" },
+          { "rule": "ETHREX_PREFIX_BUDGET", "verdict": "pass", "detail": "VERIFY prefix within 100,000" },
+          { "rule": "SIDECAR_BUDGET_010", "verdict": "pass", "detail": "entity within its validation budget" }
+        ]
+      }
+    },
+    { "stage": "include", "tx": "0x…", "block": 0, "status": "success", "payer": "rule contract", "gasUsed": 88412 },
+    {
+      "stage": "act",
+      "before": { "paused": "false", "pauseEpoch": "0", "reporter reward": "0" },
+      "after": { "paused": "true", "pauseEpoch": "1", "reporter reward": "paid from the pool" },
+      "events": ["Paused(epoch 0)", "attacker's next withdraw reverts: Paused()"]
+    }
+  ],
+  "failing": {
+    "result": "CONDITION_FALSE",
+    "core": "0x22",
+    "steps": [
+      { "stage": "build", "frames": [
+        { "mode": "VERIFY", "flags": 3, "target": "rule contract", "gasLimit": 37417, "data": "0x", "explain": "same layout" },
+        { "mode": "SENDER", "flags": 0, "target": "rule contract", "gasLimit": 200000, "data": "0xd9292504…reporter", "explain": "same trigger" }
+      ], "world": { "caller balance": "0 ETH", "vault balance": "0.2 ETH", "paused": "false" } },
+      { "stage": "validate", "reads": [
+        { "label": "totalAssets T", "value": "1000e18", "gas": 2100 },
+        { "label": "totalSupply S", "value": "1000e18", "gas": 0 },
+        { "label": "compare T·1e18 < S·M", "value": "1000e36 < 1000e36 → false", "gas": 120 }
+      ], "result": "CONDITION_FALSE", "gasUsed": 19600 },
+      { "stage": "admit", "report": { "mempool": "public EIP-8141", "outcome": "rejected", "checks": [
+        { "rule": "CORE_0x22", "verdict": "fail", "detail": "VERIFY did not approve: the condition is false" }
+      ] } }
+    ]
+  },
+  "sources": { "simulation": "ethrex_simulateFrameTransaction", "admission": "skandha_explorer_listAdmissions", "receipt": "eth_getFrameTransactionReceipt" }
+}
