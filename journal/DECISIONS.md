@@ -790,3 +790,18 @@ The payers keep their code names (RulePays, CallerPays, OpenSponsor), which the 
 signature schemes are options of Signed Instruction, not blocks of their own.
 
 **Why.** The owner asked for names that explain themselves; a reader should know what a block does from its name.
+
+## 83. Block names are the words developers already use
+
+**Context.** The names from decision 82 described each block as a sentence ("Value Crosses A Line", "Signed Instruction,
+Anyone Can Send"). The owner found them metaphorical rather than direct.
+
+**Choice.** Logic operators are AND, OR, NOT / NOR, K-of-N, EXACTLY ONE and IF / ELSE (not XOR: for three or more inputs
+XOR means an odd number are true). Conditions are Compare, Percent Change, Code Hash Changed, Signature, K-of-N
+Attestation, Exploit Proof (ZK) and Membership Proof (ZK). Actions are Call, Pause, Reward Pool, Anonymous Vote, Key
+Rotation, Withdraw All, Post-Quantum Mode and Repay. Gas payers are Self-Paying, Caller Pays and Paymaster. Privacy Pool
+and Stealth Addresses are complete contracts. The catalog groups blocks as Core, Common and Specialized, and each page
+reads Overview, Configuration, Use cases (ready to use, common configurations, other use cases), Usage, Mempool and
+Gotchas. This supersedes decision 82's display names; the Solidity and SDK identifiers keep their names for now.
+
+**Why.** A developer should recognise a block from its name without reading its page.
