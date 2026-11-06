@@ -1,0 +1,71 @@
+{
+  "module": "partial-repay-shield",
+  "recorded": false,
+  "note": "Sample run in the recorder's format. The threshold (1.1), the repayment (a quarter of the debt) and the reward (0.5%) are the template's; balances, gas and block numbers are placeholders until the recorder replaces this file.",
+  "network": { "name": "local", "chainId": 1338 },
+  "title": "A loan repays itself before liquidation",
+  "actors": { "caller": "searcher", "ruleContract": "PartialRepayShield", "payer": "the searcher" },
+  "steps": [
+    {
+      "stage": "build",
+      "frames": [
+        { "mode": "VERIFY", "flags": 2, "target": "rule contract", "gasLimit": 120000, "data": "0x", "explain": "the shield approves execution only" },
+        { "mode": "VERIFY", "flags": 1, "target": "payer", "gasLimit": 30000, "data": "0x", "explain": "the searcher's frame approves payment; Core reads the payer from here" },
+        { "mode": "SENDER", "flags": 0, "target": "rule contract", "gasLimit": 300000, "data": "0xd9292504", "explain": "pop(bytes) with empty trigger data" }
+      ],
+      "world": { "health factor": "1.08", "debt": "25.6 dUSD", "shield reserve": "10 dUSD", "searcher": "pays gas" }
+    },
+    {
+      "stage": "validate",
+      "reads": [
+        { "label": "nonce key = keccak(domain, user, rescueEpoch 0)", "value": "0x91d0…7e", "gas": 3400 },
+        { "label": "pool.debtOf(user)", "value": "25.6 dUSD", "gas": 2600 },
+        { "label": "pool.healthFactor(user)", "value": "1.08", "gas": 4800 },
+        { "label": "compare < 1.10", "value": "true", "gas": 60 },
+        { "label": "reserve ≥ amount + reward", "value": "10 ≥ 6.4 + 0.032 → true", "gas": 2600 }
+      ],
+      "result": "READY",
+      "gasUsed": 64210
+    },
+    {
+      "stage": "admit",
+      "report": {
+        "mempool": "alternative ERC-8421",
+        "outcome": "accepted",
+        "entity": { "name": "rule contract", "staked": true, "budget": 2500000, "used": 64210 },
+        "checks": [
+          { "rule": "SIDECAR_STRUCTURE_ATOMIC", "verdict": "pass", "detail": "three frames: VERIFY rule contract, VERIFY payer, SENDER" },
+          { "rule": "SIDECAR_UNSTAKED_ACCESS", "verdict": "pass", "detail": "reads the lending pool; the rule contract is staked" },
+          { "rule": "SIDECAR_BUDGET_010", "verdict": "pass", "detail": "within the staked entity budget" },
+          { "rule": "ETHREX_STORAGE_READ_NON_SENDER", "verdict": "fail", "detail": "the public mempool refuses reads of another contract, staked or not" }
+        ]
+      }
+    },
+    { "stage": "include", "tx": "0x…", "block": 0, "status": "success", "payer": "searcher", "gasUsed": 171930 },
+    {
+      "stage": "act",
+      "before": { "debt": "25.6 dUSD", "health factor": "1.08", "rescueEpoch": "0", "searcher reward": "0" },
+      "after": { "debt": "19.2 dUSD", "health factor": "above 1.1", "rescueEpoch": "1", "searcher reward": "+0.032 dUSD" },
+      "events": ["Rescued(user, 6.4 dUSD)", "RewardPaid(searcher, 0.032 dUSD)"]
+    }
+  ],
+  "failing": {
+    "result": "CONDITION_FALSE",
+    "core": "0x22",
+    "steps": [
+      { "stage": "build", "frames": [
+        { "mode": "VERIFY", "flags": 2, "target": "rule contract", "gasLimit": 120000, "data": "0x", "explain": "same layout" },
+        { "mode": "VERIFY", "flags": 1, "target": "payer", "gasLimit": 30000, "data": "0x", "explain": "same payer" },
+        { "mode": "SENDER", "flags": 0, "target": "rule contract", "gasLimit": 300000, "data": "0xd9292504", "explain": "same trigger" }
+      ], "world": { "health factor": "1.32", "debt": "25.6 dUSD", "shield reserve": "10 dUSD", "searcher": "would pay gas" } },
+      { "stage": "validate", "reads": [
+        { "label": "pool.healthFactor(user)", "value": "1.32", "gas": 4800 },
+        { "label": "compare < 1.10", "value": "false", "gas": 60 }
+      ], "result": "CONDITION_FALSE", "gasUsed": 15100 },
+      { "stage": "admit", "report": { "mempool": "alternative ERC-8421", "outcome": "rejected", "checks": [
+        { "rule": "CORE_0x22", "verdict": "fail", "detail": "the condition is false; the searcher is charged nothing" }
+      ] } }
+    ]
+  },
+  "sources": { "simulation": "ethrex_simulateFrameTransaction", "admission": "skandha_explorer_listAdmissions", "receipt": "eth_getFrameTransactionReceipt" }
+}
