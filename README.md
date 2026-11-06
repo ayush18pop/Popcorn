@@ -64,8 +64,8 @@ Needs [Bun](https://bun.sh), [Foundry](https://getfoundry.sh), `python3` and `cu
 bun install
 scripts/install-solc.sh                              # solc 0.8.33
 bash contracts/core/build.sh                          # builds Core; prints its size
-(cd contracts && forge build && forge test)           # 238 tests
-bun run --cwd packages/sdk test                       # 303 offline tests
+(cd contracts && forge build && forge test)           # 285 tests
+bun run --cwd packages/sdk test                       # 313 offline tests
 
 devnet/up.sh                                          # local devnet, about 10 minutes the first time
 POPCORN_DEVNET=local bun packages/sdk/examples/01-rule-pays.ts
