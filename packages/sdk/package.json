@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:network": "POPCORN_NETWORK=1 vitest run --reporter verbose",
     "typecheck": "tsc --noEmit",
-    "gen-artifacts": "bun scripts/gen-artifacts.ts && bun scripts/gen-ruleset-artifact.ts && bun scripts/gen-sponsor-artifact.ts",
+    "gen-artifacts": "bun scripts/gen-artifacts.ts && bun scripts/gen-ruleset-artifact.ts && bun scripts/gen-sponsor-artifact.ts && bun scripts/gen-privacy-artifacts.ts",
     "check-core-pin": "bun scripts/check-core-pin.ts",
     "deploy-factory": "bun scripts/deploy-factory.ts",
     "simulate": "bun bin/popcorn-simulate.ts"
@@ -23,7 +23,8 @@
     "@popcorn/zk": "workspace:*",
     "viem": "2.57.13",
     "@noble/curves": "1.9.1",
-    "@noble/hashes": "1.8.0"
+    "@noble/hashes": "1.8.0",
+    "@noble/post-quantum": "0.5.2"
   },
   "devDependencies": {
     "@types/bun": "1.3.9",

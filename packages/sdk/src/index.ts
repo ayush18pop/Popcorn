@@ -232,3 +232,4 @@ export {
   type RuleSpec,
 } from "./ruleset/index.ts";
 export * from "./sponsor.ts";
+export * from "./privacy.ts";

@@ -55,6 +55,10 @@ contract SovereignAccount is HiddenGuardians, Payouts {
     uint256 public constant RULE_CONTEST = 6;
     uint256 public constant RULE_MIGRATE = 4;
     bytes32 public constant PROPOSAL_QUANTUM = keccak256(abi.encode("quantum"));
+    bytes32 internal constant KEY_SPEND = keccak256("popcorn.sovereign.spend");
+    bytes32 internal constant KEY_EXIT = keccak256("popcorn.sovereign.exit");
+    bytes32 internal constant KEY_MIGRATE = keccak256("popcorn.sovereign.migrate");
+    bytes32 internal constant KEY_QUANTUM = keccak256("popcorn.sovereign.quantum");
 
     IIntentScheme public immutable ownerScheme;
     IIntentScheme public immutable backupScheme;
@@ -174,11 +178,12 @@ contract SovereignAccount is HiddenGuardians, Payouts {
 
     function nonceKey(bytes calldata popArgs) internal view override returns (uint256) {
         uint256 kind = _word(popArgs, 0);
-        if (kind == KIND_SPEND) return uint256(keccak256(abi.encode("spend", _sload(_s(2)))));
+        // constants and one keccak over two words: Core gives __nonceKey 10,000 gas
+        if (kind == KIND_SPEND) return uint256(keccak256(abi.encode(KEY_SPEND, _sload(_s(2)))));
         if (kind == KIND_VOTE) return _word(popArgs, 2); // the nullifier hash, bound to the proof
-        if (kind == KIND_EXIT) return uint256(keccak256("exit"));
-        if (kind == KIND_MIGRATE) return uint256(keccak256("migrate"));
-        if (kind == KIND_QUANTUM) return uint256(keccak256("quantum"));
+        if (kind == KIND_EXIT) return uint256(KEY_EXIT);
+        if (kind == KIND_MIGRATE) return uint256(KEY_MIGRATE);
+        if (kind == KIND_QUANTUM) return uint256(KEY_QUANTUM);
         return 0; // Core refuses a zero key
     }
 

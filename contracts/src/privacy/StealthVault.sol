@@ -19,7 +19,7 @@ import {Payouts} from "src/privacy/Payouts.sol";
 ///         Spend (trigger):
 ///           popArgs    = abi.encode(uint256 commitment, address recipient, uint256 fee)
 ///           verifyData = the Groth16 proof (256 bytes) for circuits/stealth.circom
-///           nonceKey   = keccak256("stealth", commitment): each payment is spent once, enforced by the protocol
+///           nonceKey   = keccak256(abi.encode(KEY_DOMAIN, commitment)): each payment is spent once, by the protocol
 ///           condition  = the commitment holds a balance, fee is within [minFee, balance], and the proof verifies for
 ///                        [commitment, recipient, fee]
 ///           action     = send balance - fee to the recipient (credited if it refuses ETH)
@@ -31,6 +31,7 @@ contract StealthVault is Payouts {
     /// @dev keccak256("popcorn.stealthVault"): balance(commitment) at keccak256(abi.encode(commitment, BASE)).
     bytes32 private constant VAULT = 0x48f3e26583839ac8928e303e9f3e72e168da062935641b4659088f63dfe32202;
     uint256 internal constant R = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+    bytes32 internal constant KEY_DOMAIN = keccak256("popcorn.stealthVault.spend");
 
     IVerifier public immutable verifier;
     uint256 public immutable minFee;
@@ -75,8 +76,9 @@ contract StealthVault is Payouts {
         return _sload(_balanceSlot(commitment));
     }
 
+    /// @dev Cheap enough for Core's 10,000-gas __nonceKey call: one keccak over two words.
     function nonceKey(bytes calldata popArgs) internal pure override returns (uint256) {
-        return uint256(keccak256(abi.encode("stealth", _word(popArgs, 0))));
+        return uint256(keccak256(abi.encode(KEY_DOMAIN, _word(popArgs, 0))));
     }
 
     function condition(bytes calldata popArgs, bytes calldata verifyData) internal view override returns (bool) {
