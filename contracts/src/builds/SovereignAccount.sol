@@ -10,6 +10,8 @@ import {AnonymousGroupVote} from "src/blocks/actions/AnonymousGroupVote.sol";
 import {KeyHandover} from "src/blocks/actions/KeyHandover.sol";
 import {QuantumSafeSwitch} from "src/blocks/actions/QuantumSafeSwitch.sol";
 import {ExitToAddress} from "src/blocks/actions/ExitToAddress.sol";
+import {FlowNode, Flow, IPopcornExplain, FLOW_YES, FLOW_NO, FLOW_SKIPPED} from "src/rules/Explain.sol";
+import {answer} from "src/blocks/Answer.sol";
 
 /// @title Sovereign Account (example build, the flagship)
 /// @notice A wallet account that keeps working when the things around it fail: a broken key scheme, a guardian takeover,
@@ -43,7 +45,7 @@ import {ExitToAddress} from "src/blocks/actions/ExitToAddress.sol";
 ///
 ///         Validation reads only this account's storage and calls the signer and verifier contracts (code, no storage),
 ///         so the account stakes for the alternative mempool, whose 2,500,000 staked budget covers Falcon (~1.5M).
-contract SovereignAccount is SignedInstruction, MakeACall, AnonymousGroupVote, KeyHandover, QuantumSafeSwitch, ExitToAddress {
+contract SovereignAccount is SignedInstruction, MakeACall, AnonymousGroupVote, KeyHandover, QuantumSafeSwitch, ExitToAddress, IPopcornExplain {
     /// @dev slot 0: initialized flag (the rest of the state lives in the blocks' own namespaces).
     bytes32 private constant SLOT = keccak256("popcorn.build.sovereignAccount");
 
@@ -255,5 +257,79 @@ contract SovereignAccount is SignedInstruction, MakeACall, AnonymousGroupVote, K
         (bytes memory params, bytes memory witness) = abi.decode(verifyData, (bytes, bytes));
         if (keccak256(params) != keyHash) return NO;
         return _signerSays(address(scheme), params, _intentContext(kind, _ruleEpoch(kind), popArgs), witness);
+    }
+
+    // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
+
+    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory trigger, FlowNode[] memory n) {
+        uint256 kind = popArgs.length >= 32 ? uint256(bytes32(popArgs[0:32])) : 0;
+        bool active = _sload(SLOT) == 1 && !_exited();
+        if (kind == KIND_SPEND) {
+            trigger = "spend";
+            n = new FlowNode[](7);
+            n[0] = Flow.node("trigger", "", "Spend: (to, value, data) signed by the owner; anyone can send it", FLOW_YES, Flow.none());
+            bool off = !_quantumSafeOnly();
+            if (active && off) abi.decode(popArgs, (uint256, address, uint256, bytes)); // as the condition: malformed data reverts
+            n[3] = Flow.node("condition", "post-quantum-mode", "Post-Quantum Mode is off", Flow.after_(active, answer(off)), Flow.from(0));
+            Answer sig = active && off ? _ownerSigned(RULE_SPEND, popArgs, verifyData) : Answer.wrap(FLOW_NO);
+            n[4] = Flow.node("condition", "signature", "the owner key signed this exact spend", Flow.after_(active && off, sig), Flow.from(0));
+            _tail(n, active, Flow.from(2, 3, 4), active && off ? sig : Answer.wrap(FLOW_NO), 5);
+            n[6] = Flow.node("action", "call", "make the call with the value", Flow.runs(active && off && sig.isYes()), Flow.from(5));
+        } else if (kind == KIND_VOTE) {
+            trigger = "vote";
+            n = new FlowNode[](8);
+            n[0] = Flow.node("trigger", "", "Vote: a proposal and a guardian's nullifier, with a membership proof", FLOW_YES, Flow.none());
+            bool shaped = popArgs.length == 96;
+            Answer vote = active && shaped ? _voteValid(bytes32(popArgs[32:64]), uint256(bytes32(popArgs[64:96])), verifyData) : Answer.wrap(FLOW_NO);
+            n[3] = Flow.node("condition", "membership-proof", "a guardian's valid vote for this round (who is not revealed)", Flow.after_(active, shaped ? vote : Answer.wrap(FLOW_NO)), Flow.from(0));
+            _tail(n, active, Flow.from(2, 3), vote, 4);
+            bool go = active && vote.isYes();
+            n[5] = Flow.node("action", "anonymous-vote", "count the vote", Flow.runs(go), Flow.from(4));
+            bytes32 proposal = shaped ? bytes32(popArgs[32:64]) : bytes32(0);
+            bool quorum = go && _votesFor(_voteRound(), proposal) + 1 >= _voteThreshold();
+            n[6] = Flow.node("condition", "anonymous-vote", "this vote reaches the quorum", go ? Flow.result(answer(quorum)) : FLOW_SKIPPED, Flow.from(5));
+            n[7] = proposal == PROPOSAL_QUANTUM
+                ? Flow.node("action", "post-quantum-mode", "turn on Post-Quantum Mode", Flow.runs(quorum), Flow.from(6))
+                : Flow.node("action", "key-rotation", "propose this key as the new owner, after the timelock", Flow.runs(quorum), Flow.from(6));
+        } else if (kind == KIND_EXIT) {
+            trigger = "exit";
+            n = new FlowNode[](6);
+            n[0] = Flow.node("trigger", "", "Exit: no data; anyone can send it", FLOW_YES, Flow.none());
+            Answer c = answer(popArgs.length == 32 && _contested());
+            n[3] = Flow.node("condition", "key-rotation", "an owner contested a key rotation", Flow.after_(active, c), Flow.from(0));
+            _tail(n, active, Flow.from(2, 3), c, 4);
+            n[5] = Flow.node("action", "withdraw-all", "send everything to the exit address committed on day one", Flow.runs(active && c.isYes()), Flow.from(4));
+        } else if (kind == KIND_MIGRATE) {
+            trigger = "migrate";
+            n = new FlowNode[](7);
+            n[0] = Flow.node("trigger", "", "Migrate: a target address signed by the backup key", FLOW_YES, Flow.none());
+            bool on = popArgs.length == 64 && _quantumSafeOnly();
+            n[3] = Flow.node("condition", "post-quantum-mode", "Post-Quantum Mode is on", Flow.after_(active, answer(on)), Flow.from(0));
+            Answer sig = active && on ? _keySigned(backupScheme, _backupKeyHash(), RULE_MIGRATE, popArgs, verifyData) : Answer.wrap(FLOW_NO);
+            n[4] = Flow.node("condition", "signature", "the committed post-quantum backup key signed this target", Flow.after_(active && on, sig), Flow.from(0));
+            _tail(n, active, Flow.from(2, 3, 4), active && on ? sig : Answer.wrap(FLOW_NO), 5);
+            n[6] = Flow.node("action", "withdraw-all", "send everything to the signed target, once", Flow.runs(active && on && sig.isYes()), Flow.from(5));
+        } else if (kind == KIND_QUANTUM) {
+            trigger = "quantum";
+            n = new FlowNode[](7);
+            n[0] = Flow.node("trigger", "", "Post-Quantum Mode: signed by the owner", FLOW_YES, Flow.none());
+            bool off = popArgs.length == 32 && !_quantumSafeOnly();
+            n[3] = Flow.node("condition", "post-quantum-mode", "Post-Quantum Mode is still off", Flow.after_(active, answer(off)), Flow.from(0));
+            Answer sig = active && off ? _ownerSigned(RULE_QUANTUM, popArgs, verifyData) : Answer.wrap(FLOW_NO);
+            n[4] = Flow.node("condition", "signature", "the owner key signed it", Flow.after_(active && off, sig), Flow.from(0));
+            _tail(n, active, Flow.from(2, 3, 4), active && off ? sig : Answer.wrap(FLOW_NO), 5);
+            n[6] = Flow.node("action", "post-quantum-mode", "turn on Post-Quantum Mode: owner keys stop working", Flow.runs(active && off && sig.isYes()), Flow.from(5));
+        } else {
+            trigger = "unknown";
+            n = new FlowNode[](1);
+            n[0] = Flow.node("trigger", "", "trigger kind is not 1 to 5", FLOW_NO, Flow.none());
+        }
+    }
+
+    /// @dev Fills the nodes every kind shares: the payer (1), the account guard (2) and the AND at `andAt`.
+    function _tail(FlowNode[] memory n, bool active, uint8[] memory andInputs, Answer last, uint256 andAt) private pure {
+        n[1] = Flow.node("payer", "self-paying", "the account pays its own gas", FLOW_YES, Flow.from(0));
+        n[2] = Flow.node("condition", "", "the account is set up and has not exited", Flow.result(answer(active)), Flow.from(0));
+        n[andAt] = Flow.node("operator", "and", "AND", active ? Flow.result(last) : FLOW_NO, andInputs);
     }
 }

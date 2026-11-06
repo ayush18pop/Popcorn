@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
+import {ExplainCheck} from "test/ExplainCheck.sol";
 
 import {CoreHarness} from "test/CoreHarness.sol";
 import {DemoToken} from "src/mocks/DemoToken.sol";
@@ -116,12 +117,12 @@ contract AutoRepayLoanTest {
     function test_conditionFlipsExactlyAtHF1_1() public {
         oracle.setPrice(1_100e18);
         require(pool.healthFactor(address(user)) == 1.1e18, "HF exactly 1.1");
-        require(!k.condition("", ""), "HF == 1.1: not rescuable");
+        require(!ExplainCheck.cond(k, "", ""), "HF == 1.1: not rescuable");
         oracle.setPrice(1_100e18 - 1_000);
         require(pool.healthFactor(address(user)) == 1.1e18 - 1, "HF = 1.1 - 1 wei");
-        require(k.condition("", ""), "HF < 1.1: rescuable");
+        require(ExplainCheck.cond(k, "", ""), "HF < 1.1: rescuable");
         oracle.setPrice(2_000e18);
-        require(!k.condition("", ""), "healthy");
+        require(!ExplainCheck.cond(k, "", ""), "healthy");
     }
 
     function test_rescue_repaysAQuarter_paysHalfAPercentToThePayer() public {
@@ -159,8 +160,8 @@ contract AutoRepayLoanTest {
 
     function test_notRescuable_reserveTooSmall_noDebt_popArgs() public {
         oracle.setPrice(1_080e18);
-        require(k.condition("", ""), "rescuable");
-        require(!k.condition(abi.encode(address(0xBAD)), ""), "non-empty popArgs: invalid");
+        require(ExplainCheck.cond(k, "", ""), "rescuable");
+        require(!ExplainCheck.cond(k, abi.encode(address(0xBAD)), ""), "non-empty popArgs: invalid");
         // reserve below amount * 1.005: 200 + 1 needed
         AutoRepayLoan l2 = new AutoRepayLoan(IShieldPool(address(pool)), IShieldToken(address(token)), address(user), 1.1e18, 2_500, 50, 0, 0);
         CoreHarness k2 = new CoreHarness(address(l2), CONDITION_GAS);
@@ -213,7 +214,7 @@ contract AutoRepayLoanTest {
         oracle.setPrice(700e18); // HF 0.7
         uint256 pops;
         uint256[3] memory debts;
-        while (k.condition("", "")) {
+        while (ExplainCheck.cond(k, "", "")) {
             k.popCallerPays("", "", address(0xB0B));
             (, debts[pops],,) = pool.position(address(user));
             pops++;
@@ -249,7 +250,7 @@ contract AutoRepayLoanTest {
         pool.repayFor(address(user), 1);
         require(pool.positionNonce(address(user)) == n0 + 1, "positionNonce moved");
         (, uint256 key1) = k.nonceKey("");
-        require(key1 == key0 && k.condition("", ""), "pending rescue key unchanged and still valid");
+        require(key1 == key0 && ExplainCheck.cond(k, "", ""), "pending rescue key unchanged and still valid");
     }
 
     /// The reserve is the user's: only `user` withdraws it (forwarded).

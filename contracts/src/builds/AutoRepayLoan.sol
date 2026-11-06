@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {CallerPays} from "src/payers/CallerPays.sol";
 import {ValueCrossesLine} from "src/blocks/checks/ValueCrossesLine.sol";
 import {RepayLoan} from "src/blocks/actions/RepayLoan.sol";
+import {FlowNode, Flow, IPopcornExplain, FLOW_YES, FLOW_NO} from "src/rules/Explain.sol";
+import {answer} from "src/blocks/Answer.sol";
 
 interface IShieldPool {
     function position(address user) external view returns (uint256 collateral, uint256 debt, uint256 nonce, uint256 hf);
@@ -51,7 +53,7 @@ interface IShieldToken {
 ///         be STAKED for the sidecar (built-in stake trigger, `stakeAmount` > 0), and public ethrex never includes it
 ///         (StorageReadNonSender): it is included on a devnet whose sidecar relays staked triggers.
 ///         Every external read in VERIFY has a fixed gas stipend (no GAS opcode) and fails closed.
-contract AutoRepayLoan is ValueCrossesLine, RepayLoan, CallerPays {
+contract AutoRepayLoan is ValueCrossesLine, RepayLoan, CallerPays, IPopcornExplain {
     /// @dev keccak256("popcorn.shield.positionKey")
     bytes32 public constant SHIELD_KEY_DOMAIN = keccak256("popcorn.shield.positionKey");
     uint256 public constant POSITION_READ_GAS = 25_000;
@@ -173,5 +175,23 @@ contract AutoRepayLoan is ValueCrossesLine, RepayLoan, CallerPays {
     /// @notice Pure rule, for tests and the UI: would a loan at health factor `hf` be rescued?
     function rescuableAt(uint256 hf) external view returns (bool) {
         return _crossesLine(hf, threshold, Side.Below).isYes();
+    }
+
+    // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
+
+    function popcornExplain(bytes calldata popArgs, bytes calldata) external view returns (string memory trigger, FlowNode[] memory n) {
+        trigger = "rescue";
+        n = new FlowNode[](8);
+        bool empty = popArgs.length == 0;
+        n[0] = Flow.node("trigger", "", "Rescue: no data; any keeper can send it and pay the gas", Flow.result(answer(empty)), Flow.none());
+        n[1] = Flow.node("payer", "caller-pays", "the keeper pays the gas and earns a reward", FLOW_YES, Flow.from(0));
+        (bool ok,, uint256 amount, uint256 reward) = empty ? _rescue() : (false, 0, 0, 0);
+        n[2] = Flow.node("condition", "compare", "the loan has debt and its health factor is below the threshold", Flow.after_(empty, answer(ok)), Flow.from(0));
+        bool covered = ok && _reserve() >= amount + reward;
+        n[3] = Flow.node("condition", "compare", "the reserve covers the repayment and the reward", Flow.after_(empty && ok, answer(covered)), Flow.from(0));
+        n[4] = Flow.node("operator", "and", "AND", Flow.result(answer(empty && covered)), Flow.from(2, 3));
+        n[5] = Flow.node("action", "", "advance the rescue epoch (first, so the next rescue has a fresh key)", Flow.runs(empty && covered), Flow.from(4));
+        n[6] = Flow.node("action", "repay", "repay a share of the debt from the reserve", Flow.runs(empty && covered), Flow.from(5));
+        n[7] = Flow.node("action", "caller-pays", "pay the keeper its reward", Flow.runs(empty && covered), Flow.from(6));
     }
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
+import {ExplainCheck} from "test/ExplainCheck.sol";
 
 import {CoreHarness} from "test/CoreHarness.sol";
 import {SovereignAccount} from "src/builds/SovereignAccount.sol";
@@ -72,7 +73,7 @@ contract SovereignAccountTest {
         uint256 n = vm.parseJsonUint(json, string.concat(path, ".nullifierHash"));
         bytes memory a = abi.encode(uint256(2), proposal, n);
         bytes memory proof = vm.parseJsonBytes(json, string.concat(path, ".proof"));
-        if (!_h().condition(a, proof)) return false;
+        if (!ExplainCheck.cond(_h(), a, proof)) return false;
         _h().pop(a, proof);
         return true;
     }
@@ -80,14 +81,14 @@ contract SovereignAccountTest {
     function test_owner_spends_with_a_signature_and_each_signature_once() public {
         bytes memory a = abi.encode(uint256(1), address(0xbeef), uint256(1 ether), bytes(""));
         bytes memory vd = abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a)));
-        require(_h().condition(a, vd), "owner-signed spend");
+        require(ExplainCheck.cond(_h(), a, vd), "owner-signed spend");
         _h().pop(a, vd);
         require(address(0xbeef).balance == 1 ether, "paid");
-        require(!_h().condition(a, vd), "epoch moved: the same signature is dead");
+        require(!ExplainCheck.cond(_h(), a, vd), "epoch moved: the same signature is dead");
         bytes memory forged = abi.encode(ownerParams, _sig(0xBAD, 1, 1, keccak256(a)));
-        require(!_h().condition(a, forged), "another key");
+        require(!ExplainCheck.cond(_h(), a, forged), "another key");
         bytes memory otherParams = abi.encode(abi.encodePacked(vm.addr(0xBAD)), _sig(0xBAD, 1, 1, keccak256(a)));
-        require(!_h().condition(a, otherParams), "params must hash to the owner's");
+        require(!ExplainCheck.cond(_h(), a, otherParams), "params must hash to the owner's");
     }
 
     function test_quantum_switch_refuses_owner_spends_and_only_the_backup_key_migrates() public {
@@ -96,14 +97,14 @@ contract SovereignAccountTest {
         (,, bool quantum,,,,,) = _acct().state();
         require(quantum, "switched");
         bytes memory a = abi.encode(uint256(1), address(0xbeef), uint256(1 ether), bytes(""));
-        require(!_h().condition(a, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a)))), "owner spends refused");
+        require(!ExplainCheck.cond(_h(), a, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a)))), "owner spends refused");
         bytes memory m = abi.encode(uint256(4), address(0xC01D));
-        require(!_h().condition(m, abi.encode(ownerParams, _sig(OWNER_PK, 4, 0, keccak256(m)))), "the old owner cannot migrate");
+        require(!ExplainCheck.cond(_h(), m, abi.encode(ownerParams, _sig(OWNER_PK, 4, 0, keccak256(m)))), "the old owner cannot migrate");
         bytes memory mv = abi.encode(backupParams, _sig(BACKUP_PK, 4, 0, keccak256(m)));
-        require(_h().condition(m, mv), "the committed backup key migrates");
+        require(ExplainCheck.cond(_h(), m, mv), "the committed backup key migrates");
         _h().pop(m, mv);
         require(address(0xC01D).balance == 5 ether, "everything moved");
-        require(!_h().condition(a, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a)))), "nothing more runs");
+        require(!ExplainCheck.cond(_h(), a, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a)))), "nothing more runs");
     }
 
     function test_hidden_guardians_rotate_after_the_delay() public {
@@ -125,14 +126,14 @@ contract SovereignAccountTest {
 
     function test_a_contested_takeover_opens_the_forced_exit_to_anyone() public {
         bytes memory e = abi.encode(uint256(3));
-        require(!_h().condition(e, ""), "no exit while uncontested");
+        require(!ExplainCheck.cond(_h(), e, ""), "no exit while uncontested");
         _vote(".guardians.rotationVotes[0]");
         _vote(".guardians.rotationVotes[1]");
         _acct().contest(ownerParams, _sig(OWNER_PK, 6, 1, keccak256("contest")));
         bool ok;
         try _acct().finalizeRecovery() { ok = true; } catch {}
         require(!ok, "the contested rotation is gone");
-        require(_h().condition(e, ""), "anyone may exit");
+        require(ExplainCheck.cond(_h(), e, ""), "anyone may exit");
         _h().pop(e, "");
         require(EXIT.balance == 5 ether, "everything to the committed exit address");
     }
@@ -149,7 +150,7 @@ contract SovereignAccountTest {
     /// so it cannot leave the spend epoch stuck; the next well-formed spend still works.
     function test_malformed_signed_spend_is_refused_and_spends_keep_working() public {
         bytes memory bad = abi.encode(uint256(1), address(0xbeef));
-        require(!_h().condition(bad, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(bad)))), "malformed spend refused in validation");
+        require(!ExplainCheck.cond(_h(), bad, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(bad)))), "malformed spend refused in validation");
         bytes memory a = abi.encode(uint256(1), address(0xbeef), uint256(1 ether), bytes(""));
         _h().pop(a, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a))));
         require(address(0xbeef).balance == 1 ether, "the next spend works");

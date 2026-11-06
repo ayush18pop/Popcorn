@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
+import {ExplainCheck} from "test/ExplainCheck.sol";
 
 import {CoreHarness} from "test/CoreHarness.sol";
 import {StealthVault} from "src/privacy/StealthVault.sol";
@@ -40,21 +41,21 @@ contract StealthVaultTest {
         require(StealthVault(payable(VAULT)).balanceOf(commitment) == 3 ether, "payments add up");
         bytes memory a = abi.encode(commitment, RECIPIENT, fee);
         CoreHarness h = CoreHarness(payable(VAULT));
-        require(h.condition(a, proof), "the receiver's proof");
+        require(ExplainCheck.cond(h, a, proof), "the receiver's proof");
         h.pop(a, proof);
         require(RECIPIENT.balance == 3 ether - fee, "balance - fee to the recipient");
         require(StealthVault(payable(VAULT)).balanceOf(commitment) == 0, "emptied");
-        require(!h.condition(a, proof), "nothing left to spend");
+        require(!ExplainCheck.cond(h, a, proof), "nothing left to spend");
     }
 
     function test_refusals() public {
         CoreHarness h = CoreHarness(payable(VAULT));
-        require(!h.condition(abi.encode(commitment, RECIPIENT, fee), proof), "empty commitment");
+        require(!ExplainCheck.cond(h, abi.encode(commitment, RECIPIENT, fee), proof), "empty commitment");
         StealthVault(payable(VAULT)).pay{value: 1 ether}(commitment, 1, "");
-        require(!h.condition(abi.encode(commitment, address(0xdead), fee), proof), "recipient bound");
-        require(!h.condition(abi.encode(commitment, RECIPIENT, fee + 1), proof), "fee bound");
-        require(!h.condition(abi.encode(commitment, RECIPIENT, uint256(1)), proof), "below the minimum fee");
-        require(!h.condition(abi.encode(commitment + 1, RECIPIENT, fee), proof), "another commitment");
+        require(!ExplainCheck.cond(h, abi.encode(commitment, address(0xdead), fee), proof), "recipient bound");
+        require(!ExplainCheck.cond(h, abi.encode(commitment, RECIPIENT, fee + 1), proof), "fee bound");
+        require(!ExplainCheck.cond(h, abi.encode(commitment, RECIPIENT, uint256(1)), proof), "below the minimum fee");
+        require(!ExplainCheck.cond(h, abi.encode(commitment + 1, RECIPIENT, fee), proof), "another commitment");
         bool ok;
         try StealthVault(payable(VAULT)).pay{value: 0}(commitment, 1, "") { ok = true; } catch {}
         require(!ok, "zero payment refused");
