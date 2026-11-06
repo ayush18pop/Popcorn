@@ -673,3 +673,14 @@ for that.
 
 **Why.** It is a gas-limit change only, which the scope rule allows, and it makes the local devnet match the network the
 modules will run on instead of a stricter draft value.
+
+## 74. The MCP server is read-only and the skills ship in the repository
+
+**Choice.** `packages/mcp` reads the catalog, the example projects and their recorded runs, explains Core and sponsor
+codes, and talks to a devnet only to simulate a trigger or to build it unsigned. It holds no key and sends nothing: a
+rule-pays trigger it builds needs no signature, so the user's own wallet or script sends it. The Claude skills
+(`popcorn-build`, `popcorn-debug`) live in `.claude/skills/`, and `.mcp.json` registers the server, so opening the
+repository in Claude Code gives both.
+
+**Why.** An agent that can deploy and sign is a key-management problem; one that can explain and prepare is not. Keeping
+the skills next to the code they describe keeps them in step with it.
