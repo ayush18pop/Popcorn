@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command";
 import { NAV } from "@/components/GlassNav";
-import { CORNERS, MODULES } from "@/lib/catalog";
+import { CATALOG, shapeLabel } from "@/lib/catalog";
 import { RUNS } from "@/lib/runs";
 import { go } from "@/lib/route";
 
 export const CLONE = "git clone https://github.com/ayush18pop/Popcorn.git && cd Popcorn && bun install";
 
-/** ⌘K: every page, every module, every example, and a couple of actions. */
+/** ⌘K: every page, every block, every example, and a couple of actions. */
 export function CommandMenu({ open, onOpenChange, onToggleTheme }: { open: boolean; onOpenChange: (o: boolean) => void; onToggleTheme: () => void }) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -27,7 +27,7 @@ export function CommandMenu({ open, onOpenChange, onToggleTheme }: { open: boole
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search modules, examples, pages…" />
+      <CommandInput placeholder="Search blocks, examples, pages…" />
       <CommandList>
         <CommandEmpty>Nothing found.</CommandEmpty>
         <CommandGroup heading="Go to">
@@ -38,12 +38,12 @@ export function CommandMenu({ open, onOpenChange, onToggleTheme }: { open: boole
             </CommandItem>
           ))}
         </CommandGroup>
-        <CommandGroup heading="Modules">
-          {MODULES.map((m) => (
-            <CommandItem key={m.id} value={`${m.name} ${m.corner} ${m.trigger} ${m.status}`} onSelect={run(() => go("modules", m.corner, m.id))}>
+        <CommandGroup heading="Blocks">
+          {CATALOG.map((m) => (
+            <CommandItem key={m.id} value={`${m.name} ${m.shape} ${m.id} ${m.status}`} onSelect={run(() => go("blocks", m.id))}>
               <span>{m.name}</span>
               <CommandShortcut className="font-mono normal-case tracking-normal">
-                {CORNERS.find((c) => c.id === m.corner)?.name} · {m.status}
+                {shapeLabel(m)}{m.tier ? ` · tier ${m.tier}` : ""}
               </CommandShortcut>
             </CommandItem>
           ))}

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-/** Hash routes, so the site stays a static bundle with no server rewrites. `#/modules/pause/guarded-vault` → ["modules", "pause", "guarded-vault"]. */
-export type Page = "home" | "modules" | "examples" | "explorer" | "skills" | "mcp" | "docs";
+/** Hash routes, so the site stays a static bundle with no server rewrites. `#/blocks/pause-the-target` → ["blocks", "pause-the-target"]. Old `#/modules/...` links open the blocks page. */
+export type Page = "home" | "blocks" | "examples" | "explorer" | "skills" | "mcp" | "docs";
 
-const PAGES: Page[] = ["modules", "examples", "explorer", "skills", "mcp", "docs"];
+const PAGES: Page[] = ["blocks", "examples", "explorer", "skills", "mcp", "docs"];
 
 export interface Route {
   page: Page;
@@ -12,6 +12,10 @@ export interface Route {
 
 const parse = (): Route => {
   const [head = "", ...parts] = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  if (head === "modules") {
+    // old links: #/modules, #/modules/<group>, #/modules/<group>/<id>
+    return { page: "blocks", parts: parts.length >= 2 ? [parts[parts.length - 1]!] : [] };
+  }
   const page = PAGES.find((p) => p === head) ?? "home";
   return { page, parts: page === "home" ? [] : parts };
 };

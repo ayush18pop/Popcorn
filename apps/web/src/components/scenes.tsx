@@ -3,7 +3,7 @@ import { AnimatePresence, animate, motion, useInView } from "framer-motion";
 import { useScramble } from "@/lib/useScramble";
 import { cn } from "@/lib/utils";
 
-// Small looping scenes for the featured examples. Each one restates the module's own facts (threshold, action, who
+// Small looping scenes for the featured examples. Each one restates the example's own facts (threshold, action, who
 // pays) and is labelled as an illustration; the player is where recorded numbers live.
 
 function usePhases(durations: number[]) {

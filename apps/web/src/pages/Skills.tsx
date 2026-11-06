@@ -4,16 +4,16 @@ import { AuroraBackground } from "@/components/ui/aurora-background";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Reveal, Spotlight } from "@/components/motion";
 import { Code, StatusBadge } from "@/components/bits";
-import { CORNERS, MODULES, type GroupId } from "@/lib/catalog";
+import { BLOCKS, SHAPES, type ShapeId } from "@/lib/catalog";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
 // The Claude skills live in the repo at .claude/skills/ (popcorn-build, popcorn-debug): opening the repository in Claude
 // Code loads them, together with the read-only MCP server from .mcp.json.
 
-const SKILLS: { id: string; groups: GroupId[]; does: string; tools: string[] }[] = [
-  { id: "popcorn-build", groups: ["private", "gas", "protect", "sign", "prove"], does: "Turns a problem (“pay salaries privately”, “free transactions for our members”) into modules, starts from the closest example project, deploys it on the local devnet and runs it.", tools: ["list_examples", "how_to_build", "get_module", "can_trigger", "build_trigger"] },
-  { id: "popcorn-debug", groups: ["gas", "sign", "private"], does: "Explains why a trigger was refused: which frame said no, the code in plain words, who paid (usually nobody) and the one change that fixes it.", tools: ["can_trigger", "explain_code", "rule_contract_info"] },
+const SKILLS: { id: string; groups: ShapeId[]; does: string; tools: string[] }[] = [
+  { id: "popcorn-build", groups: ["check", "join", "action", "payer"], does: "Turns a problem (“pay salaries privately”, “free transactions for our members”) into blocks, starts from the closest example project, deploys it on the local devnet and runs it.", tools: ["list_examples", "how_to_build", "get_module", "can_trigger", "build_trigger"] },
+  { id: "popcorn-debug", groups: ["check", "payer"], does: "Explains why a trigger was refused: which frame said no, the code in plain words, who paid (usually nobody) and the one change that fixes it.", tools: ["can_trigger", "explain_code", "rule_contract_info"] },
 ];
 
 const CONVO = [
@@ -35,7 +35,7 @@ bun test packages/mcp/test/        # the MCP tools it calls`;
 export default function Skills() {
   const [sel, setSel] = useState(SKILLS[0].id);
   const skill = SKILLS.find((s) => s.id === sel)!;
-  const pages = MODULES.filter((m) => skill.groups.includes(m.group) && m.status === "built").slice(0, 12);
+  const pages = BLOCKS.filter((m) => skill.groups.includes(m.shape as ShapeId) && m.status === "built").slice(0, 12);
 
   return (
     <div className="relative overflow-x-clip">
@@ -52,7 +52,7 @@ export default function Skills() {
       </AuroraBackground>
 
       <div className="mx-auto max-w-[1120px] px-4 pb-32 sm:px-6">
-        {/* map: skills → corners */}
+        {/* map: skills → block shapes */}
         <Reveal>
           <div className="glass relative grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 rounded-[28px] p-4 sm:p-6">
             <div className="space-y-1.5">
@@ -66,7 +66,7 @@ export default function Skills() {
             <svg className="w-10 sm:w-24" viewBox="0 0 100 320" preserveAspectRatio="none" aria-hidden>
               {SKILLS.flatMap((s, i) =>
                 s.groups.map((g) => {
-                  const j = CORNERS.findIndex((c) => c.id === g);
+                  const j = SHAPES.findIndex((c) => c.id === g);
                   const on = s.id === sel;
                   return (
                     <motion.path
@@ -86,9 +86,9 @@ export default function Skills() {
               )}
             </svg>
             <div className="space-y-1.5">
-              {CORNERS.map((c) => (
-                <a key={c.id} href={href("modules", c.id)} className={cn("block rounded-xl px-3 py-2 text-[12px] transition-colors sm:text-[13px]", skill.groups.includes(c.id) ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
-                  {c.name}
+              {SHAPES.map((c) => (
+                <a key={c.id} href={href("blocks")} className={cn("block rounded-xl px-3 py-2 text-[12px] transition-colors sm:text-[13px]", skill.groups.includes(c.id) ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                  {c.plural}
                 </a>
               ))}
             </div>
@@ -117,7 +117,7 @@ export default function Skills() {
               <p className="label-mono">Reads these catalog pages</p>
               <div className="mt-3 space-y-1">
                 {pages.map((m) => (
-                  <a key={m.id} href={href("modules", m.group, m.id)} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[13px] text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground">
+                  <a key={m.id} href={href("blocks", m.id)} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[13px] text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground">
                     <span>{m.name}</span>
                     <span className="font-mono text-[10.5px] text-faint">{m.status}</span>
                   </a>

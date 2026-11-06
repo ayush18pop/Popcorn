@@ -9,7 +9,7 @@ import { Peel } from "@/components/effects/Peel";
 import { Code, GhostLink, PrimaryLink, SectionHead, StatusBadge, TAB } from "@/components/bits";
 import { HealthCard, LayoutCard, PayerCard, VerdictCard } from "@/components/cards";
 import { Player } from "@/player/Player";
-import { CORNERS, MODULES, REPO } from "@/lib/catalog";
+import { BLOCKS, READY_MADE, REPO, SHAPES } from "@/lib/catalog";
 import { RUNS } from "@/lib/runs";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
@@ -128,7 +128,7 @@ export default function Home() {
               Reviewed building blocks for keeping DeFi safe when contracts approve and pay for their own transactions. A rule contract acts when its condition is true, not when a key signs.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <PrimaryLink href={href("modules")}>Browse modules</PrimaryLink>
+              <PrimaryLink href={href("blocks")}>Browse blocks</PrimaryLink>
               <GhostLink href={href("examples", "protect", "proof-of-exploit")}>Watch a whitehat get paid</GhostLink>
             </div>
           </Reveal>
@@ -197,7 +197,7 @@ export default function Home() {
       {/* featured examples */}
       <section className="px-4 pt-36 sm:px-6">
         <div className="mx-auto max-w-[1120px]">
-          <SectionHead label="Examples" title="Whole projects, recorded on a devnet." sub="Each one solves a real problem with several modules. Every transaction happened, sent by a key with no ETH. Flip any of them to the refused case." />
+          <SectionHead label="Examples" title="Whole projects, recorded on a devnet." sub="Each one solves a real problem with several blocks. Every transaction happened, sent by a key with no ETH. Flip any of them to the refused case." />
           <div className="mt-12 grid gap-4 md:grid-cols-3">
             {featured.map((d, i) => (
               <Reveal key={d.key} delay={i * 0.08}>
@@ -233,15 +233,14 @@ export default function Home() {
       {/* the catalog at a glance */}
       <section className="px-4 pt-36 sm:px-6">
         <div className="mx-auto max-w-[1120px]">
-          <SectionHead label="Five use cases" title="Start from what you need to do." sub="Censorship resistance, privacy, security and post-quantum are built into every module. You pick the job." />
+          <SectionHead label="Blocks" title="A payer, checks, joins and actions." sub="Every build is a payer, checks joined together, and actions. Pick the blocks; plug them together in Solidity or through the SDK." />
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {CORNERS.map((c, i) => {
-              const mods = MODULES.filter((m) => m.corner === c.id);
-              const built = mods.filter((m) => m.status === "built").length;
+            {[...SHAPES.map((sh) => ({ id: sh.id, name: sh.plural, does: sh.does, mods: BLOCKS.filter((m) => m.shape === sh.id) })), { id: "ready-made", name: "Ready-made builds", does: "Whole applications made of blocks.", mods: READY_MADE }].map((c, i) => {
+              const built = c.mods.filter((m) => m.status === "built").length;
               return (
                 <Reveal key={c.id} delay={(i % 4) * 0.06}>
                   <Spotlight className="glass group h-full rounded-[24px]">
-                    <a href={href("modules", c.id)} className="flex h-full flex-col p-6">
+                    <a href={href("blocks")} className="flex h-full flex-col p-6">
                       <div className="flex items-center justify-between">
                         <span className="font-pixel text-[13px] text-faint">0{i + 1}</span>
                         <ArrowUpRight className="size-4 text-faint transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
@@ -250,12 +249,12 @@ export default function Home() {
                       <p className="mt-1.5 text-[13px] leading-snug text-muted-foreground">{c.does}</p>
                       <div className="mt-6 flex items-center gap-2">
                         <div className="flex flex-1 gap-0.5">
-                          {mods.map((m) => (
+                          {c.mods.map((m) => (
                             <span key={m.id} className={cn("h-1 flex-1 rounded-full", m.status === "built" ? "bg-foreground" : "bg-foreground/15")} />
                           ))}
                         </div>
                         <span className="font-mono text-[11px] text-muted-foreground">
-                          {built}/{mods.length}
+                          {built}/{c.mods.length}
                         </span>
                       </div>
                     </a>
@@ -295,10 +294,10 @@ export default function Home() {
         <Reveal>
           <div className="glass hatch relative mx-auto flex max-w-[1120px] flex-col items-center overflow-hidden rounded-[36px] px-6 py-20 text-center">
             <img src="/popcorn.svg" alt="" className="size-14" />
-            <h2 className="text-chrome mt-6 text-[34px] font-semibold leading-[1.05] tracking-[-0.03em] md:text-[44px]">Pick a module. Watch it run. Copy it.</h2>
-            <p className="mt-4 max-w-[520px] text-[15px] text-muted-foreground">Reviewed by us, not externally audited. Every module page lists what it cannot do.</p>
+            <h2 className="text-chrome mt-6 text-[34px] font-semibold leading-[1.05] tracking-[-0.03em] md:text-[44px]">Pick blocks. Watch them run. Copy them.</h2>
+            <p className="mt-4 max-w-[520px] text-[15px] text-muted-foreground">Reviewed by us, not externally audited. Block pages list their limits.</p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
-              <PrimaryLink href={href("modules")}>Browse modules</PrimaryLink>
+              <PrimaryLink href={href("blocks")}>Browse blocks</PrimaryLink>
               <GhostLink href={REPO} external>
                 Repository
               </GhostLink>

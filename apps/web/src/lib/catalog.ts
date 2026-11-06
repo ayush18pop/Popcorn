@@ -1,44 +1,15 @@
-// The module catalog and the example projects. docs/catalog/<group>/<module>.md and examples/<group>/<id>/project.md are
-// the single sources: front matter for the facts the site filters and badges on, Markdown sections for the page.
+// The block catalog and the example projects. docs/catalog/<checks|joins|actions|payers|ready-made>/<id>.md and
+// examples/<group>/<id>/project.md are the single sources: front matter for the facts the site filters and badges on,
+// Markdown sections for the page.
 import { parse as parseYaml } from "yaml";
 
 const files = import.meta.glob("../../../../docs/catalog/*/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const projectFiles = import.meta.glob("../../../../examples/*/*/project.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
-export type GroupId = "private" | "gas" | "protect" | "sign" | "prove";
-/** Kept for the pages that still say corner. */
-export type CornerId = GroupId;
-export type Trigger = "invariant" | "market" | "dependency" | "people" | "proof" | "tickets" | "payment" | "tooling";
 export type Status = "built" | "planned" | "research";
 export type RunsOn = "public" | "alternative" | "alternative-staked";
-
-export interface Group {
-  id: GroupId;
-  name: string;
-  does: string;
-  triggers: Trigger[];
-}
-
-/** The five use-case groups (decisions 68 and 72), in priority order. */
-export const GROUPS: Group[] = [
-  { id: "protect", name: "Protect a position or protocol", does: "Pause, pay a whitehat, repay or exit before losses, with no keeper", triggers: ["invariant", "market", "dependency", "people", "tickets"] },
-  { id: "private", name: "Move money privately", does: "Receive, hold and send without linking your addresses", triggers: ["proof"] },
-  { id: "gas", name: "Pay for gas", does: "Who pays, without a server or a relayer in the way", triggers: ["payment"] },
-  { id: "sign", name: "Sign and recover", does: "Who may act: keys, post-quantum signatures, guardians", triggers: ["people", "proof"] },
-  { id: "prove", name: "Prove and publish", does: "Evidence a contract can check: proofs, attestations, membership", triggers: ["proof", "people"] },
-];
-export const CORNERS = GROUPS;
-
-export const TRIGGER_TEXT: Record<Trigger, string> = {
-  invariant: "the protocol's own math broke",
-  market: "prices, pegs, liquidity",
-  dependency: "something it relies on changed",
-  people: "signatures",
-  proof: "cryptographic evidence",
-  tickets: "keyed-nonce tickets",
-  payment: "who pays the gas",
-  tooling: "build and test",
-};
+export type ShapeId = "check" | "join" | "action" | "payer";
+export type TierId = 1 | 2 | 3;
 
 export const RUNS_ON_TEXT: Record<RunsOn, string> = {
   public: "Public mempool",
@@ -46,29 +17,53 @@ export const RUNS_ON_TEXT: Record<RunsOn, string> = {
   "alternative-staked": "Alternative mempool, staked",
 };
 
-export interface Module {
+export interface Shape {
+  id: ShapeId;
+  name: string;
+  /** Plural, for filters and headings. */
+  plural: string;
+  does: string;
+}
+
+/** The four block shapes. A build is a payer, checks joined together, and actions. */
+export const SHAPES: Shape[] = [
+  { id: "check", name: "Check", plural: "Checks", does: "Answers yes, no or unknown. Unknown never fires." },
+  { id: "join", name: "Join", plural: "Joins", does: "Combines checks into one answer: all of, any of, none of, at least k of n, exactly one of, if / else." },
+  { id: "action", name: "Action", plural: "Actions", does: "Does one thing when the checks say yes." },
+  { id: "payer", name: "Payer", plural: "Payers", does: "Pays the gas." },
+];
+export const shapeById = (id: string) => SHAPES.find((s) => s.id === id);
+
+export const TIERS: { id: TierId; title: string }[] = [
+  { id: 1, title: "Without these, nothing works" },
+  { id: 2, title: "With these, the headline examples work" },
+  { id: 3, title: "With these, the rest of the listed use cases work" },
+];
+
+export interface Block {
   id: string;
   name: string;
-  group: GroupId;
-  /** Same as group (older pages). */
-  corner: GroupId;
-  trigger: Trigger;
+  /** "ready-made" for whole builds (Private Pool, Stealth Vault). */
+  shape: ShapeId | "ready-made";
+  /** Absent for ready-made builds. */
+  tier: TierId | null;
   status: Status;
-  /** Order within its group (1 = first). */
-  priority: number;
   runsOn: RunsOn[];
-  usedIn: string[];
-  properties: string[];
   gas: { validation?: number; total?: number; tag: "measured" | "estimated"; network: string } | null;
-  example: string | null; // e.g. "private/private-payroll"
+  inputs: { name: string; what: string }[];
+  perTrigger: string;
+  output: string;
+  presets: string[];
+  builtFrom: string[];
+  sdk: string | null;
   related: string[];
   code: string[];
-  postQuantum: boolean;
-  schemes: string[];
-  /** Markdown sections by heading ("What it does", "When it fires", ...). */
+  /** Markdown sections by heading ("What it does", "Inputs", "Code", ...). */
   sections: Record<string, string>;
   summary: string;
 }
+/** Older name for a block. */
+export type Module = Block;
 
 function split(path: string, raw: string) {
   const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(raw);
@@ -79,8 +74,10 @@ function split(path: string, raw: string) {
 function sectionsOf(body: string) {
   const sections: Record<string, string> = {};
   let cur = "";
+  let inFence = false;
   for (const line of body.split("\n")) {
-    const h = /^## (.+)$/.exec(line);
+    if (line.startsWith("```")) inFence = !inFence;
+    const h = !inFence && /^## (.+)$/.exec(line);
     if (h) {
       cur = h[1]!;
       sections[cur] = "";
@@ -90,43 +87,64 @@ function sectionsOf(body: string) {
   return sections;
 }
 
-function parseFile(path: string, raw: string): Module {
+const strings = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
+
+function parseFile(path: string, raw: string): Block {
   const { fm, body } = split(path, raw);
   const id = path.split("/").pop()!.replace(/\.md$/, "");
   const sections = sectionsOf(body);
-  const example = typeof fm.example === "string" ? fm.example.replace(/^examples\//, "").replace(/\/run\.json$/, "") : null;
-  const group = fm.group as GroupId;
+  const tier = Number(fm.tier);
   return {
     id,
     name: String(fm.name),
-    group,
-    corner: group,
-    trigger: fm.trigger as Trigger,
-    status: fm.status as Status,
-    priority: Number(fm.priority ?? 99),
+    shape: fm.shape as Block["shape"],
+    tier: tier === 1 || tier === 2 || tier === 3 ? tier : null,
+    status: (fm.status as Status) ?? "planned",
     runsOn: (fm.runsOn as RunsOn[]) ?? [],
-    usedIn: (fm.usedIn as string[]) ?? [],
-    properties: (fm.properties as string[]) ?? [],
-    gas: (fm.gas as Module["gas"]) ?? null,
-    example,
-    related: (fm.related as string[]) ?? [],
-    code: (fm.code as string[]) ?? [],
-    postQuantum: Boolean(fm.postQuantum),
-    schemes: (fm.schemes as string[]) ?? [],
+    gas: (fm.gas as Block["gas"]) ?? null,
+    inputs: ((fm.inputs as { name: unknown; what: unknown }[]) ?? []).map((x) => ({ name: String(x.name), what: String(x.what ?? "") })),
+    perTrigger: String(fm.perTrigger ?? ""),
+    output: String(fm.output ?? ""),
+    presets: strings(fm.presets),
+    builtFrom: strings(fm.builtFrom),
+    sdk: typeof fm.sdk === "string" ? fm.sdk : null,
+    related: strings(fm.related),
+    code: strings(fm.code),
     sections,
     summary: sections["What it does"] ?? "",
   };
 }
 
-export const MODULES: Module[] = Object.entries(files)
-  .map(([p, raw]) => parseFile(p, raw))
-  .sort((a, b) => GROUPS.findIndex((c) => c.id === a.group) - GROUPS.findIndex((c) => c.id === b.group) || a.priority - b.priority);
+const ALL: Block[] = Object.entries(files).map(([p, raw]) => parseFile(p, raw));
+const shapeOrder = (b: Block) => (b.shape === "ready-made" ? 99 : SHAPES.findIndex((s) => s.id === b.shape));
 
-export const moduleById = (id: string) => MODULES.find((m) => m.id === id);
-export const groupById = (id: string) => GROUPS.find((c) => c.id === id);
-export const cornerById = groupById;
+/** Every block (checks, joins, actions, payers), by tier, then shape, then name. */
+export const BLOCKS: Block[] = ALL.filter((b) => b.shape !== "ready-made").sort(
+  (a, b) => (a.tier ?? 9) - (b.tier ?? 9) || shapeOrder(a) - shapeOrder(b) || a.name.localeCompare(b.name),
+);
+/** Ready-made builds: whole applications made of blocks. */
+export const READY_MADE: Block[] = ALL.filter((b) => b.shape === "ready-made").sort((a, b) => a.name.localeCompare(b.name));
+/** Blocks and ready-made builds together. */
+export const CATALOG: Block[] = [...BLOCKS, ...READY_MADE];
+export const MODULES = CATALOG;
 
-// ---------------------------------------------------------------- example projects (decision 70)
+export const blockById = (id: string) => CATALOG.find((m) => m.id === id);
+export const moduleById = blockById;
+
+/** "Check", "Join", ..., or "Ready-made build". */
+export const shapeLabel = (b: Block) => (b.shape === "ready-made" ? "Ready-made build" : (shapeById(b.shape)?.name ?? b.shape));
+
+// ---------------------------------------------------------------- example projects
+
+export type GroupId = "protect" | "private" | "gas" | "sign";
+
+/** The example folders under examples/, used only to label and group the examples. */
+export const GROUPS: { id: GroupId; name: string }[] = [
+  { id: "protect", name: "Protect a position or protocol" },
+  { id: "private", name: "Move money privately" },
+  { id: "gas", name: "Pay for gas" },
+  { id: "sign", name: "Sign and recover" },
+];
 
 export interface Project {
   /** "<group>/<id>", the run's key too. */
@@ -135,12 +153,17 @@ export interface Project {
   group: GroupId;
   name: string;
   problem: string;
+  /** Block ids (and ready-made build ids) with the role each plays here. */
   modules: { id: string; role: string }[];
+  /** What the build protects or acts on, when it is a demo contract and not a block. */
+  target: string | null;
+  /** The Solidity file of the build. */
+  build: string | null;
   featured: string;
   flagship: boolean;
   order: number;
   summary: string;
-  /** Built when every module it names is built. */
+  /** Built when every block it names is built. */
   status: Status;
 }
 
@@ -148,7 +171,7 @@ export const PROJECTS: Project[] = Object.entries(projectFiles)
   .map(([p, raw]) => {
     const { fm, body } = split(p, raw);
     const [group, id] = p.split("/").slice(-3, -1) as [GroupId, string];
-    const modules = (fm.modules as { id: string; role: string }[]) ?? [];
+    const modules = ((fm.modules as { id: string; role: string }[]) ?? []).map((m) => ({ id: String(m.id), role: String(m.role ?? "") }));
     const project: Project = {
       key: `${group}/${id}`,
       id,
@@ -156,18 +179,20 @@ export const PROJECTS: Project[] = Object.entries(projectFiles)
       name: String(fm.name),
       problem: String(fm.problem ?? ""),
       modules,
+      target: typeof fm.target === "string" ? fm.target : null,
+      build: typeof fm.build === "string" ? fm.build : null,
       featured: String(fm.featured ?? ""),
       flagship: Boolean(fm.flagship),
       order: Number(fm.order ?? 99),
       summary: body.trim(),
-      status: modules.every((m) => moduleById(m.id)?.status === "built") ? "built" : "planned",
+      status: modules.every((m) => blockById(m.id)?.status === "built") ? "built" : "planned",
     };
     return project;
   })
   .sort((a, b) => a.order - b.order);
 
 export const projectByKey = (key: string) => PROJECTS.find((p) => p.key === key);
-export const projectsUsing = (moduleId: string) => PROJECTS.filter((p) => p.modules.some((m) => m.id === moduleId));
+export const projectsUsing = (blockId: string) => PROJECTS.filter((p) => p.modules.some((m) => m.id === blockId));
 
 export const REPO = "https://github.com/ayush18pop/Popcorn";
 export const repoFile = (path: string) => `${REPO}/blob/main/${path}`;
