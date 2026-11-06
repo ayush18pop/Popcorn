@@ -777,3 +777,16 @@ Loan, Pause The Target on the build itself) are Solidity only.
 **Why.** A developer can try a build in minutes with no compiler, and the engine is already validated on chain. Adding
 stateful actions to the engine would grow its reviewed surface for every user; inheritance keeps them reviewable one
 block at a time.
+
+## 82. Block names say what the block does
+
+**Choice.** Display names are verb phrases: Value Crosses A Line, Value Moves Too Fast, Contract Code Changed, Signed
+Instruction (Anyone Can Send), Statement Signed By k Of n Reporters, Proof That The Rules Were Broken, Prove You're In
+The Group, All Of, Any Of, None Of, At Least k Of n, Exactly One Of, If / Else, Make A Call, Pause The Target, Pay The
+Reward, Anonymous Group Vote, Hand Over To A New Key, Exit To An Address, Switch To Quantum-Safe Only, Repay A Loan,
+Contract Pays The Gas, Payer Gets Rewarded, Public Gas Sponsor. Solidity names are the short form (ValueCrossesLine,
+RulesBrokenProof, PauseTarget, PayTheReward, AnonymousGroupVote, KeyHandover, QuantumSafeSwitch, ExitToAddress, ...).
+The payers keep their code names (RulePays, CallerPays, OpenSponsor), which the factory and the SDK check by name. The
+signature schemes are options of Signed Instruction, not blocks of their own.
+
+**Why.** The owner asked for names that explain themselves; a reader should know what a block does from its name.
