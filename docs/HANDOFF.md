@@ -167,6 +167,20 @@ examples' links say `#/explorer/local/<hash>` (they were recorded locally). `app
 
 ## Next work: UI, ease of explanation, demos
 
+**First, from the owner's review of the public demo (the flow "looks random"):**
+1. **Readable labels.** No-Solidity (rule-set) nodes show raw selectors (`0x2FC63d…0x3fa4f245() gt 1000`). Resolve getters to
+   names and the contract's role (`vault.totalAssets()`), and show the live values compared
+   (`0.0088 / 0.01 = 0.88 < 1.0 -> YES`). Code: `packages/sdk/src/inspect.ts` (ruleSetFlow), `ruleset/explain.ts` (nodeLabel).
+2. **One node per idea.** Draw a ratio as one "share price < 1.0" node; fold `NOT (paused > 0)` into "vault not paused".
+3. **Incident view in the explorer.** An attack is several transactions: the attacker's ordinary tx (Popcorn cannot act
+   inside it), the state change, the trigger (the only frame transaction; its frames are VERIFY then SENDER), the blocked
+   retry, and refusals. Show them as a timeline with the flow on the trigger, each hash linked, frames as raw detail.
+4. **Demos.** `packages/sdk/scripts/demo-simple-exploit.ts` runs that story on the public devnet (BuggyVault, 1.3 KB, plus
+   a no-Solidity build). Its "refused while healthy" step currently shares its hash with the later successful trigger (a
+   rule-pays trigger has no signature, so the same fees give the same bytes); give refused attempts a tip one wei higher.
+   `demo-proof-of-exploit.ts` (the ZK bounty) only runs on the local devnet: its 16.6 KB build exceeds the public
+   devnet's per-transaction gas (a new storage slot costs about 98k gas there; deploys need 1k+ gas per byte).
+
 Status at handoff: everything above is committed on branch `modular-blocks` (pushed). The six examples were being
 re-recorded on the final contracts when this was written; Proof-of-Exploit, Private Payroll and Open Gas Network are
 re-recorded with flows. If `examples/sign/*/run.json` and `examples/protect/walkaway-exit/run.json` lack a `flow` field,
