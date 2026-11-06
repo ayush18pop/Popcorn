@@ -731,3 +731,14 @@ so a public-mempool trigger and a 200k proof check belong in separate builds whe
 **Why.** Validation may read the sender's own storage freely, but reading another contract's storage needs a staked
 build on the alternative mempool. Inherited blocks keep their state in the build's own storage, so they stay on the
 public mempool where their checks allow it, and cost less gas.
+
+## 78. Checks answer yes, no or unknown, and Exactly One Of joins them
+
+**Choice.** A Solidity check returns an `Answer` (no, yes, unknown); `Join` combines answers with the same rules as the
+rule-set engine (decision 49), so a check written in Solidity and one built from data mean the same thing. The engine
+gains Exactly One Of as node type 5, "exactly k of n": its children are evaluated exactly, like under NOT, so an
+unknown child makes the answer unknown, and the validator refuses predicate leaves below it. The SDK encoder, decoder,
+validator, explainer and gas model learn it, and the shared vectors cover it.
+
+**Why.** "Exactly one" is only meaningful if every other child is a definite no; a signature or proof whose no only
+means "the witness failed" cannot give that.
