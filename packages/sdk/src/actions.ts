@@ -187,6 +187,8 @@ async function gatewayUp(ctx: PopcornContext): Promise<boolean> {
 /** The submit route "auto" resolves to right now. */
 export async function resolveVia(ctx: PopcornContext, via: Via | "auto" = ctx.via): Promise<Via> {
   if (via !== "auto") return via;
+  const preferred = getDevnet(ctx.devnet).autoVia;
+  if (preferred) return preferred;
   return (await gatewayUp(ctx)) ? "gateway" : "rpc";
 }
 
@@ -204,7 +206,11 @@ export interface TriggerFees {
 
 /** Trigger fees within the rule contract's caps. `enforce`: throw FeeAboveCap for a requested fee above a cap (trigger does; simulate doesn't). */
 async function triggerFees(ctx: PopcornContext, args: RuleContractArgs, req: TriggerFees | undefined, enforce: boolean) {
-  const { baseFee, suggestedTip } = await currentFees(ctx);
+  const fees = await currentFees(ctx);
+  const baseFee = fees.baseFee;
+  // never below the tip the network actually includes (the public devnet's builders skip tips under about 1 gwei)
+  const floor = getDevnet(ctx.devnet).minPriorityFee ?? 0n;
+  const suggestedTip = fees.suggestedTip > floor ? fees.suggestedTip : floor;
   const min = (a: bigint, b: bigint) => (a < b ? a : b);
   if (args.mode === 1) {
     // caller-pays: Core has no fee caps (the payer pays); the payer's requested fees, else baseFee × multiplier + tip

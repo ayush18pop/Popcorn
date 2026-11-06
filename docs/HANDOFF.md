@@ -135,6 +135,36 @@ The local devnet (`devnet/README.md`, `devnet/up.sh`) must be up for anything li
   roughly 19 to 20 KB of runtime. Current sizes: Sovereign Account 18.7 KB, bounty 16.6 KB. Check with
   `forge build --sizes` before adding code to a build.
 
+## The public devnet (chain 1337): measured, and now the default target
+
+Endpoints (docs: https://docs.altmempool.wtf/guides/devnet/): node `https://altmempool.forshtat.com`, sidecar
+`https://altmempool.forshtat.com/rpc`, explorer https://explorer.altmempool.wtf/. There is no faucet: the published
+throwaway key in the sidecar repo (`deploy/devnet/genesis.values.env`) funds new accounts with one plain transfer;
+`keys/deployer.json` holds about 1 ETH there. Blocks are 60M gas and mostly empty; the base fee is a few wei.
+
+What we learned running our tests there:
+
+- **Tip.** The node suggests a 1-wei tip, but its builders leave frame transactions with tips under about 1 gwei unincluded
+  until the sidecar drops them ("relayed 4 times without being included"). The SDK's devnet table now sets
+  `minPriorityFee: 1 gwei` for devnet1; at 1 gwei a trigger lands in about 30 seconds.
+- **Route.** The gateway (`altmempoolgateway.forshtat.com`) answers health checks but drops frame transactions; the
+  devnet table sets `autoVia: "sidecar"` so "auto" submits to the sidecar.
+- **Reads of other contracts are fine.** A no-Solidity build whose conditions read other contracts (staked) was included.
+- **Passing on the public devnet:** `POPCORN_NETWORK=1 POPCORN_DEVNET=devnet1 npx vitest run test/blocks.network.test.ts`
+  (the shared rule-set engine is now deployed there) and `POPCORN_DEVNET=devnet1 POPCORN_KEY=keys/deployer.json bun
+  packages/sdk/examples/02-caller-pays.ts`; `inspectTransaction` explains both hashes, and the public sidecar's own
+  refusals (structure, storage access, prefix budget) are named as mempool rules.
+- **Not run there yet:** the six examples (they deploy 8 to 16M-gas contracts each; the network is shared, so ask first)
+  and the remaining devnet suites. Never use one key from two processes at once: nonces collide.
+
+## The deployed site
+
+https://popcorn-chi-five.vercel.app (Vercel project `popcorn`, team ayush18pops-projects, linked in `apps/web/.vercel`).
+Vercel's own build cannot see `docs/` and `examples/` (the site reads them from the repository root), so deploy prebuilt:
+`cd apps/web && vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod`.
+`VITE_DEFAULT_DEVNET=devnet1` is set on the project, so the deployed explorer starts on the public devnet; the recorded
+examples' links say `#/explorer/local/<hash>` (they were recorded locally). `apps/web/package.json` pins Node 24.
+
 ## Next work: UI, ease of explanation, demos
 
 Status at handoff: everything above is committed on branch `modular-blocks` (pushed). The six examples were being

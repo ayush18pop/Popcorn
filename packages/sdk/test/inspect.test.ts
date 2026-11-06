@@ -47,6 +47,8 @@ describe("parseRefusal and Core codes", () => {
     expect(parseRefusal("validation frame 0: reverted with data 0x0000000000000000000000000000000000000000000000000000000000000022")).toEqual({ frame: 0, code: 0x22 });
     expect(parseRefusal("validation frame 1: reverted with data 0x6d")).toEqual({ frame: 1, code: 0x6d });
     expect(parseRefusal("entity 0xabc validation gas 260909 exceeds unstaked budget 250000 (BUDGET-010)")).toBeNull();
+    // a structural rule names a frame but carries no revert word
+    expect(parseRefusal("Frame 2: atomic batch flag on last frame")).toEqual({ frame: 2, code: null });
   });
   it("explains a Core code in plain English", () => {
     expect(coreMeaning(0x22)).toMatch(/^Core 0x22 \(condition is false\): The rule contract's condition is not true/);

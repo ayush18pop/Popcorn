@@ -58,7 +58,8 @@ export interface Inspection {
   hash: Hex;
   /** Where the transaction was found. */
   foundOn: "node" | "sidecar" | "nowhere";
-  status: "included" | "action-reverted" | "pending" | "refused" | "unknown";
+  /** "dropped": admitted by the sidecar, relayed, never included, then given up. */
+  status: "included" | "action-reverted" | "pending" | "refused" | "dropped" | "unknown";
   build: Address | null;
   payer: Address | null;
   triggerData: Hex | null;
@@ -69,7 +70,9 @@ export interface Inspection {
   stages: Stage[];
   flow: Flow | null;
   /** The refusal, when there is one: the frame that refused, its code and what the code means. */
-  refusal: { frame: number; code: number | null; who: "build" | "payer" | "other"; meaning: string } | null;
+  /** The refusal: the frame that reverted with its code ("build" or "payer"), or a mempool rule that refused it before any
+   *  frame decided ("mempool": structure, storage access, gas budget, ...; frame is -1 when none is named). */
+  refusal: { frame: number; code: number | null; who: "build" | "payer" | "mempool" | "other"; meaning: string; rule?: string } | null;
 }
 
 interface RawFrame {
@@ -342,7 +345,10 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
       ...(adm.checks ? { checks: adm.checks } : {}),
     });
     if (adm.outcome === "rejected") {
-      const r = parseRefusal(failed?.detail ?? side?.events?.find((e) => e.kind === "rejected")?.reason);
+      const reason = failed?.detail ?? side?.events?.find((e) => e.kind === "rejected")?.reason ?? "";
+      // a frame's VERIFY reverted with a word: Core's code (the build) or the payer's code. Anything else is a mempool rule.
+      const r = failed?.rule === "simulation" && /validation frame \d+: reverted with data 0x[0-9a-f]+\s*$/i.test(reason) ? parseRefusal(reason) : null;
+      if (!r) out.refusal = { frame: parseRefusal(reason)?.frame ?? -1, code: null, who: "mempool", rule: failed?.rule ?? "rejected", meaning: `the alternative mempool's ${failed?.rule ?? ""} rule refused it: ${reason}` };
       if (r) {
         const target = frames[r.frame]?.target;
         const who: "build" | "payer" | "other" = frames[r.frame]?.mode === FrameMode.VERIFY ? (!target || getAddress(target) === out.build ? "build" : "payer") : "other";
@@ -369,6 +375,22 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
     if (out.payer) out.stages.push({ id: "payer", title: "Payer", state: "pass", detail: `${out.payer} approved and paid` });
     out.stages.push({ id: "build", title: "The build's condition", state: "pass", detail: "YES when it ran: the build approved the transaction" });
     out.stages.push({ id: "chain", title: "Included", state: receipt.status === "success" ? "pass" : "fail", detail: `block ${receipt.blockNumber}, ${receipt.gasUsed} gas, ${receipt.status === "success" ? "every frame succeeded" : "a frame reverted"}` });
+  } else if (out.foundOn === "sidecar" && ref?.who === "mempool") {
+    out.status = "refused";
+    out.stages.push({ id: "core", title: "Core checks", state: "skipped", detail: `not run: the mempool's ${ref.rule} rule refused the transaction first` });
+    out.stages.push({ id: "build", title: "The build's condition", state: "skipped", detail: "not reached" });
+    out.stages.push({ id: "chain", title: "Included", state: "skipped", detail: "never included: a refused transaction costs nothing" });
+  } else if (out.foundOn === "sidecar" && (side?.entry?.status === "Cancelled" || adm?.outcome === "dropped" || side?.events?.some((e) => e.kind === "dropped"))) {
+    out.status = "dropped";
+    const why = side?.events?.filter((e) => e.kind === "dropped").pop()?.reason ?? "dropped";
+    out.stages.push({ id: "core", title: "Core checks", state: "pass", detail: "passed when the sidecar simulated it" });
+    out.stages.push({ id: "build", title: "The build's condition", state: "pass", detail: "YES when the sidecar admitted it" });
+    out.stages.push({
+      id: "chain",
+      title: "Included",
+      state: "fail",
+      detail: `never included: ${why}. A common cause is a tip below what the network's builders include (on the public devnet about 1 gwei; the SDK's devnet table sets it).`,
+    });
   } else if (out.foundOn === "sidecar") {
     out.status = adm?.outcome === "rejected" ? "refused" : "pending";
     const buildRefused = ref?.who === "build";
@@ -397,7 +419,7 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
       const actionFrame = receipt.frameReceipts[senderIdx];
       out.flow = deriveFromInclusion(flow, actionFrame ? actionFrame.status === "success" : receipt.status === "success");
     }
-    else if (ref && ref.who === "build" && ref.code !== 0x22) {
+    else if (ref && (ref.who === "mempool" || (ref.who === "build" && ref.code !== 0x22))) {
       // Core refused before the condition ran: every build node is grey
       out.flow = { ...flow, nodes: flow.nodes.map((n) => ({ ...n, result: n.kind === "trigger" ? "yes" : "skipped", note: n.kind === "trigger" ? undefined : `not reached: ${ref.meaning}` })) };
     } else if (ref && ref.who === "payer") {
