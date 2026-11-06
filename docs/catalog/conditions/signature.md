@@ -6,7 +6,7 @@ status: built
 runsOn: [public, alternative]
 gas: null
 inputs:
-  - { name: "signer", what: "the key type: ECDSA, passkey (P-256, WebAuthn), both keys must sign, k of n keys, or a post-quantum scheme (WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon)" }
+  - { name: "signer", what: "the key type (each post-quantum one has its own page under Signers): ECDSA, passkey (P-256, WebAuthn), both keys must sign, k of n keys, or a post-quantum scheme (WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon)" }
   - { name: "key", what: "the signer's params: the public key or keys" }
 perTrigger: "the instruction (trigger data) and the signature (verify data)"
 output: "yes / no / unknown"
@@ -15,7 +15,7 @@ useCases:
   configs: ["Passkey wallet (P-256 / WebAuthn)", "K-of-N keys treasury", "Post-quantum key (WOTS+, Falcon)"]
   ideas: ["Gasless meta-transactions any relayer can send"]
 sdk: "blocks.signedInstruction"
-related: [call, k-of-n-attestation, post-quantum-mode]
+related: [call, k-of-n-attestation, post-quantum-mode, wots, falcon, xmss, sphincs, fors]
 code: ["contracts/src/blocks/checks/SignedInstruction.sol"]
 ---
 
@@ -27,7 +27,7 @@ Yes when a key signed this exact instruction for this build. Anyone can then del
 
 ## Configuration
 
-- **signer**: the key type: ECDSA, passkey (P-256, WebAuthn), both keys must sign, k of n keys, or a post-quantum scheme (WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon)
+- **signer**: the key type (each post-quantum one has its own page under Signers): ECDSA, passkey (P-256, WebAuthn), both keys must sign, k of n keys, or a post-quantum scheme (WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon)
 - **key**: the signer's params: the public key or keys
 - **trigger payload**: the instruction (trigger data) and the signature (verify data)
 - **returns**: yes / no / unknown

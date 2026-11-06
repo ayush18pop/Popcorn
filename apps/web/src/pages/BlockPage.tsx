@@ -33,7 +33,7 @@ export default function BlockPage({ id }: { id: string }) {
   const progress = useSpring(scrollYProgress, { stiffness: 200, damping: 30 });
   const [active, setActive] = useState("what");
 
-  const isCheck = m?.shape === "check" || m?.shape === "join";
+  const isCheck = m?.shape === "check" || m?.shape === "join" || m?.shape === "signer";
   const ready = m?.shape === "ready-made";
   const code = m ? codeFiles(m) : [];
   const limits = items(m?.sections["Gotchas"]);

@@ -8,7 +8,7 @@ const projectFiles = import.meta.glob("../../../../examples/*/*/project.md", { q
 
 export type Status = "built" | "planned" | "research";
 export type RunsOn = "public" | "alternative" | "alternative-staked";
-export type ShapeId = "check" | "join" | "action" | "payer";
+export type ShapeId = "check" | "join" | "action" | "payer" | "signer";
 export type TierId = 1 | 2 | 3;
 
 export const RUNS_ON_TEXT: Record<RunsOn, string> = {
@@ -31,6 +31,7 @@ export const SHAPES: Shape[] = [
   { id: "join", name: "Logic operator", plural: "Logic operators", does: "Combines conditions: AND, OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE." },
   { id: "action", name: "Action", plural: "Actions", does: "Does one thing when the conditions return YES." },
   { id: "payer", name: "Gas payer", plural: "Gas payers", does: "Decides who pays the gas." },
+  { id: "signer", name: "Signer", plural: "Signers", does: "Key types for the Signature condition; the post-quantum ones are marked." },
 ];
 export const shapeById = (id: string) => SHAPES.find((s) => s.id === id);
 
@@ -55,6 +56,8 @@ export interface Block {
   output: string;
   /** Use cases in three groups: ready to use (a build or example exists), common configurations, other ideas (not built). */
   useCases: { ready: string[]; configs: string[]; ideas: string[] };
+  /** A post-quantum scheme (the signers): shown on its card. */
+  postQuantum: boolean;
   builtFrom: string[];
   sdk: string | null;
   related: string[];
@@ -112,6 +115,7 @@ function parseFile(path: string, raw: string): Block {
       ideas: strings((fm.useCases as Record<string, unknown> | undefined)?.ideas),
     },
     builtFrom: strings(fm.builtFrom),
+    postQuantum: Boolean(fm.postQuantum),
     sdk: typeof fm.sdk === "string" ? fm.sdk : null,
     related: strings(fm.related),
     code: strings(fm.code),
@@ -124,13 +128,15 @@ const ALL: Block[] = Object.entries(files).map(([p, raw]) => parseFile(p, raw));
 const shapeOrder = (b: Block) => (b.shape === "ready-made" ? 99 : SHAPES.findIndex((s) => s.id === b.shape));
 
 /** Every block (checks, joins, actions, payers), by tier, then shape, then name. */
-export const BLOCKS: Block[] = ALL.filter((b) => b.shape !== "ready-made").sort(
+export const BLOCKS: Block[] = ALL.filter((b) => b.shape !== "ready-made" && b.shape !== "signer").sort(
   (a, b) => (a.tier ?? 9) - (b.tier ?? 9) || shapeOrder(a) - shapeOrder(b) || a.name.localeCompare(b.name),
 );
+/** Signers: the Signature condition's key types, by measured validation gas. */
+export const SIGNERS: Block[] = ALL.filter((b) => b.shape === "signer").sort((a, b) => (a.gas?.validation ?? 9e9) - (b.gas?.validation ?? 9e9));
 /** Complete contracts: whole applications made of blocks. */
 export const READY_MADE: Block[] = ALL.filter((b) => b.shape === "ready-made").sort((a, b) => a.name.localeCompare(b.name));
 /** Blocks and complete contracts together. */
-export const CATALOG: Block[] = [...BLOCKS, ...READY_MADE];
+export const CATALOG: Block[] = [...BLOCKS, ...SIGNERS, ...READY_MADE];
 export const MODULES = CATALOG;
 
 export const blockById = (id: string) => CATALOG.find((m) => m.id === id);

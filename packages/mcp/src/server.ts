@@ -81,7 +81,7 @@ export function createServer(): McpServer {
     {
       description:
         "List Popcorn's blocks (checks, joins, actions, payers; each does one job) and the complete contracts, optionally for one shape or tier. A build is a payer, checks joined together, and actions.",
-      inputSchema: { shape: z.enum(["check", "join", "action", "payer", "ready-made"]).optional(), tier: z.number().int().min(1).max(3).optional() },
+      inputSchema: { shape: z.enum(["check", "join", "action", "payer", "signer", "ready-made"]).optional(), tier: z.number().int().min(1).max(3).optional() },
     },
     async ({ shape, tier }) =>
       json(

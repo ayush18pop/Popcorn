@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Reveal, Spotlight } from "@/components/motion";
 import { MempoolBadges, StatusBadge } from "@/components/bits";
-import { BLOCKS, READY_MADE, SHAPES, TIERS, projectsUsing, shapeLabel, type Block, type ShapeId } from "@/lib/catalog";
+import { BLOCKS, READY_MADE, SHAPES, SIGNERS, TIERS, blockById, projectsUsing, shapeLabel, type Block, type ShapeId } from "@/lib/catalog";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,10 @@ export function BlockCard({ m, i = 0 }: { m: Block; i?: number }) {
         <a href={href("blocks", m.id)} className="flex h-full min-h-[220px] flex-col p-6 transition-transform duration-500 ease-[cubic-bezier(.2,.7,.2,1)] group-hover:-translate-y-1">
           <div className="flex items-center justify-between gap-2">
             <span className="label-mono">{shapeLabel(m)}</span>
-            {m.status !== "built" && <StatusBadge status={m.status} />}
+            <span className="flex items-center gap-1.5">
+              {m.postQuantum && <span className="rounded-full border border-foreground/40 px-2 py-0.5 font-mono text-[10px] text-foreground">post-quantum</span>}
+              {m.status !== "built" && <StatusBadge status={m.status} />}
+            </span>
           </div>
           <h3 className="mt-4 text-[17px] font-semibold tracking-tight">{m.name}</h3>
           <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-muted-foreground">{plain(m.summary)}</p>
@@ -33,7 +36,9 @@ export function BlockCard({ m, i = 0 }: { m: Block; i?: number }) {
           <div className="mt-auto space-y-3 pt-5">
             <MempoolBadges m={m} />
             <div className="flex items-center justify-between border-t border-[var(--glass-border)] pt-3">
-              <span className="font-mono text-[11px] text-faint">{used ? `used in ${used} example${used === 1 ? "" : "s"}` : "not in an example yet"}</span>
+              <span className="font-mono text-[11px] text-faint">
+                {m.gas?.validation ? `${m.gas.validation.toLocaleString("en-US")} gas · ${m.gas.tag}` : used ? `used in ${used} example${used === 1 ? "" : "s"}` : "not in an example yet"}
+              </span>
               <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
             </div>
           </div>
@@ -76,6 +81,8 @@ export default function Blocks() {
           </p>
         </Reveal>
 
+        <Highlights />
+
         {/* shapes */}
         <Reveal delay={0.08} className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {SHAPES.map((s) => (
@@ -117,6 +124,16 @@ export default function Blocks() {
         })}
         {list.length === 0 && <p className="mt-16 text-center text-[14px] text-muted-foreground">No block of this kind yet.</p>}
 
+        {(!shape || shape === "signer") && SIGNERS.length > 0 && (
+          <section className="mt-20">
+            <div className="mb-5 border-b border-[var(--glass-border)] pb-3">
+              <h2 className="text-[20px] font-semibold tracking-tight">Signers</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">The Signature condition's key types. Each post-quantum scheme by name, with its measured validation gas: WOTS+, XMSS and FORS fit the public mempool's 100,000.</p>
+            </div>
+            <Grid list={SIGNERS} />
+          </section>
+        )}
+
         {READY_MADE.length > 0 && (
           <section className="mt-20">
             <div className="mb-5 border-b border-[var(--glass-border)] pb-3">
@@ -130,5 +147,69 @@ export default function Blocks() {
         <p className="mt-12 text-[12px] leading-relaxed text-faint">Source: docs/catalog/&lt;conditions|operators|actions|payers|complete&gt;/&lt;block&gt;.md. Hover a mempool chip for the reason.</p>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------- start here */
+
+// What a reader should see first, whatever they filter by: the bounty, post-quantum, privacy, Core and the paymaster.
+const HIGHLIGHTS: { id?: string; href?: string; kicker: string; title: string; line: string; big?: boolean; chips?: string[] }[] = [
+  { href: "#/examples/protect/proof-of-exploit", kicker: "Example", title: "Proof-of-Exploit Bounty", line: "A whitehat proves the bug in zero knowledge from a key with no ETH. Paid to a fresh address, and the vault paused, in one transaction. No committee.", big: true },
+  { id: "post-quantum-mode", kicker: "Post-quantum", title: "Post-Quantum Mode", line: "The day ECDSA breaks, owner signatures stop working and only a post-quantum key nobody has seen can move the money." },
+  { id: "wots", kicker: "Post-quantum", title: "Post-quantum signers", line: "Hash-based and lattice signatures a quantum computer cannot forge, three of them within the public mempool's budget.", chips: ["wots", "xmss", "fors", "sphincs", "falcon"] },
+  { id: "privacy-pool", kicker: "Private", title: "Privacy Pool", line: "Withdraw to an address with no ETH, no relayer and no link to the deposit. The pool pays the gas; association sets keep flagged funds out." },
+  { href: "#/docs/contracts", kicker: "Core", title: "Popcorn Core", line: "The account code every build runs on: one frame layout, fee caps, once per event, a re-entry lock. Anyone can trigger; a NO costs nothing." },
+  { id: "paymaster", kicker: "Gas", title: "Paymaster", line: "Gas sponsorship as public code, not a server: budgets, a fee cap and an anonymous one-account-per-member gate." },
+];
+
+function Highlights() {
+  return (
+    <section className="mt-10">
+      <p className="label-mono mb-4">Start here</p>
+      <div className="grid gap-4 md:grid-cols-3">
+        {HIGHLIGHTS.map((h, i) => {
+          const m = h.id ? blockById(h.id) : undefined;
+          const link = h.href ?? (m ? href("blocks", m.id) : "#");
+          const gas = m?.gas ? (m.gas.total ?? m.gas.validation) : null;
+          return (
+            <Reveal key={h.title} delay={i * 0.05} className={cn(h.big && "md:col-span-2 md:row-span-2")}>
+              <Spotlight className="glass group relative h-full overflow-hidden rounded-[26px]">
+                <a href={link} className={cn("flex h-full flex-col p-6", h.big && "md:p-9")}>
+                  <div className="flex items-center justify-between">
+                    <span className="label-mono">{h.kicker}</span>
+                    <ArrowRight className="size-4 text-faint transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
+                  </div>
+                  <h3 className={cn("text-chrome mt-4 font-semibold tracking-tight", h.big ? "text-[30px] leading-[1.05] md:text-[44px]" : "text-[19px]")}>{h.title}</h3>
+                  <p className={cn("mt-3 leading-relaxed text-muted-foreground", h.big ? "max-w-[520px] text-[15px] md:text-[17px]" : "text-[13px]")}>{h.line}</p>
+                  {h.chips && (
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {h.chips.map((c) => {
+                        const cm = blockById(c);
+                        return cm ? (
+                          <span
+                            key={c}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              window.location.hash = href("blocks", cm.id).slice(1);
+                            }}
+                            className="cursor-pointer rounded-full border border-foreground/30 px-2.5 py-1 font-mono text-[11px] text-foreground hover:bg-foreground/[0.06]"
+                          >
+                            {cm.name.replace(/ Signer$/, "")}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <div className="mt-auto flex flex-wrap items-center gap-3 pt-5 font-mono text-[11px] text-faint">
+                    {gas !== null && gas !== undefined && m?.gas && <span>{gas.toLocaleString("en-US")} gas · {m.gas.tag}</span>}
+                    {h.big && <span>recorded example ↗</span>}
+                  </div>
+                </a>
+              </Spotlight>
+            </Reveal>
+          );
+        })}
+      </div>
+    </section>
   );
 }
