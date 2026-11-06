@@ -1,9 +1,9 @@
 ---
 name: "Sponsor With Limits"
-corner: gas
+group: gas
 trigger: market
 status: planned
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
 gas: null
 example: null
 related: [rule-pays]
@@ -24,9 +24,9 @@ When the sponsored call matches the allowlist and the budget has room.
 
 Pays for the call and debits the budget.
 
-## Mempool
+## Runs on
 
-Planned on own-storage budgets.
+The sponsor's policy and budgets live in its own storage: the public mempool and the alternative mempool.
 
 ## Limits
 

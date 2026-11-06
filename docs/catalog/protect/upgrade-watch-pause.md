@@ -1,9 +1,9 @@
 ---
 name: "Upgrade Watch Pause"
-corner: pause
+group: protect
 trigger: dependency
 status: planned
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
 gas: null
 example: null
 related: [rule-sets]
@@ -24,9 +24,9 @@ When a dependency's code hash differs from the recorded one (the rule-set code-h
 
 Pauses the integration until the owner reviews the new code.
 
-## Mempool
+## Runs on
 
-Reads another contract's code hash.
+Reads the watched contract's code hash, so the rule contract stakes: the alternative mempool.
 
 ## Limits
 

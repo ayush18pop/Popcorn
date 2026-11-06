@@ -1,9 +1,10 @@
 ---
 name: "Share Price Floor Pause"
-corner: pause
+group: protect
 trigger: invariant
 status: planned
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
+usedIn: [defi]
 gas: null
 example: null
 related: [guarded-vault]
@@ -24,9 +25,9 @@ When assets per share fall below a floor.
 
 Pauses the vault.
 
-## Mempool
+## Runs on
 
-Planned as a drop-in for any ERC-4626 vault that keeps its accounting in its own storage.
+Reads an ERC-4626 vault's accounting kept in its own storage: the public mempool and the alternative mempool.
 
 ## Limits
 

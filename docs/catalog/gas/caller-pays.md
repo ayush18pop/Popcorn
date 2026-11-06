@@ -1,11 +1,11 @@
 ---
 name: "Caller Pays"
-corner: gas
+group: gas
 trigger: payment
 status: built
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
 gas: null
-example: examples/repay/partial-repay-shield/run.json
+example: examples/gas/partial-repay-shield/run.json
 related: [rule-pays, partial-repay-shield]
 code: ["contracts/src/payers/CallerPays.sol", "packages/sdk/examples/02-caller-pays.ts"]
 ---
@@ -24,9 +24,9 @@ When the condition is true and a payer's VERIFY frame approves payment.
 
 The action receives the payer from Core (read from the payer's own frame) and pays the reward there.
 
-## Mempool
+## Runs on
 
-The payer's VERIFY frame approves payment; the rule contract approves execution only.
+The payer's own verification approves payment and the rule contract approves execution, each reading only its own storage: the public mempool and the alternative mempool.
 
 ## Code
 

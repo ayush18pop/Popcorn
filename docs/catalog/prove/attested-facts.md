@@ -1,21 +1,20 @@
 ---
-name: "SPHINCS+-style"
-corner: sign
+name: "Attested Facts"
+group: prove
 trigger: people
 status: built
-mempool: { public: false, alt: unstaked }
+runsOn: [alternative]
 gas: null
 example: null
 related: [signed-intent, multisig-signer]
-postQuantum: true
-code: ["contracts/src/signers/SphincsSigner.sol", "packages/sdk/examples/08-signed-intent.ts"]
+code: ["contracts/src/signers/AttestedFactSigner.sol", "packages/sdk/examples/08-signed-intent.ts"]
 ---
 
-# SPHINCS+-style
+# Attested Facts
 
 ## What it does
 
-Stateless hash-based signatures. A keccak construction, not the NIST encoding.
+k-of-n signers attest to a fact (a price, an event); the rule fires on the attested value.
 
 ## When it fires
 
@@ -25,9 +24,9 @@ When a signed intent for this rule contract, this rule and its current epoch ver
 
 The rule's action runs and the epoch advances, so the same signature can never be replayed.
 
-## Mempool
+## Runs on
 
-Validation goes above the public 100,000; the local devnet's 250,000 budget admits it.
+The alternative mempool, which admits validation of any size.
 
 ## Code
 
@@ -40,6 +39,4 @@ const hash = await anyone.trigger(ruleContract, { triggerData, verifyData: signa
 
 ## Limits
 
-- One-time and few-time keys never sign twice: the SDK records each digest before returning a signature.
-- Above the public 100,000 gas: run it on the local devnet or a network with a larger budget.
 - Reviewed by us, not externally audited.

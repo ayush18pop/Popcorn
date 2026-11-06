@@ -1,9 +1,9 @@
 ---
 name: "Guardian Quorum Pause"
-corner: pause
+group: protect
 trigger: people
 status: planned
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
 gas: null
 example: null
 related: [multisig-signer, attested-facts]
@@ -24,9 +24,9 @@ When a signed intent carries k valid guardian signatures for this rule's epoch.
 
 Pauses the protocol.
 
-## Mempool
+## Runs on
 
-Signature checks fit the public budget for ECDSA and WOTS+.
+ECDSA and WOTS+ guardian signatures with the quorum in the contract's own storage: the public mempool and the alternative mempool.
 
 ## Limits
 

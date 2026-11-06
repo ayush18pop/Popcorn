@@ -1,9 +1,9 @@
 ---
 name: "Hybrid Owner Key"
-corner: sign
+group: sign
 trigger: people
 status: built
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
 gas: null
 example: null
 related: [signed-intent, multisig-signer]
@@ -25,9 +25,9 @@ When a signed intent for this rule contract, this rule and its current epoch ver
 
 The rule's action runs and the epoch advances, so the same signature can never be replayed.
 
-## Mempool
+## Runs on
 
-Fits the public 100,000 gas of validation.
+ECDSA plus WOTS+ over the same hash, keys in the contract's own storage: the public mempool and the alternative mempool.
 
 ## Code
 

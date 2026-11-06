@@ -1,9 +1,10 @@
 ---
 name: "Peg Break Exit"
-corner: exit
+group: protect
 trigger: market
 status: planned
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
 example: null
 related: [oracle-deviation-pause]
@@ -24,9 +25,9 @@ When the price stays outside the band across a crossing check.
 
 Withdraws to a safe asset.
 
-## Mempool
+## Runs on
 
-Reads a pool or oracle price.
+Reads a pool or oracle price, so the rule contract stakes: the alternative mempool.
 
 ## Limits
 

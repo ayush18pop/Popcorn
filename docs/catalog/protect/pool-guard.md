@@ -1,12 +1,13 @@
 ---
 name: "Pool Guard"
-corner: pause
+group: protect
 trigger: dependency
 status: built
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
 example: null
-related: [rule-sets, threshold-condition]
+related: [rule-sets]
 code: ["contracts/src/examples/PoolGuard.sol", "contracts/src/rules/RuleSet.sol"]
 ---
 
@@ -24,9 +25,9 @@ Rule 0 when `pool.paused()` is true; otherwise rule 1 when `pool.value()` is bel
 
 Records which rule fired. Replace the action with your own pause, exit or repay call.
 
-## Mempool
+## Runs on
 
-Both rules read another contract (`pool.paused()`, `pool.value()`), which needs a staked rule contract on the alternative mempool.
+Both rules read the pool (`pool.paused()`, `pool.value()`), so the rule contract stakes: the alternative mempool.
 
 ## Code
 

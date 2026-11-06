@@ -1,9 +1,10 @@
 ---
 name: "Outflow Spike Pause"
-corner: pause
+group: protect
 trigger: invariant
 status: planned
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
+usedIn: [defi]
 gas: null
 example: null
 related: [guarded-vault, share-price-floor-pause]
@@ -24,9 +25,9 @@ When tracked outflow over the current window exceeds the configured limit.
 
 Pauses withdrawals and pays the reporter.
 
-## Mempool
+## Runs on
 
-Planned to read only the protocol's own outflow counters.
+Reads only the protocol's own outflow counters: the public mempool and the alternative mempool.
 
 ## Limits
 

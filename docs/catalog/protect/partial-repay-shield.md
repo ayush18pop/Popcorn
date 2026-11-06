@@ -1,11 +1,12 @@
 ---
 name: "Partial Repay Shield"
-corner: repay
+group: protect
 trigger: invariant
 status: built
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
-example: examples/repay/partial-repay-shield/run.json
+example: examples/protect/partial-repay-shield/run.json
 related: [caller-pays, health-exit]
 code: ["contracts/src/templates/PartialRepayShield.sol", "packages/sdk/examples/02-caller-pays.ts"]
 ---
@@ -24,9 +25,9 @@ When the user's health factor is below the threshold, there is debt, and the shi
 
 Bumps its rescue epoch first, repays a quarter of the debt from its reserve and pays the triggerer 0.5% of the amount repaid. If anything fails it records the skip and returns: it never reverts.
 
-## Mempool
+## Runs on
 
-The condition reads the lending pool's health factor, which is another contract's storage.
+Reads the lending pool's health factor, so the rule contract stakes: the alternative mempool.
 
 ## Code
 

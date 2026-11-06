@@ -1,11 +1,12 @@
 ---
 name: "Guarded Vault"
-corner: pause
+group: protect
 trigger: invariant
 status: built
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
+usedIn: [defi]
 gas: null
-example: examples/pause/guarded-vault/run.json
+example: examples/protect/guarded-vault/run.json
 related: [proof-of-exploit-bounty, outflow-spike-pause, rule-pays]
 code: ["contracts/src/templates/GuardedVault.sol", "contracts/docs/guarded-vault.md"]
 ---
@@ -24,9 +25,9 @@ When assets per share fall below the floor: `totalAssets * 1e18 < totalSupply * 
 
 Sets `paused`, bumps the pause epoch and pays the reporter from the reward pool. Deposits, withdrawals and redemptions revert until the owner unpauses, and unpause requires the invariant to hold again.
 
-## Mempool
+## Runs on
 
-The condition reads two words of the vault's own storage, which the public mempool accepts without stake.
+The condition reads two words of the vault's own storage: the public mempool and the alternative mempool.
 
 ## Code
 

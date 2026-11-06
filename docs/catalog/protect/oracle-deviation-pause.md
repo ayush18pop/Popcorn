@@ -1,9 +1,10 @@
 ---
 name: "Oracle Deviation Pause"
-corner: pause
+group: protect
 trigger: market
 status: planned
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
 example: null
 related: [pool-guard, rule-sets]
@@ -24,9 +25,9 @@ When the ratio of two oracle reads leaves the allowed band.
 
 Pauses the markets that use the price.
 
-## Mempool
+## Runs on
 
-Reads oracle contracts.
+Reads the oracle contracts, so the rule contract stakes: the alternative mempool.
 
 ## Limits
 

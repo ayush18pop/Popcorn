@@ -1,9 +1,10 @@
 ---
 name: "Health Exit"
-corner: exit
+group: protect
 trigger: invariant
 status: planned
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
 example: null
 related: [partial-repay-shield]
@@ -24,9 +25,9 @@ When the venue's invariant fails.
 
 Withdraws everything the position can.
 
-## Mempool
+## Runs on
 
-Reads the venue's accounting.
+Reads the venue's accounting, so the rule contract stakes: the alternative mempool.
 
 ## Limits
 

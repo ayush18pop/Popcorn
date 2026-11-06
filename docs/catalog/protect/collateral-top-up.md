@@ -1,9 +1,10 @@
 ---
 name: "Collateral Top-Up"
-corner: repay
+group: protect
 trigger: invariant
 status: planned
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
 example: null
 related: [partial-repay-shield]
@@ -24,9 +25,9 @@ When health falls below the threshold.
 
 Moves collateral from the reserve into the position.
 
-## Mempool
+## Runs on
 
-Reads the lending pool.
+Reads the lending pool, so the rule contract stakes: the alternative mempool.
 
 ## Limits
 

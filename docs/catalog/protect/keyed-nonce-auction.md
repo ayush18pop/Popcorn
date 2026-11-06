@@ -1,9 +1,10 @@
 ---
 name: "Keyed-Nonce Liquidation"
-corner: liquidate
+group: protect
 trigger: tickets
 status: planned
-mempool: { public: false, alt: staked }
+runsOn: [alternative-staked]
+usedIn: [defi]
 gas: null
 example: null
 related: [partial-repay-shield]
@@ -24,9 +25,9 @@ When a position is liquidatable; the nonce key is the event, so only one trigger
 
 Liquidates and pays the winner.
 
-## Mempool
+## Runs on
 
-Reads the lending pool.
+Reads the lending pool, so the rule contract stakes: the alternative mempool.
 
 ## Limits
 

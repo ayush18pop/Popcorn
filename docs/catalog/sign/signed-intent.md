@@ -1,12 +1,12 @@
 ---
 name: "Signed Intent"
-corner: sign
+group: sign
 trigger: people
 status: built
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
 gas: null
 example: null
-related: [ecdsa-signer, wots-signer]
+related: [post-quantum-signer, passkey-signer, multisig-signer]
 code: ["contracts/src/conditions/SignedIntentCondition.sol", "packages/sdk/examples/08-signed-intent.ts"]
 ---
 
@@ -14,7 +14,7 @@ code: ["contracts/src/conditions/SignedIntentCondition.sol", "packages/sdk/examp
 
 ## What it does
 
-A rule fires when an authorised key signs an intent for it, bound to the rule's epoch so it cannot be replayed.
+A rule fires when an authorised key signs an intent for it, bound to the rule's epoch so it cannot be replayed. The default key is ECDSA (secp256k1, signed with `eth_signTypedData_v4`, which every wallet has); passkeys, multisig and post-quantum schemes plug into the same digest.
 
 ## When it fires
 
@@ -24,9 +24,9 @@ When the signature over the intent digest verifies.
 
 Runs the rule's action and advances its epoch.
 
-## Mempool
+## Runs on
 
-Inline ECDSA and WOTS+ conditions keep the key as immutables and fit 100,000 gas.
+Inline ECDSA and WOTS+ keep the key in immutables: the public mempool and the alternative mempool.
 
 ## Code
 

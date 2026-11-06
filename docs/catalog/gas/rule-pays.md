@@ -1,9 +1,9 @@
 ---
 name: "Rule Pays"
-corner: gas
+group: gas
 trigger: payment
 status: built
-mempool: { public: true, alt: unstaked }
+runsOn: [public, alternative]
 gas: null
 example: examples/gas/rule-pays-counter/run.json
 related: [caller-pays, core]
@@ -24,9 +24,9 @@ Whenever the rule contract's condition is true; Core approves execution and paym
 
 The rule contract's balance pays the gas, capped by the fee caps fixed at deployment.
 
-## Mempool
+## Runs on
 
-Payment is approved in the rule contract's own VERIFY frame.
+Payment is approved in the rule contract's own verification, which reads only its own storage: the public mempool and the alternative mempool.
 
 ## Code
 
