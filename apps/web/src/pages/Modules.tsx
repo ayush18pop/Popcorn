@@ -25,11 +25,16 @@ export function ModuleCard({ m, i = 0 }: { m: Module; i?: number }) {
       <Spotlight className={cn("glass group relative h-full overflow-hidden rounded-[24px]", m.status !== "built" && "opacity-80")}>
         <a href={link} className="flex h-full min-h-[220px] flex-col p-6 transition-transform duration-500 ease-[cubic-bezier(.2,.7,.2,1)] group-hover:-translate-y-2">
           <div className="flex items-center justify-between gap-2">
-            <StatusBadge status={m.status} />
-            <span className="flex items-center gap-1.5 font-mono text-[11px] text-faint">
-              {m.postQuantum && <Atom className="size-3.5" aria-label="post-quantum" />}
-              {m.trigger}
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge status={m.status} />
+              {m.postQuantum && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-foreground/40 px-2 py-0.5 font-mono text-[10.5px] text-foreground">
+                  <Atom className="size-3" /> post-quantum
+                </span>
+              )}
+              {m.properties.includes("private") && <span className="rounded-full border border-foreground/40 px-2 py-0.5 font-mono text-[10.5px] text-foreground">private</span>}
+            </div>
+            <span className="font-mono text-[11px] text-faint">{m.trigger}</span>
           </div>
           <h3 className="mt-5 text-[17px] font-semibold tracking-tight">{m.name}</h3>
           <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-muted-foreground">{m.summary.replace(/`/g, "")}</p>

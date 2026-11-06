@@ -2,12 +2,12 @@
 name: "Signed Intent"
 group: sign
 trigger: people
-priority: 5
+priority: 9
 status: built
 runsOn: [public, alternative]
 gas: null
 example: examples/sign/sovereign-account/run.json
-related: [post-quantum-signer, passkey-signer, multisig-signer]
+related: [wots-signer, passkey-signer, multisig-signer]
 code: ["contracts/src/conditions/SignedIntentCondition.sol", "packages/sdk/examples/08-signed-intent.ts"]
 ---
 

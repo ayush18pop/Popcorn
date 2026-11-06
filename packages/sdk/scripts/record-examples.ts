@@ -221,7 +221,7 @@ async function quantumReadyTreasury() {
     explain: ["the treasury checks the WOTS+ signature against the backup key it committed to, then approves", "moves every wei to the post-quantum target"],
     world: async () => ({ "treasury balance": await eth(A), "post-quantum target": await eth(target) }),
   });
-  story.push(await storyEntry(pub, featured.hash, "post-quantum-signer", "migrate", "The committed WOTS+ backup key moves everything to a post-quantum account"));
+  story.push(await storyEntry(pub, featured.hash, "wots-signer", "migrate", "The committed WOTS+ backup key moves everything to a post-quantum account"));
   writeRun(out("sign/quantum-ready-treasury"), {
     module: "quantum-ready-treasury", network: NETWORK, title: "A treasury that survives the day ECDSA breaks",
     actors: { caller: "a key with no ETH", ruleContract: "treasury", payer: "the treasury" }, contracts: { treasury: A },
@@ -286,7 +286,7 @@ async function sovereignAccount() {
   story.push(await storyEntry(pub, await sent(t, A, await s.vote(2, PROPOSAL_QUANTUM)), "quantum-switch", "switch", "Quorum: owner signatures stop working"));
   const target = fresh();
   const signer = wotsIntentSigner({ tree: s.backupTree, firstEpoch: 0, binding: { chainId: CHAIN, ruleContract: A, ruleId: ACCOUNT_RULE.MIGRATE }, store: memoryUsageStore(), budget: { maxSteps: 900, maxTries: 400_000 } });
-  story.push(await storyEntry(pub, await sent(t, A, migrateTrigger(target, s.backupParams, signer.sign(accountBinding(CHAIN, A, ACCOUNT_RULE.MIGRATE, 0n, migrateData(target))))), "post-quantum-signer", "migrate", "The committed post-quantum key moves everything to its new home"));
+  story.push(await storyEntry(pub, await sent(t, A, migrateTrigger(target, s.backupParams, signer.sign(accountBinding(CHAIN, A, ACCOUNT_RULE.MIGRATE, 0n, migrateData(target))))), "wots-signer", "migrate", "The committed post-quantum key moves everything to its new home"));
   writeRun(out("sign/sovereign-account"), {
     module: "sovereign-account", network: NETWORK, title: "One account that keeps working when everything around it fails",
     actors: { caller: "a key with no ETH", ruleContract: "sovereign account", payer: "the account" }, contracts: { account: A, stealthVault: vault.vault },
