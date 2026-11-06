@@ -701,3 +701,20 @@ only for logic built before the view existed.
 
 **Why.** It removes a class of wrong keys instead of special-casing one, and it needs nothing from the node beyond
 eth_call.
+
+## 76. Blocks, not modules: checks, joins, actions and payers
+
+**Context.** Several "modules" were whole applications named after one of their jobs. The guarded vault held about
+eight jobs and the Sovereign Account about nine, and the Proof-of-Exploit example listed the guarded vault twice, once
+as the target and once as the bounty. Nine planned pages were a check plus an action rather than modules.
+
+**Choice.** The catalog is made of blocks, each doing one job with a small interface fixed by its shape: a **check**
+answers yes, no or unknown; a **join** combines checks (All Of, Any Of, None Of, At Least k Of n, Exactly One Of,
+If / Else); an **action** does one thing; a **payer** pays the gas. A build is always a payer, checks joined together,
+and actions. Each block keeps its state in its own namespace and has a test build that runs it alone. Blocks have a
+tier: 1, nothing works without them; 2, the headline examples work; 3, the rest of the listed use cases. Private Pool
+and Stealth Vault stay as ready-made builds, listed as built from blocks. The planned check-plus-action pages are
+presets of the check. This supersedes decision 68's use-case grouping and decision 72's list.
+
+**Why.** A block that does one job can be reused in any build, and an example can then name each block once with one
+role. The owner asked for Lego-like pieces that anyone can put together.
