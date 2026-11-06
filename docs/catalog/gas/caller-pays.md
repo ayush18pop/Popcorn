@@ -2,6 +2,7 @@
 name: "Caller Pays"
 group: gas
 trigger: payment
+priority: 4
 status: built
 runsOn: [public, alternative]
 gas: null

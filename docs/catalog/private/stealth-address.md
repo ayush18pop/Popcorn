@@ -2,6 +2,7 @@
 name: "Stealth Address"
 group: private
 trigger: proof
+priority: 2
 status: built
 runsOn: [alternative-staked]
 gas: { total: 460359, tag: measured, network: local }

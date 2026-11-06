@@ -2,6 +2,7 @@
 name: "Upgrade Watch Pause"
 group: protect
 trigger: dependency
+priority: 8
 status: planned
 runsOn: [alternative-staked]
 gas: null

@@ -1,4 +1,5 @@
 ---
+order: 3
 name: "Open Gas Network"
 problem: "Gasless apps rely on a paymaster server that signs each approval. It can go down, refuse a country or drop a user, and nobody can see why."
 modules:

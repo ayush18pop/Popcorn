@@ -2,6 +2,7 @@
 name: "Hybrid Owner Key"
 group: sign
 trigger: people
+priority: 4
 status: built
 runsOn: [public, alternative]
 gas: null

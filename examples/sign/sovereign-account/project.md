@@ -1,4 +1,5 @@
 ---
+order: 6
 name: "Sovereign Account"
 flagship: true
 problem: "A wallet depends on things that can fail: a signature scheme, guardians, a relayer, a gas balance. Each failure today means lost funds or lost privacy."

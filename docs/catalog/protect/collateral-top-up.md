@@ -2,6 +2,7 @@
 name: "Collateral Top-Up"
 group: protect
 trigger: invariant
+priority: 12
 status: planned
 runsOn: [alternative-staked]
 usedIn: [defi]

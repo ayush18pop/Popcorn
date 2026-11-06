@@ -2,6 +2,7 @@
 name: "Oracle Deviation Pause"
 group: protect
 trigger: market
+priority: 7
 status: planned
 runsOn: [alternative-staked]
 usedIn: [defi]

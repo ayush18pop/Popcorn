@@ -2,6 +2,7 @@
 name: "Partial Repay Shield"
 group: protect
 trigger: invariant
+priority: 4
 status: built
 runsOn: [alternative-staked]
 usedIn: [defi]

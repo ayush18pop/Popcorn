@@ -3,9 +3,9 @@
 //   SIDECAR_UNSTAKED_BUDGET=10000000 devnet (decision 73), then:
 //   bun scripts/record-examples.ts [private-payroll open-gas-network quantum-ready-treasury walkaway-exit sovereign-account]
 import { readFileSync } from "node:fs";
-import { createPublicClient, createWalletClient, formatEther, http, parseEther, parseGwei, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, encodeAbiParameters, encodeDeployData, formatEther, formatUnits, http, keccak256, maxUint256, parseEther, parseGwei, type Abi, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { MerkleTree, membershipProof, newIdentity, newNote, poseidon, randomField, stealthCommitment, stealthProof, withdrawProof } from "@popcorn/zk";
+import { MerkleTree, findExploit, membershipProof, newIdentity, newNote, poseidon, proveExploit, randomField, stealthCommitment, stealthProof, withdrawProof } from "@popcorn/zk";
 import {
   ACCOUNT_RULE, CONTEST_PREIMAGE, PROPOSAL_QUANTUM, accountBinding, contestRecovery, deployOpenSponsor, deployPrivatePool, deploySovereignAccount, deployStealthVault,
   devnetChain, ecdsaParams, exitTrigger, finalizeRecovery, guardianScope, guardianSignal, initializeAccount, memoryUsageStore, migrateData, migrateTrigger,
@@ -39,6 +39,73 @@ const sent = async (c: ReturnType<typeof triggerer>, k: Address, t: Parameters<t
     console.log(`  ${h} ${s.state}; still valid, resending`);
   }
 };
+
+const forge = (name: string) => {
+  const j = JSON.parse(readFileSync(`${ROOT}contracts/out/${name}.sol/${name}.json`, "utf8"));
+  return { abi: j.abi as Abi, bytecode: j.bytecode.object as Hex };
+};
+const write = async (address: Address, abi: Abi, functionName: string, args: unknown[], gas = 1_500_000n) => {
+  const h = await wallet.writeContract({ address, abi, functionName, args, gas } as never);
+  const r = await pub.waitForTransactionReceipt({ hash: h });
+  if (r.status !== "success") throw new Error(`${functionName} reverted: ${h}`);
+  return h;
+};
+
+async function proofOfExploit() {
+  const token = forge("DemoToken");
+  const vaultArt = forge("GuardedVault");
+  const E = 10n ** 18n;
+  const story: RecordedStory[] = [];
+  const dusd = (await deployCode(dc, encodeDeployData({ abi: token.abi, bytecode: token.bytecode, args: ["Demo USD", "dUSD"] }), 8_000_000n)).address;
+  const verifier = (await deployCode(dc, forge("ExploitVerifier").bytecode, 8_000_000n)).address;
+  const stakeAmount = parseEther("0.1");
+  const logic = await deployCode(dc, encodeDeployData({ abi: vaultArt.abi, bytecode: vaultArt.bytecode, args: [deployerAcct.address, dusd, E, 0n, 100n * E, verifier, stakeAmount, 0n] }), 30_000_000n);
+  const caps = { conditionGas: 240_000, maxVerifyDataLength: 256, maxTriggerDataLength: 64, maxGasPerFrame: 400_000n, maxStateGasPerFrame: 6n * 97_920n, maxFeePerGas: parseGwei("10"), maxPriorityFeePerGas: parseGwei("2") };
+  const d = await wallet.deployRule({ logic: logic.address, caps, fund: stakeAmount + parseEther("0.2"), stake: true } as never);
+  const V = d.ruleContract;
+  await write(V, vaultArt.abi, "initialize", []);
+  await write(dusd, token.abi, "mint", [deployerAcct.address, 2_000n * E]);
+  await write(dusd, token.abi, "approve", [V, maxUint256]);
+  story.push(await storyEntry(pub, await write(V, vaultArt.abi, "deposit", [800n * E]), "guarded-vault", "deposit", "Depositors put 800 dUSD into the vault"));
+  story.push(await storyEntry(pub, await write(V, vaultArt.abi, "deposit", [200n * E]), "guarded-vault", "deposit", "Another 200 dUSD: 1,000 shares for 1,000 dUSD"));
+  story.push(await storyEntry(pub, await write(V, vaultArt.abi, "harvest", [100n * E]), "guarded-vault", "yield", "Yield of 100 dUSD arrives: 1,100 assets now back 1,000 shares, and the rounding bug becomes exploitable"));
+  story.push(await storyEntry(pub, await write(V, vaultArt.abi, "fundRewards", [100n * E]), "proof-of-exploit-bounty", "fund", "The team funds a 100 dUSD bounty pool, public and on chain"));
+  const T = (await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "totalAssets" })) as bigint;
+  const S = (await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "totalSupply" })) as bigint;
+  const state = { totalAssets: T, totalSupply: S, minAssetsPerShare: E, vault: BigInt(V) };
+  const w = findExploit(state);
+  if (!w) throw new Error("no exploit at this state");
+  const whitehat = fresh();
+  const p = await proveExploit(state, w, BigInt(whitehat), 1n);
+  const args = (to: Address) => encodeAbiParameters([{ type: "address" }, { type: "uint64" }], [to, 1n]);
+  // the bounty's key is keccak256(abi.encode("bounty", vault, pauseEpoch)) (ExploitInputs.bountyNonceKey); pass it explicitly
+  const epoch = (await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "pauseEpoch" })) as bigint;
+  const nonceKey = BigInt(keccak256(encodeAbiParameters([{ type: "string" }, { type: "address" }, { type: "uint64" }], ["bounty", V, epoch])));
+  const t = triggerer();
+  const labels = { [V.toLowerCase()]: "guarded vault", sender: "guarded vault" };
+  const bal = async (a: Address) => `${formatUnits((await pub.readContract({ address: dusd, abi: token.abi, functionName: "balanceOf", args: [a] })) as bigint, 18)} dUSD`;
+  const world = async () => ({
+    "whitehat's fresh address": await bal(whitehat),
+    "vault paused": String(await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "paused" })),
+    "bounty pool": `${formatUnits((await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "rewardPool" })) as bigint, 18)} dUSD`,
+  });
+  // a mempool watcher copies the proof and puts its own address in: the proof is bound to the whitehat's
+  const refusal = await recordRefusal({ client: t as never, ruleContract: V, labels, trigger: { triggerData: args(fresh()), verifyData: p.proof, nonceKey }, world });
+  const featured = await recordTrigger({
+    client: t as never, pub: pub as never, devnet: "local", ruleContract: V, labels,
+    trigger: { triggerData: args(whitehat), verifyData: p.proof, nonceKey },
+    explain: ["the vault checks the Groth16 proof against its own live state, its address and the recipient in the trigger, then approves execution and payment", "pays the bounty to the recipient bound in the proof, pauses the vault and opens a new epoch"],
+    world,
+  });
+  story.push(await storyEntry(pub, featured.hash, "proof-of-exploit-bounty", "claim", "The whitehat proves the bug in zero knowledge from a key with no ETH: paid to a fresh address, vault paused, one transaction"));
+  writeRun(out("protect/proof-of-exploit"), {
+    module: "proof-of-exploit", network: NETWORK, title: "A whitehat proves the bug, gets paid, and the vault pauses, in one transaction",
+    actors: { caller: "a key with no ETH", ruleContract: "guarded vault", payer: "the vault" },
+    contracts: { vault: V, token: dusd, verifier },
+    exploit: { holding: w.holding, withdrawals: w.amounts, state: { totalAssets: T, totalSupply: S } },
+    steps: featured.steps, failing: refusal, story, sources: SOURCES,
+  });
+}
 
 async function privatePayroll() {
   const vault = await deployStealthVault(dc, wallet as never);
@@ -241,7 +308,7 @@ async function sovereignAccount() {
   });
 }
 
-const ALL: Record<string, () => Promise<void>> = { "private-payroll": privatePayroll, "open-gas-network": openGasNetwork, "quantum-ready-treasury": quantumReadyTreasury, "walkaway-exit": walkawayExit, "sovereign-account": sovereignAccount };
+const ALL: Record<string, () => Promise<void>> = { "proof-of-exploit": proofOfExploit, "private-payroll": privatePayroll, "open-gas-network": openGasNetwork, "quantum-ready-treasury": quantumReadyTreasury, "walkaway-exit": walkawayExit, "sovereign-account": sovereignAccount };
 for (const id of process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(ALL)) {
   const t0 = Date.now();
   await ALL[id]!();

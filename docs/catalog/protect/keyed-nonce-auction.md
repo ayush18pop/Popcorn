@@ -2,6 +2,7 @@
 name: "Keyed-Nonce Liquidation"
 group: protect
 trigger: tickets
+priority: 13
 status: planned
 runsOn: [alternative-staked]
 usedIn: [defi]

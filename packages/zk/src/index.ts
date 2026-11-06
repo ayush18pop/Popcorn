@@ -175,3 +175,4 @@ export async function stealthProof(a: { spendSecret: bigint; shared: bigint; rec
   const p = await prove("stealth", { commitment, recipient: a.recipient, fee: a.fee, spendSecret: a.spendSecret, shared: a.shared % R });
   return { ...p, commitment };
 }
+export * from "./exploit.ts";

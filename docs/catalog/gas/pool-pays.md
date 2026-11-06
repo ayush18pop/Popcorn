@@ -2,6 +2,7 @@
 name: "Pool Pays"
 group: gas
 trigger: payment
+priority: 3
 status: built
 runsOn: [alternative-staked]
 gas: null

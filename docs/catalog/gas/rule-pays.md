@@ -2,6 +2,7 @@
 name: "Rule Pays"
 group: gas
 trigger: payment
+priority: 2
 status: built
 runsOn: [public, alternative]
 gas: null

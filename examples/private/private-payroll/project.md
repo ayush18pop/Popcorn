@@ -1,4 +1,5 @@
 ---
+order: 2
 name: "Private Payroll"
 problem: "Salaries paid on chain are public: anyone can see who earns what, and moving the money links the employee's addresses together."
 modules:

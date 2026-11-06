@@ -1,4 +1,5 @@
 ---
+order: 4
 name: "Quantum-Ready Treasury"
 problem: "When ECDSA breaks, every account whose public key is on chain can be drained, and adding a post-quantum key at that point is too late: the attacker can add one too."
 modules:

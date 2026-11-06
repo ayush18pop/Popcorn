@@ -2,6 +2,7 @@
 name: "Guardian Quorum Pause"
 group: protect
 trigger: people
+priority: 9
 status: planned
 runsOn: [public, alternative]
 gas: null

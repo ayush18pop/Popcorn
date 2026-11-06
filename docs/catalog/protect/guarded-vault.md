@@ -2,11 +2,12 @@
 name: "Guarded Vault"
 group: protect
 trigger: invariant
+priority: 1
 status: built
 runsOn: [public, alternative]
 usedIn: [defi]
 gas: null
-example: null
+example: examples/protect/proof-of-exploit/run.json
 related: [proof-of-exploit-bounty, outflow-spike-pause, rule-pays]
 code: ["contracts/src/templates/GuardedVault.sol", "contracts/docs/guarded-vault.md"]
 ---

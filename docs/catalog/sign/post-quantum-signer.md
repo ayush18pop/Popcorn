@@ -2,6 +2,7 @@
 name: "Post-Quantum Signer"
 group: sign
 trigger: people
+priority: 1
 status: built
 runsOn: [public, alternative]
 gas: null

@@ -2,6 +2,7 @@
 name: "P-256 and WebAuthn passkeys"
 group: sign
 trigger: people
+priority: 6
 status: built
 runsOn: [alternative]
 gas: null

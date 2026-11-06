@@ -2,6 +2,7 @@
 name: "Pool Guard"
 group: protect
 trigger: dependency
+priority: 3
 status: built
 runsOn: [alternative-staked]
 usedIn: [defi]

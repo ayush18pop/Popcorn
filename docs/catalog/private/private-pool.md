@@ -2,6 +2,7 @@
 name: "Private Pool"
 group: private
 trigger: proof
+priority: 1
 status: built
 runsOn: [alternative-staked]
 gas: { total: 486660, tag: measured, network: local }

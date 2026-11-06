@@ -2,6 +2,7 @@
 name: "M-of-N Multisig"
 group: sign
 trigger: people
+priority: 7
 status: built
 runsOn: [alternative]
 gas: null

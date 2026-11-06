@@ -2,6 +2,7 @@
 name: "Signed Intent"
 group: sign
 trigger: people
+priority: 5
 status: built
 runsOn: [public, alternative]
 gas: null

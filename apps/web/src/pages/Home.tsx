@@ -53,13 +53,13 @@ const stats = [
   { v: 0, s: "", label: "ETH needed to trigger", sub: "in rule-pays mode" },
   { v: 101, s: "", label: "bytes of settings", sub: "immutable, appended to Core" },
   { v: 252, s: "", label: "contract tests", sub: "forge test" },
-  { v: 5, s: "", label: "projects recorded on a devnet", sub: "every transaction real" },
+  { v: 6, s: "", label: "projects recorded on a devnet", sub: "every transaction real" },
 ];
 
 const featured = [
-  { key: "private/private-payroll", n: "01", t: "Private Payroll", d: "Salaries to ML-KEM stealth addresses, savings in a private pool. No relayer, no gas top-up, no link between addresses.", tag: "private · recorded on devnet" },
-  { key: "gas/open-gas-network", n: "02", t: "Open Gas Network", d: "Members get free transactions from a sponsor whose policy is public code. Nobody can switch it off or learn who they are.", tag: "gas · recorded on devnet" },
-  { key: "sign/quantum-ready-treasury", n: "03", t: "Quantum-Ready Treasury", d: "Hidden guardians flip a quantum switch; only a post-quantum key nobody has seen can move the money.", tag: "post-quantum · recorded on devnet" },
+  { key: "protect/proof-of-exploit", n: "01", t: "Proof-of-Exploit Bounty", d: "A whitehat proves the bug in zero knowledge from a key with no ETH: paid to a fresh address, vault paused, one transaction.", tag: "protect · recorded on devnet" },
+  { key: "private/private-payroll", n: "02", t: "Private Payroll", d: "Salaries to ML-KEM stealth addresses, savings in a private pool. No relayer, no gas top-up, no link between addresses.", tag: "private · recorded on devnet" },
+  { key: "gas/open-gas-network", n: "03", t: "Open Gas Network", d: "Members get free transactions from a sponsor whose policy is public code. Nobody can switch it off or learn who they are.", tag: "gas · recorded on devnet" },
 ];
 
 function Card({ className, inner, children, delay = 0 }: { className?: string; inner?: string; children: React.ReactNode; delay?: number }) {
@@ -96,7 +96,7 @@ function Quickstart({ className }: { className?: string }) {
 }
 
 export default function Home() {
-  const hero = RUNS["sign/sovereign-account"] ?? RUNS["private/private-payroll"];
+  const hero = RUNS["protect/proof-of-exploit"] ?? RUNS["sign/sovereign-account"];
   return (
     <div className="relative overflow-x-clip">
       {/* backdrop: slow grey mesh, faded out below the fold */}
@@ -129,7 +129,7 @@ export default function Home() {
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PrimaryLink href={href("modules")}>Browse modules</PrimaryLink>
-              <GhostLink href={href("examples", "sign", "sovereign-account")}>Watch the flagship play</GhostLink>
+              <GhostLink href={href("examples", "protect", "proof-of-exploit")}>Watch a whitehat get paid</GhostLink>
             </div>
           </Reveal>
           <Reveal delay={0.4} className="mt-8 w-full max-w-[640px]">

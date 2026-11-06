@@ -2,6 +2,7 @@
 name: "Health Exit"
 group: protect
 trigger: invariant
+priority: 10
 status: planned
 runsOn: [alternative-staked]
 usedIn: [defi]

@@ -2,6 +2,7 @@
 name: "Open Sponsor"
 group: gas
 trigger: payment
+priority: 1
 status: built
 runsOn: [alternative-staked]
 gas: { total: 390317, tag: measured, network: local }

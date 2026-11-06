@@ -2,6 +2,7 @@
 name: "Quantum Switch"
 group: sign
 trigger: people
+priority: 2
 status: built
 runsOn: [alternative-staked]
 gas: { total: 488794, tag: measured, network: local }

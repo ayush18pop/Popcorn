@@ -2,6 +2,7 @@
 name: "Membership Proof"
 group: prove
 trigger: proof
+priority: 2
 status: built
 runsOn: [alternative-staked]
 gas: { total: 839489, tag: measured, network: local }

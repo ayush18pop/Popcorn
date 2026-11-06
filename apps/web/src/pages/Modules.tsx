@@ -113,13 +113,30 @@ export default function Modules({ corner }: { corner?: string }) {
           </div>
         </Reveal>
 
-        <motion.div layout className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence mode="popLayout">
-            {list.map((m, i) => (
-              <ModuleCard key={m.id} m={m} i={i} />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        {(active ? [active] : CORNERS).map((g, gi) => {
+          const mods = list.filter((m) => m.group === g.id);
+          if (mods.length === 0) return null;
+          return (
+            <section key={g.id} className="mt-12">
+              {!active && (
+                <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-[var(--glass-border)] pb-3">
+                  <h2 className="text-[20px] font-semibold tracking-tight">
+                    <span className="mr-3 font-pixel text-[13px] text-faint">0{gi + 1}</span>
+                    {g.name}
+                  </h2>
+                  <a href={href("modules", g.id)} className="text-[12px] text-muted-foreground hover:text-foreground">{g.does}</a>
+                </div>
+              )}
+              <motion.div layout className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <AnimatePresence mode="popLayout">
+                  {mods.map((m, i) => (
+                    <ModuleCard key={m.id} m={m} i={i} />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </section>
+          );
+        })}
         {list.length === 0 && <p className="mt-16 text-center text-[14px] text-muted-foreground">No module matches these filters yet.</p>}
 
         <p className="mt-12 text-[12px] leading-relaxed text-faint">

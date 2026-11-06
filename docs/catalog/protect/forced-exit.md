@@ -2,6 +2,7 @@
 name: "Forced Exit"
 group: protect
 trigger: invariant
+priority: 2
 status: built
 runsOn: [alternative-staked]
 gas: null

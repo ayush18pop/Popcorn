@@ -2,6 +2,7 @@
 name: "Outflow Spike Pause"
 group: protect
 trigger: invariant
+priority: 5
 status: planned
 runsOn: [public, alternative]
 usedIn: [defi]

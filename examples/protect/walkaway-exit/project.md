@@ -1,4 +1,5 @@
 ---
+order: 5
 name: "Walkaway Exit"
 problem: "Social recovery fixes lost keys, but a captured guardian majority can take the account. The owner needs a way out that works even if they can no longer sign transactions or pay gas."
 modules:

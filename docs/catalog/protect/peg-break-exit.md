@@ -2,6 +2,7 @@
 name: "Peg Break Exit"
 group: protect
 trigger: market
+priority: 11
 status: planned
 runsOn: [alternative-staked]
 usedIn: [defi]

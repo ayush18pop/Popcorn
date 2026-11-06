@@ -2,6 +2,7 @@
 name: "Attested Facts"
 group: prove
 trigger: people
+priority: 3
 status: built
 runsOn: [alternative]
 gas: null

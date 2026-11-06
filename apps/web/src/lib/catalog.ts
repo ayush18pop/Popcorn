@@ -19,11 +19,11 @@ export interface Group {
   triggers: Trigger[];
 }
 
-/** The five use-case groups (decisions 68 and 72). */
+/** The five use-case groups (decisions 68 and 72), in priority order. */
 export const GROUPS: Group[] = [
+  { id: "protect", name: "Protect a position or protocol", does: "Pause, pay a whitehat, repay or exit before losses, with no keeper", triggers: ["invariant", "market", "dependency", "people", "tickets"] },
   { id: "private", name: "Move money privately", does: "Receive, hold and send without linking your addresses", triggers: ["proof"] },
   { id: "gas", name: "Pay for gas", does: "Who pays, without a server or a relayer in the way", triggers: ["payment"] },
-  { id: "protect", name: "Protect a position or protocol", does: "Pause, repay or exit before losses, with no keeper", triggers: ["invariant", "market", "dependency", "people", "tickets"] },
   { id: "sign", name: "Sign and recover", does: "Who may act: keys, post-quantum signatures, guardians", triggers: ["people", "proof"] },
   { id: "prove", name: "Prove and publish", does: "Evidence a contract can check: proofs, attestations, membership", triggers: ["proof", "people"] },
 ];
@@ -54,6 +54,8 @@ export interface Module {
   corner: GroupId;
   trigger: Trigger;
   status: Status;
+  /** Order within its group (1 = first). */
+  priority: number;
   runsOn: RunsOn[];
   usedIn: string[];
   properties: string[];
@@ -101,6 +103,7 @@ function parseFile(path: string, raw: string): Module {
     corner: group,
     trigger: fm.trigger as Trigger,
     status: fm.status as Status,
+    priority: Number(fm.priority ?? 99),
     runsOn: (fm.runsOn as RunsOn[]) ?? [],
     usedIn: (fm.usedIn as string[]) ?? [],
     properties: (fm.properties as string[]) ?? [],
@@ -117,7 +120,7 @@ function parseFile(path: string, raw: string): Module {
 
 export const MODULES: Module[] = Object.entries(files)
   .map(([p, raw]) => parseFile(p, raw))
-  .sort((a, b) => GROUPS.findIndex((c) => c.id === a.group) - GROUPS.findIndex((c) => c.id === b.group) || (a.status === b.status ? 0 : a.status === "built" ? -1 : 1) || a.name.localeCompare(b.name));
+  .sort((a, b) => GROUPS.findIndex((c) => c.id === a.group) - GROUPS.findIndex((c) => c.id === b.group) || a.priority - b.priority);
 
 export const moduleById = (id: string) => MODULES.find((m) => m.id === id);
 export const groupById = (id: string) => GROUPS.find((c) => c.id === id);
@@ -135,6 +138,7 @@ export interface Project {
   modules: { id: string; role: string }[];
   featured: string;
   flagship: boolean;
+  order: number;
   summary: string;
   /** Built when every module it names is built. */
   status: Status;
@@ -154,12 +158,13 @@ export const PROJECTS: Project[] = Object.entries(projectFiles)
       modules,
       featured: String(fm.featured ?? ""),
       flagship: Boolean(fm.flagship),
+      order: Number(fm.order ?? 99),
       summary: body.trim(),
       status: modules.every((m) => moduleById(m.id)?.status === "built") ? "built" : "planned",
     };
     return project;
   })
-  .sort((a, b) => Number(a.flagship) - Number(b.flagship) || GROUPS.findIndex((g) => g.id === a.group) - GROUPS.findIndex((g) => g.id === b.group));
+  .sort((a, b) => a.order - b.order);
 
 export const projectByKey = (key: string) => PROJECTS.find((p) => p.key === key);
 export const projectsUsing = (moduleId: string) => PROJECTS.filter((p) => p.modules.some((m) => m.id === moduleId));

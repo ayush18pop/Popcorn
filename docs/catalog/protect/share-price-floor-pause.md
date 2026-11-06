@@ -2,6 +2,7 @@
 name: "Share Price Floor Pause"
 group: protect
 trigger: invariant
+priority: 6
 status: planned
 runsOn: [public, alternative]
 usedIn: [defi]
