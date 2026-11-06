@@ -231,3 +231,4 @@ export {
   type RuleSetSpec,
   type RuleSpec,
 } from "./ruleset/index.ts";
+export * from "./sponsor.ts";

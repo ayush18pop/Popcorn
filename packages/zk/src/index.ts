@@ -27,7 +27,7 @@ function ensureCurve(): Promise<void> {
     c.terminate = async () => {};
     g.curve_bn128 = c;
   });
-  return curveReady;
+  return curveReady!;
 }
 
 // ---------------------------------------------------------------- Poseidon
@@ -53,7 +53,7 @@ export const randomField = (): bigint => BigInt(`0x${randomBytes(32).toString("h
 /** zeros[0] = 0, zeros[i] = Poseidon(zeros[i-1], zeros[i-1]): the empty subtree at each level. */
 export async function zeroValues(depth = TREE_DEPTH): Promise<bigint[]> {
   const z = [0n];
-  for (let i = 1; i <= depth; i++) z.push(await poseidon(z[i - 1], z[i - 1]));
+  for (let i = 1; i <= depth; i++) z.push(await poseidon(z[i - 1]!, z[i - 1]!));
   return z;
 }
 
@@ -73,16 +73,16 @@ export class MerkleTree {
   private async layers(): Promise<bigint[][]> {
     const out: bigint[][] = [this.leaves.slice()];
     for (let lvl = 0; lvl < this.depth; lvl++) {
-      const cur = out[lvl];
+      const cur = out[lvl]!;
       const next: bigint[] = [];
-      for (let i = 0; i < Math.ceil(cur.length / 2); i++) next.push(await poseidon(cur[2 * i], cur[2 * i + 1] ?? this.zeros[lvl]));
+      for (let i = 0; i < Math.ceil(cur.length / 2); i++) next.push(await poseidon(cur[2 * i]!, cur[2 * i + 1] ?? this.zeros[lvl]!));
       out.push(next);
     }
     return out;
   }
   async root(): Promise<bigint> {
-    if (this.leaves.length === 0) return this.zeros[this.depth];
-    return (await this.layers())[this.depth][0];
+    if (this.leaves.length === 0) return this.zeros[this.depth]!;
+    return (await this.layers())[this.depth]![0]!;
   }
   async path(index: number): Promise<{ pathElements: bigint[]; pathIndices: number[]; root: bigint }> {
     if (index < 0 || index >= this.leaves.length) throw new Error(`no leaf ${index}`);
@@ -92,11 +92,11 @@ export class MerkleTree {
     let i = index;
     for (let lvl = 0; lvl < this.depth; lvl++) {
       const sib = i ^ 1;
-      pathElements.push(L[lvl][sib] ?? this.zeros[lvl]);
+      pathElements.push(L[lvl]![sib] ?? this.zeros[lvl]!);
       pathIndices.push(i & 1);
       i >>= 1;
     }
-    return { pathElements, pathIndices, root: L[this.depth][0] };
+    return { pathElements, pathIndices, root: L[this.depth]![0]! };
   }
 }
 

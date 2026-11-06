@@ -13,13 +13,14 @@
     "test": "vitest run",
     "test:network": "POPCORN_NETWORK=1 vitest run --reporter verbose",
     "typecheck": "tsc --noEmit",
-    "gen-artifacts": "bun scripts/gen-artifacts.ts && bun scripts/gen-ruleset-artifact.ts",
+    "gen-artifacts": "bun scripts/gen-artifacts.ts && bun scripts/gen-ruleset-artifact.ts && bun scripts/gen-sponsor-artifact.ts",
     "check-core-pin": "bun scripts/check-core-pin.ts",
     "deploy-factory": "bun scripts/deploy-factory.ts",
     "simulate": "bun bin/popcorn-simulate.ts"
   },
   "dependencies": {
     "@popcorn/simulator": "workspace:*",
+    "@popcorn/zk": "workspace:*",
     "viem": "2.57.13",
     "@noble/curves": "1.9.1",
     "@noble/hashes": "1.8.0"

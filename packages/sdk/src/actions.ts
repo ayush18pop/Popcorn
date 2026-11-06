@@ -6,6 +6,7 @@
 //
 // Truth source: every readiness verdict comes from ethrex_simulateFrameTransaction of the EXACT trigger that trigger() would
 // send (same nonce key, limits, fees, data). The nonce key comes from the shadow run in nonceKey.ts.
+import { OPEN_SPONSOR_ERRORS } from "./sponsor.ts";
 import {
   BaseError,
   ContractFunctionRevertedError,
@@ -262,6 +263,8 @@ export interface TriggerOptions {
   payerGasLimit?: bigint;
   /** Mode 1: an optional DEFAULT frame after the action (frame 3), the payer's own follow-up; never the rule contract. */
   tail?: TriggerTail;
+  /** Mode 1, payer contract only: frame 1 data its code reads (e.g. an Open Sponsor membership proof). */
+  payerData?: Hex;
 }
 
 export interface PreparedTrigger {
@@ -290,7 +293,7 @@ export interface Readiness {
   ready: boolean;
   /** Core revert code (VERIFY), or null for non-Core reasons. */
   code: number | null;
-  /** CORE_ERRORS name, or READY / NONCE_USED / INSUFFICIENT_BALANCE / INVALID / ACTION_REVERTS. */
+  /** CORE_ERRORS name, or READY / NONCE_USED / INSUFFICIENT_BALANCE / INVALID / ACTION_REVERTS / PAYER_REFUSED (the payer frame said no). */
   name: string;
   reason: string;
   /** Public ethrex's canonical-mempool verdict (e.g. false for reads of another contract's storage). */
@@ -317,6 +320,11 @@ export function readinessOf(sim: SimulationResult): Readiness {
     return { ready: true, code: null, name: actionReverts ? "ACTION_REVERTS" : "READY", reason: actionReverts ? "valid, but the SENDER frame (action) reverts" : "valid", canonical, actionReverts };
   }
   const code = coreCodeOf(sim.revertData);
+  // A refusal from the payer's frame (caller-pays frame 1) is the payer's own code, not Core's: name it as such.
+  if (code !== null && sim.failedFrameIndex === 1) {
+    const sponsorReason = OPEN_SPONSOR_ERRORS[code];
+    return { ready: false, code, name: "PAYER_REFUSED", reason: sponsorReason ? `payer refused: ${sponsorReason} (0x${code.toString(16)})` : `payer refused with 0x${code.toString(16)}`, canonical, actionReverts: false };
+  }
   if (code !== null) {
     const e = coreErrorOf(code);
     return { ready: false, code, name: e?.name ?? "UNKNOWN_CORE_CODE", reason: e?.check ?? `Core revert 0x${code.toString(16)}`, canonical, actionReverts: false };
@@ -362,7 +370,7 @@ export async function prepareTrigger(ctx: PopcornContext, ruleContractAddr: Addr
   const build = async (verifyGasLimit: bigint) => {
     const base = { ruleContract: ruleContract.address, args: a, chainId: ctx.chainId, triggerData, verifyData, nonceKey, verifyGasLimit, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas, core: ruleContract.core };
     let tx = sp
-      ? buildCallerPaysTriggerTx({ ...base, payer: payerAddr!, payerGasLimit: o.payerGasLimit ?? DEFAULT_PAYER_GAS_LIMIT, payerKind: payerSigner ? "eoa" : "contract", ...(o.tail ? { tail: o.tail } : {}) })
+      ? buildCallerPaysTriggerTx({ ...base, payer: payerAddr!, payerGasLimit: o.payerGasLimit ?? DEFAULT_PAYER_GAS_LIMIT, payerKind: payerSigner ? "eoa" : "contract", ...(o.tail ? { tail: o.tail } : {}), ...(o.payerData ? { payerData: o.payerData } : {}) })
       : buildTriggerTx(base);
     if (sp && payerSigner) tx = await signSecp256k1Entry(tx, 1, payerSigner); // the payer signs the whole tx last
     const raw = serializeFrameTx(tx);
