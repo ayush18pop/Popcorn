@@ -765,3 +765,15 @@ shield) is rebuilt the same way.
 
 **Why.** Keeping the interface lets the existing proofs, SDK helpers and suites check the rebuild unchanged, while every
 part becomes reusable: Walkaway Exit and the Quantum-Ready Treasury are the same blocks in other combinations.
+
+## 81. Blocks without Solidity run on the shared rule-set engine
+
+**Choice.** The SDK's `blocks` namespace names every check, join and stateless action after its block
+(`valueCrossesLine`, `allOf`, `exactlyOne`, `makeACall`, `pauseTarget`, ...) and puts them together with `build` and
+`buildIfElse`, deployed by `deployRuleSet` on the shared, reviewed rule-set engine. Blocks that keep state of their own
+(Pay The Reward, Anonymous Group Vote, Hand Over To A New Key, Exit To An Address, Switch To Quantum-Safe Only, Repay A
+Loan, Pause The Target on the build itself) are Solidity only.
+
+**Why.** A developer can try a build in minutes with no compiler, and the engine is already validated on chain. Adding
+stateful actions to the engine would grow its reviewed surface for every user; inheritance keeps them reviewable one
+block at a time.
