@@ -6,6 +6,8 @@ import { dirname } from "node:path";
 import type { Address, Hex, PublicClient } from "viem";
 import type { CanTriggerResult, TriggerOptions } from "./actions.ts";
 import { readStakeStatus } from "./stakeStatus.ts";
+import { explainTrigger, inspectTransaction, triggerOf, type Flow } from "./inspect.ts";
+import { sendFrameTransaction, type DevnetSelector } from "./transport.ts";
 import type { FrameTx } from "./types.ts";
 
 type Trig = TriggerOptions & { triggerData?: Hex; verifyData?: Hex };
@@ -30,6 +32,8 @@ export interface RecordedStory {
   block: number;
   gasUsed: number;
   status: string;
+  /** The build's flow for this transaction (frame transactions only). */
+  flow?: Flow;
 }
 
 function frames(tx: FrameTx, labels: Record<string, string>, explain: string[] = []) {
@@ -89,18 +93,35 @@ export async function recordTrigger(o: {
     { stage: "include", tx: hash, block: Number(r.blockNumber), status: r.status, payer: ready.simulation.payer ? o.labels[ready.simulation.payer.toLowerCase()] ?? ready.simulation.payer : "rule contract", gasUsed: Number(r.gasUsed) },
     { stage: "act", before, after, events: r.logs.map((l) => `${o.labels[l.address.toLowerCase()] ?? l.address}: ${l.topics[0]?.slice(0, 10)}`) },
   ];
-  return { hash, receipt: r, steps, ready };
+  // the build's flow for this transaction, exactly as the explorer shows it for this hash
+  const flow = (await inspectTransaction(hash, { devnet: o.devnet as DevnetSelector })).flow;
+  return { hash, receipt: r, steps, ready, flow };
 }
 
-/** Records a refusal from a real simulation (nothing is sent). */
-export async function recordRefusal(o: { client: Client; ruleContract: Address; trigger: Trig; labels: Record<string, string>; explain?: string[]; world: WorldReader; mempool?: string }) {
+/** Records a refusal from a real simulation, with the build's flow evaluated at that moment. With `submit` (default true) the
+ *  refused transaction is also sent to the sidecar, which refuses it (it costs nothing) and keeps it under its hash, so the
+ *  explorer can show the same refusal for that hash. */
+export async function recordRefusal(o: { client: Client; ruleContract: Address; trigger: Trig; labels: Record<string, string>; explain?: string[]; world: WorldReader; mempool?: string; devnet?: DevnetSelector; submit?: boolean }) {
   const world = await o.world();
   const r = await o.client.canTrigger(o.ruleContract, o.trigger);
   if (r.ready) throw new Error("expected a refusal, but the trigger is valid");
+  const t = triggerOf(o.ruleContract, r.tx.frames.map((f) => ({ mode: f.mode, flags: f.flags, target: f.target, data: f.data })));
+  const flow: Flow = await explainTrigger(o.ruleContract, t.triggerData ?? "0x", t.verifyData ?? "0x", { devnet: o.devnet ?? "local" });
+  let tx: Hex | null = null;
+  if (o.submit !== false) {
+    try {
+      await sendFrameTransaction(r.raw, { devnet: o.devnet ?? "local", via: "sidecar" });
+    } catch {
+      // refused, as expected: the sidecar keeps the refusal under the transaction's hash
+    }
+    tx = r.hash;
+  }
   const used = Number(r.simulation.frames?.find((f) => !f.succeeded)?.gasUsed ?? r.simulation.frames?.[0]?.gasUsed ?? 0n);
   return {
     result: r.name,
     ...(r.code !== null ? { core: `0x${r.code.toString(16)}` } : {}),
+    ...(tx ? { tx } : {}),
+    flow,
     steps: [
       { stage: "build", frames: frames(r.tx, o.labels, o.explain), world },
       { stage: "validate", reads: [{ label: `frame ${r.simulation.failedFrameIndex ?? 0}`, value: r.reason, gas: used }], result: r.name, gasUsed: used },
@@ -109,9 +130,11 @@ export async function recordRefusal(o: { client: Client; ruleContract: Address; 
   };
 }
 
-export async function storyEntry(pub: PublicClient, hash: Hex, module: string, role: string, title: string): Promise<RecordedStory> {
+export async function storyEntry(pub: PublicClient, hash: Hex, module: string, role: string, title: string, devnet: DevnetSelector = "local"): Promise<RecordedStory> {
   const r = await pub.getTransactionReceipt({ hash });
-  return { module, role, title, tx: hash, block: Number(r.blockNumber), gasUsed: Number(r.gasUsed), status: r.status };
+  // a frame transaction gets its flow (the build's nodes); an ordinary call (a deposit, a setup) has none
+  const flow = (await inspectTransaction(hash, { devnet }).catch(() => null))?.flow ?? null;
+  return { module, role, title, tx: hash, block: Number(r.blockNumber), gasUsed: Number(r.gasUsed), status: r.status, ...(flow ? { flow } : {}) };
 }
 
 /** Writes a recorded run (recorded: true) for the site's player and the example page. */

@@ -91,7 +91,7 @@ async function proofOfExploit() {
     actors: { caller: "a key with no ETH", ruleContract: "the vault (Proof-of-Exploit Bounty build)", payer: "the vault" },
     contracts: { vault: V, token: dusd, verifier },
     exploit: { holding: w.holding, withdrawals: w.amounts, state: { totalAssets: T, totalSupply: S } },
-    steps: featured.steps, failing: refusal, story, sources: SOURCES,
+    steps: featured.steps, flow: featured.flow, failing: refusal, story, sources: SOURCES,
   });
 }
 
@@ -139,7 +139,7 @@ async function privatePayroll() {
     module: "private-payroll", network: NETWORK, title: "Salary that nobody can trace to the employee",
     actors: { caller: "a key with no ETH", ruleContract: "stealth vault", payer: "the stealth vault" },
     contracts: { stealthVault: vault.vault, privatePool: pool.pool },
-    steps: featured.steps, failing: refusal, story, sources: SOURCES,
+    steps: featured.steps, flow: featured.flow, failing: refusal, story, sources: SOURCES,
   });
 }
 
@@ -178,7 +178,7 @@ async function openGasNetwork() {
   writeRun(out("gas/open-gas-network"), {
     module: "open-gas-network", network: NETWORK, title: "Free transactions for members, with no server to switch off",
     actors: { caller: "a key with no ETH", ruleContract: "member's app account", payer: "the open sponsor" },
-    contracts: { sponsor, verifier, app: app.ruleContract }, steps: featured.steps, failing: refusal, story, sources: SOURCES,
+    contracts: { sponsor, verifier, app: app.ruleContract }, steps: featured.steps, flow: featured.flow, failing: refusal, story, sources: SOURCES,
   });
 }
 
@@ -225,7 +225,7 @@ async function quantumReadyTreasury() {
   writeRun(out("sign/quantum-ready-treasury"), {
     module: "quantum-ready-treasury", network: NETWORK, title: "A treasury that survives the day ECDSA breaks",
     actors: { caller: "a key with no ETH", ruleContract: "treasury", payer: "the treasury" }, contracts: { treasury: A },
-    steps: featured.steps, failing: refusal, story, sources: SOURCES,
+    steps: featured.steps, flow: featured.flow, failing: refusal, story, sources: SOURCES,
   });
 }
 
@@ -252,7 +252,7 @@ async function walkawayExit() {
   writeRun(out("protect/walkaway-exit"), {
     module: "walkaway-exit", network: NETWORK, title: "When control is contested, the money walks away to the owner",
     actors: { caller: "a key with no ETH", ruleContract: "account", payer: "the account" }, contracts: { account: A },
-    steps: featured.steps, failing: refusal, story, sources: SOURCES,
+    steps: featured.steps, flow: featured.flow, failing: refusal, story, sources: SOURCES,
   });
 }
 
@@ -291,7 +291,7 @@ async function sovereignAccount() {
     module: "sovereign-account", network: NETWORK, title: "One account that keeps working when everything around it fails",
     actors: { caller: "a key with no ETH", ruleContract: "sovereign account", payer: "the account" }, contracts: { account: A, stealthVault: vault.vault },
     owner: "ECDSA in this run; the flagship owner is ECDSA + Falcon-512 (recorded when the Falcon signer is installed)",
-    steps: featured.steps, failing: refusal, story, sources: SOURCES,
+    steps: featured.steps, flow: featured.flow, failing: refusal, story, sources: SOURCES,
   });
 }
 
