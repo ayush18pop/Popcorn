@@ -684,3 +684,20 @@ repository in Claude Code gives both.
 
 **Why.** An agent that can deploy and sign is a key-management problem; one that can explain and prepare is not. Keeping
 the skills next to the code they describe keeps them in step with it.
+
+## 75. Rule contracts expose their nonce key as a forwarded view
+
+**Context.** The SDK derived a trigger's nonce key by re-running the logic's `__nonceKey` in a shadow contract created by
+eth_call, because Core runs VERIFY only inside a frame transaction and ethrex offers no state override. In the shadow,
+`address(this)` is the shadow's address, so any key derived from the rule contract's address (the guarded vault's bounty
+key) came out wrong and the trigger failed with Core 0x1e. Calling from the rule contract's address is not possible
+either: nodes refuse an eth_call whose sender has code (EIP-3607), even though a frame transaction may have a contract
+sender.
+
+**Choice.** `RuleContract` gains `popcornNonceKey(bytes popArgs)`, an ordinary forwarded view. Core forwards it to the
+logic inside the rule contract, so it runs with the rule contract's real address and storage, the same context as
+VERIFY, and returns what `__nonceKey` would. The SDK reads the key from it with a plain eth_call and keeps the shadow run
+only for logic built before the view existed.
+
+**Why.** It removes a class of wrong keys instead of special-casing one, and it needs nothing from the node beyond
+eth_call.
