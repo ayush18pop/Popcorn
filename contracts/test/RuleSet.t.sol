@@ -159,6 +159,8 @@ contract RuleSetTest is RuleSetBase {
         // child count: kofn k > n and k == 0, NOT with two children, AND with no children
         req(!validates(one(RuleSetCodec.kofn(3, k2(T(), T())))), "k > n");
         req(!validates(one(RuleSetCodec.kofn(0, k2(T(), T())))), "k = 0");
+        req(!validates(one(RuleSetCodec.exactly(3, k2(T(), T())))), "exactly: k > n");
+        req(!validates(one(RuleSetCodec.exactly(0, k2(T(), T())))), "exactly: k = 0");
         req(!validates(one(RuleSetCodec.node(T_NOT, "", k2(T(), T())))), "not with 2");
         req(!validates(one(RuleSetCodec.node(T_AND, "", new bytes[](0)))), "and with 0");
         // unknown node type and bad leaf fields
@@ -234,6 +236,7 @@ contract RuleSetTest is RuleSetBase {
         req(validates(one(RuleSetCodec.or_(k2(F(), p)))), "predicate under OR ok");
         req(validates(one(RuleSetCodec.kofn(1, k2(p, T())))), "predicate under k-of-n ok");
         req(!validates(one(RuleSetCodec.not_(p))), "predicate under NOT refused");
+        req(!validates(one(RuleSetCodec.exactly(1, k2(p, T())))), "predicate under exactly-one refused (its no is not exact)");
         req(!validates(one(RuleSetCodec.not_(RuleSetCodec.and_(k2(T(), p))))), "predicate deep under NOT refused");
         req(validates(one(RuleSetCodec.not_(RuleSetCodec.not_(p)))) == false, "double NOT still exact");
         // else mode: trees 0..n-2 are evaluated exactly by later rules -> no predicate there, last rule may have one
@@ -548,6 +551,28 @@ contract RuleSetTest is RuleSetBase {
                 req(passes(deploy(one(RuleSetCodec.kofn(k, k3(x, y, z)))), 0) == (yes >= k), "k-of-n");
             }
         }
+    }
+
+    function test_exactly_k_truth_table() public {
+        for (uint256 mask; mask < 8; ++mask) {
+            uint256 yes = (mask & 1) + ((mask >> 1) & 1) + ((mask >> 2) & 1);
+            bytes memory x = mask & 1 != 0 ? T() : F();
+            bytes memory y = mask & 2 != 0 ? T() : F();
+            bytes memory z = mask & 4 != 0 ? T() : F();
+            for (uint8 k = 1; k <= 3; ++k) {
+                req(passes(deploy(one(RuleSetCodec.exactly(k, k3(x, y, z)))), 0) == (yes == k), "exactly k");
+            }
+        }
+    }
+
+    /// Exactly one of (true, unknown): the unknown could be a second yes, so the answer is unknown, never true; and NOT of
+    /// it is not true either. Exactly one of (true, true, unknown) is a definite no (already two).
+    function test_exactly_one_with_unknown_child_never_fires() public {
+        bytes memory bad = RuleSetCodec.cmp(RuleSetCodec.srcGetter(address(new MockReverter()), g.value.selector, 20_000), OP_GE, 0);
+        req(!passes(deploy(one(RuleSetCodec.exactly(1, k2(T(), bad)))), 0), "exactly one (yes, unknown): not true");
+        req(!passes(deploy(one(RuleSetCodec.not_(RuleSetCodec.exactly(1, k2(T(), bad))))), 0), "NOT of unknown: not true");
+        req(passes(deploy(one(RuleSetCodec.not_(RuleSetCodec.exactly(1, k3(T(), T(), bad))))), 0), "two yes already: exactly one is a definite no");
+        req(passes(deploy(one(RuleSetCodec.exactly(1, k3(T(), F(), F())))), 0), "one yes, two definite no");
     }
 
     function test_nested_tree_from_values() public {

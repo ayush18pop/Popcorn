@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 // Rule-set configuration format. One byte string describes up to 16 rules; each rule is a condition
-// tree (AND / OR / NOT / k-of-n over leaves) plus an action and its own nonce-key epoch. The same bytes serve a data-driven
+// tree (AND / OR / NOT / k-of-n / exactly-k over leaves) plus an action and its own nonce-key epoch. The same bytes serve a data-driven
 // rule contract (RuleSetContract, built by the SDK, no Solidity needed) and an inheriting developer contract (RuleSet).
 //
 //   config   := version u8 (=1) | mode u8 (0 independent, 1 else) | ruleCount u8 | nodeCount u16
@@ -21,6 +21,7 @@ uint8 constant T_AND = 1;
 uint8 constant T_OR = 2;
 uint8 constant T_NOT = 3;
 uint8 constant T_KOFN = 4; // body: k u8
+uint8 constant T_EXACT = 5; // body: k u8. Exactly k children true (exactly one of: k = 1); children are evaluated exactly
 uint8 constant T_CMP = 0x10; // body: source | op u8 | operand 32
 uint8 constant T_RANGE = 0x11; // source | lo 32 | hi 32 | outside u8
 uint8 constant T_CROSSING = 0x12; // source | line 32 | dir u8 | initial 32 | slot u8   (stateful)
@@ -193,6 +194,10 @@ library RuleSetCodec {
         return node(T_KOFN, abi.encodePacked(k), kids);
     }
 
+    function exactly(uint8 k, bytes[] memory kids) internal pure returns (bytes memory) {
+        return node(T_EXACT, abi.encodePacked(k), kids);
+    }
+
     function leaf(uint8 t, bytes memory body) internal pure returns (bytes memory) {
         return node(t, body, new bytes[](0));
     }
@@ -318,7 +323,7 @@ library RuleSetCodec {
         if (size < NODE_HEADER || p + size > end) revert BadConfig(E_NODE, p);
         uint256 cnt;
         if (t < 0x10) {
-            if (t == 0 || t > T_KOFN) revert BadConfig(E_NODE, p);
+            if (t == 0 || t > T_EXACT) revert BadConfig(E_NODE, p);
             cnt = _composite(c, t, p, size, depth, exact, id);
         } else {
             _leaf(c, t, p, size, exact, id);
@@ -332,12 +337,13 @@ library RuleSetCodec {
         uint256 q = p + NODE_HEADER;
         uint256 end = p + size;
         uint256 k;
-        if (t == T_KOFN) {
+        if (t == T_KOFN || t == T_EXACT) {
             if (q >= end) revert BadConfig(E_NODE, p);
             k = u8(c, q);
             q += 1;
         }
-        bool childExact = exact || t == T_NOT;
+        // NOT and EXACT need each child's exact answer (a "no" must really be no), so predicate leaves are refused below them
+        bool childExact = exact || t == T_NOT || t == T_EXACT;
         cnt = 1;
         uint256 n;
         while (q < end) {
@@ -346,7 +352,7 @@ library RuleSetCodec {
             q += u16(c, q + 1);
             ++n;
         }
-        if (q != end || n == 0 || n > MAX_CHILDREN || (t == T_NOT && n != 1) || (t == T_KOFN && (k == 0 || k > n))) revert BadConfig(E_CHILDREN, p);
+        if (q != end || n == 0 || n > MAX_CHILDREN || (t == T_NOT && n != 1) || ((t == T_KOFN || t == T_EXACT) && (k == 0 || k > n))) revert BadConfig(E_CHILDREN, p);
     }
 
     function _leaf(bytes memory c, uint256 t, uint256 p, uint256 size, bool exact, uint256 id) private pure {

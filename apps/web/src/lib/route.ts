@@ -1,9 +1,10 @@
+import { OLD_BLOCK_IDS } from "@/lib/catalog";
 import { useEffect, useState } from "react";
 
-/** Hash routes, so the site stays a static bundle with no server rewrites. `#/modules/pause/guarded-vault` → ["modules", "pause", "guarded-vault"]. */
-export type Page = "home" | "modules" | "examples" | "explorer" | "skills" | "mcp" | "docs";
+/** Hash routes, so the site stays a static bundle with no server rewrites. `#/blocks/pause-the-target` → ["blocks", "pause-the-target"]. Old `#/modules/...` links open the blocks page. */
+export type Page = "home" | "blocks" | "examples" | "explorer" | "skills" | "mcp" | "docs";
 
-const PAGES: Page[] = ["modules", "examples", "explorer", "skills", "mcp", "docs"];
+const PAGES: Page[] = ["blocks", "examples", "explorer", "skills", "mcp", "docs"];
 
 export interface Route {
   page: Page;
@@ -12,7 +13,13 @@ export interface Route {
 
 const parse = (): Route => {
   const [head = "", ...parts] = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  if (head === "modules") {
+    // old links: #/modules, #/modules/<group>, #/modules/<group>/<id>
+    const id = parts.length >= 2 ? parts[parts.length - 1]! : undefined;
+    return { page: "blocks", parts: id ? [OLD_BLOCK_IDS[id] ?? id] : [] };
+  }
   const page = PAGES.find((p) => p === head) ?? "home";
+  if (page === "blocks" && parts[0] && OLD_BLOCK_IDS[parts[0]]) parts[0] = OLD_BLOCK_IDS[parts[0]]!;
   return { page, parts: page === "home" ? [] : parts };
 };
 

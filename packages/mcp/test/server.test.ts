@@ -20,15 +20,23 @@ describe("popcorn MCP server", () => {
   test("lists its tools, none of which sign or send", async () => {
     const c = await client();
     const names = (await c.listTools()).tools.map((t) => t.name).sort();
-    expect(names).toEqual(["build_trigger", "can_trigger", "explain_code", "get_example", "get_module", "how_to_build", "list_examples", "list_modules", "rule_contract_info"]);
+    expect(names).toEqual(["build_trigger", "can_trigger", "explain_code", "get_block", "get_example", "how_to_build", "inspect_transaction", "list_blocks", "list_examples", "rule_contract_info"]);
   });
-  test("catalog: modules by group and one page", async () => {
+  test("catalog: blocks by shape and tier, and one page", async () => {
     const c = await client();
-    const priv = JSON.parse(await call(c, "list_modules", { group: "private" }));
-    expect(priv.map((m: { id: string }) => m.id).sort()).toEqual(["private-pool", "stealth-address"]);
-    const page = JSON.parse(await call(c, "get_module", { id: "open-sponsor" }));
-    expect(page.status).toBe("built");
-    expect(page.page).toContain("## Runs on");
+    const ready = JSON.parse(await call(c, "list_blocks", { shape: "ready-made" }));
+    expect(ready.map((m: { id: string }) => m.id).sort()).toEqual(["privacy-pool", "stealth-addresses"]);
+    const tier1 = JSON.parse(await call(c, "list_blocks", { tier: 1 }));
+    expect(tier1.map((m: { id: string }) => m.id).sort()).toEqual(["and", "call", "compare", "not", "or", "pause", "self-paying", "signature"]);
+    const page = JSON.parse(await call(c, "get_block", { id: "pause" }));
+    expect(page.shape).toBe("action");
+    expect(page.inputs.map((x: { name: string }) => x.name)).toContain("target");
+    expect(page.page).toContain("## Mempool");
+    expect(page.useCases.ready.length).toBeGreaterThan(0);
+    // every block an example names is in the catalog
+    for (const e of JSON.parse(await call(c, "list_examples"))) {
+      for (const b of e.blocks as { id: string }[]) expect(JSON.parse(await call(c, "get_block", { id: b.id })).id).toBe(b.id);
+    }
   });
   test("examples: projects with recorded transactions", async () => {
     const c = await client();

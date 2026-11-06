@@ -23,6 +23,9 @@
       "@popcorn/sdk/transport": [
         "../../packages/sdk/src/transport.ts"
       ],
+      "@popcorn/sdk/inspect": [
+        "../../packages/sdk/src/inspect.ts"
+      ],
       "viem": [
         "./node_modules/viem"
       ]

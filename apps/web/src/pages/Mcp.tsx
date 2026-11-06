@@ -4,7 +4,7 @@ import { KeyRound, Lock, Play, ShieldCheck } from "lucide-react";
 import { Snippet, SnippetCopyButton, SnippetHeader, SnippetTabsContent, SnippetTabsList, SnippetTabsTrigger } from "@/components/kibo-ui/snippet";
 import { Reveal, Spotlight } from "@/components/motion";
 import { StatusBadge, TAB } from "@/components/bits";
-import { MODULES, PROJECTS } from "@/lib/catalog";
+import { CATALOG, PROJECTS } from "@/lib/catalog";
 import { RUNS } from "@/lib/runs";
 import { cn } from "@/lib/utils";
 
@@ -13,31 +13,33 @@ import { cn } from "@/lib/utils";
 
 const TOOLS: { name: string; does: string; input: string; local?: (arg: string) => unknown }[] = [
   {
-    name: "list_modules", does: "The modules, optionally for one use-case group.", input: `{ "group": "private" }`,
+    name: "list_blocks", does: "The blocks and complete contracts, optionally for one kind.", input: `{ "shape": "check" }`,
     local: (a) => {
-      const f = safe(a) as { group?: string };
-      return MODULES.filter((m) => !f.group || m.group === f.group).map((m) => ({ id: m.id, name: m.name, group: m.group, status: m.status, runsOn: m.runsOn, postQuantum: m.postQuantum }));
+      const f = safe(a) as { shape?: string };
+      return CATALOG.filter((m) => !f.shape || m.shape === f.shape).map((m) => ({ id: m.id, name: m.name, shape: m.shape, tier: m.tier, status: m.status, runsOn: m.runsOn }));
     },
   },
   {
-    name: "get_module", does: "One module's page: what it does, when it fires, where it runs, code, limits.", input: `{ "id": "open-sponsor" }`,
+    name: "get_block", does: "One block's page: what it does, its inputs, where it runs, code, limits.", input: `{ "id": "public-gas-sponsor" }`,
     local: (a) => {
-      const m = MODULES.find((x) => x.id === (safe(a) as { id?: string }).id);
-      return m ? { id: m.id, name: m.name, status: m.status, runsOn: m.runsOn, whatItDoes: m.summary, whenItFires: m.sections["When it fires"], limits: m.sections["Limits"], code: m.code } : { error: "no such module" };
+      const m = CATALOG.find((x) => x.id === (safe(a) as { id?: string }).id);
+      return m
+        ? { id: m.id, name: m.name, shape: m.shape, tier: m.tier, status: m.status, runsOn: m.runsOn, overview: m.summary, inputs: m.inputs, triggerPayload: m.perTrigger, output: m.output, useCases: m.useCases, builtFrom: m.builtFrom.length ? m.builtFrom : undefined, sdk: m.sdk, gotchas: m.sections["Gotchas"], code: m.code }
+        : { error: "no such block" };
     },
   },
   {
-    name: "list_examples", does: "The example projects, their modules and roles, recorded or not.", input: `{}`,
-    local: () => PROJECTS.map((p) => ({ id: p.id, name: p.name, problem: p.problem, modules: p.modules.map((m) => m.id), recorded: Boolean(RUNS[p.key]?.recorded) })),
+    name: "list_examples", does: "The example projects, their blocks and roles, recorded or not.", input: `{}`,
+    local: () => PROJECTS.map((p) => ({ id: p.id, name: p.name, problem: p.problem, blocks: p.modules.map((m) => m.id), target: p.target ?? undefined, recorded: Boolean(RUNS[p.key]?.recorded) })),
   },
   {
     name: "get_example", does: "One project: every recorded transaction, the featured one's five stages and its refusal.", input: `{ "id": "private-payroll" }`,
     local: (a) => {
       const p = PROJECTS.find((x) => x.id === (safe(a) as { id?: string }).id);
-      return p ? { name: p.name, modules: p.modules, story: RUNS[p.key]?.story, refused: RUNS[p.key]?.failing.result } : { error: "no such example" };
+      return p ? { name: p.name, blocks: p.modules, target: p.target ?? undefined, build: p.build ?? undefined, story: RUNS[p.key]?.story, refused: RUNS[p.key]?.failing.result } : { error: "no such example" };
     },
   },
-  { name: "how_to_build", does: "The modules, roles and SDK calls to build a project like an example.", input: `{ "id": "sovereign-account" }` },
+  { name: "how_to_build", does: "The blocks, roles and SDK calls to build a project like an example.", input: `{ "id": "sovereign-account" }` },
   { name: "explain_code", does: "A Core code (frame 0) or an Open Sponsor code (frame 1) in plain words, and who paid.", input: `{ "code": "0x6c", "frame": "payer" }` },
   { name: "rule_contract_info", does: "A deployed rule contract's logic, mode, caps and balance.", input: `{ "network": "local", "ruleContract": "0x…" }` },
   { name: "can_trigger", does: "Simulates a trigger on the devnet: would it be accepted now, and if not which frame refused it.", input: `{ "network": "local", "ruleContract": "0x…", "triggerData": "0x…", "verifyData": "0x…" }` },
@@ -110,7 +112,7 @@ export default function Mcp() {
             <p className="label-mono mb-3">Tool inspector</p>
             <h2 className="text-chrome text-[30px] font-semibold tracking-[-0.03em]">Try the tools.</h2>
             <p className="mt-2 max-w-[600px] text-[14px] text-muted-foreground">
-              <code className="font-mono">list_modules</code> and <code className="font-mono">get_module</code> run here, on the catalog this site ships. The others need the server.
+              <code className="font-mono">list_blocks</code> and <code className="font-mono">get_block</code> run here, on the catalog this site ships. The others need the server.
             </p>
           </Reveal>
           <Reveal delay={0.1} className="mt-8">

@@ -71,7 +71,7 @@ duplicate it.
 7. **Limits**: what it cannot do.
 8. **Related modules**.
 
-Catalog front matter (`docs/catalog/<corner>/<module>.md`):
+Catalog front matter (this described the earlier module catalog; the catalog is now `docs/catalog/<shape>/<block>.md`):
 
 ```yaml
 name: Outflow Spike Pause
@@ -157,7 +157,7 @@ The skill files live in `skills/<name>/SKILL.md`; the page is generated from the
 ## MCP page
 
 Tools, resources and the safety model. The server is **read-only by default and never holds or asks for a private key**.
-Tools: `list_modules`, `get_module`, `plan_rule` (description to rule file), `check_rule` (per-mempool verdict),
+Tools: `list_blocks`, `get_block`, `plan_rule` (description to rule file), `check_rule` (per-mempool verdict),
 `explain_rule` (live per-node result), `rule_status`, `decode_frame_tx`, `admission_report`, and `build_trigger_tx`, which
 returns an **unsigned** transaction. Signing happens in the user's CLI or wallet. Show install snippets for Claude Code and
 other MCP clients, and a tool inspector that calls the tools against the local devnet.

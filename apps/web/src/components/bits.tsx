@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Pill, PillIndicator } from "@/components/kibo-ui/pill";
 import { CodeBlock, CodeBlockBody, CodeBlockContent, CodeBlockCopyButton, CodeBlockFilename, CodeBlockFiles, CodeBlockHeader, CodeBlockItem } from "@/components/kibo-ui/code-block";
 import { Reveal } from "@/components/motion";
-import { RUNS_ON_TEXT, type Module, type Status } from "@/lib/catalog";
+import { RUNS_ON_TEXT, type Block, type Status } from "@/lib/catalog";
 import { monoThemes } from "@/lib/mono-theme";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +19,9 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   );
 }
 
-/** Where the module runs, as positive chips (decision 67), with the reason on hover. */
-export function MempoolBadges({ m, className }: { m: Module; className?: string }) {
-  const why = m.sections["Runs on"];
+/** Where the block runs, as positive chips only (decision 67), with the reason on hover. */
+export function MempoolBadges({ m, className }: { m: Block; className?: string }) {
+  const why = m.sections["Mempool"];
   return (
     <div className={cn("flex flex-wrap gap-1.5 font-mono text-[11px]", className)} title={why}>
       {m.runsOn.map((r) => (
@@ -29,12 +29,11 @@ export function MempoolBadges({ m, className }: { m: Module; className?: string 
           ✓ {RUNS_ON_TEXT[r]}
         </span>
       ))}
-      {m.usedIn.includes("defi") && <span className="rounded-full border border-[var(--glass-border)] px-2.5 py-1 text-muted-foreground">used in DeFi</span>}
     </div>
   );
 }
 
-export function GasTag({ m }: { m: Module }) {
+export function GasTag({ m }: { m: Block }) {
   if (!m.gas) return <span className="font-mono text-[11px] text-faint">gas · not measured yet</span>;
   return (
     <span className="font-mono text-[11px] text-muted-foreground">
@@ -108,8 +107,12 @@ export function Code({ files, className }: { files: { filename: string; lang: st
 
 /** Pull the first fenced block out of a Markdown section. */
 export function fenced(md: string | undefined): { lang: string; code: string } | null {
-  const m = md && /```(\w*)\n([\s\S]*?)```/.exec(md);
-  return m ? { lang: m[1] || "text", code: m[2].replace(/\n$/, "") } : null;
+  return fencedAll(md)[0] ?? null;
+}
+
+/** Every fenced block in a Markdown section, in order. */
+export function fencedAll(md: string | undefined): { lang: string; code: string }[] {
+  return [...(md ?? "").matchAll(/```(\w*)\n([\s\S]*?)```/g)].map((m) => ({ lang: m[1] || "text", code: m[2]!.replace(/\n$/, "") }));
 }
 
 export function Footer() {

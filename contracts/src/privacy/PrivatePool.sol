@@ -5,6 +5,8 @@ import {IVerifier} from "src/interfaces/IVerifier.sol";
 import {IPoseidon2} from "src/privacy/IPoseidon.sol";
 import {PoseidonTree} from "src/privacy/PoseidonTree.sol";
 import {Payouts} from "src/privacy/Payouts.sol";
+import {Flow, IPopcornExplain, FLOW_YES, FLOW_NO, FLOW_SKIPPED} from "src/rules/Explain.sol";
+import {Answer, YES, NO, UNKNOWN, answer} from "src/blocks/Answer.sol";
 
 /// @title PrivatePool
 /// @notice A fixed-denomination private pool whose withdrawals pay their own gas. Rule-pays (Core mode 0).
@@ -30,7 +32,7 @@ import {Payouts} from "src/privacy/Payouts.sol";
 ///         The verifier is a separate contract, so the pool stakes (built-in stake trigger) for the alternative mempool.
 ///
 ///         Not post-quantum: Groth16 is zero-knowledge, and a quantum computer could forge its proofs.
-contract PrivatePool is PoseidonTree, Payouts {
+contract PrivatePool is PoseidonTree, Payouts, IPopcornExplain {
     /// @dev keccak256("popcorn.privatePool"): association root r known at keccak256(abi.encode(r, BASE)).
     bytes32 private constant POOL = 0xcd097eeb3c4b2c41ecdd4385a1ccbee6dfe07012f16abad47592304368ea9bbd;
     uint256 internal constant R = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -134,6 +136,12 @@ contract PrivatePool is PoseidonTree, Payouts {
         (uint256 nullifierHash, uint256 root, uint256 assocRoot, address recipient, uint256 fee) = _decode(popArgs);
         if (recipient == address(0) || fee < minFee || fee > denomination) return false;
         if (!_isKnownRoot(root) || _sload(_assocSlot(assocRoot)) != 1) return false;
+        return _proofOk(nullifierHash, root, assocRoot, recipient, fee, verifyData).isYes();
+    }
+
+    /// @dev The withdraw proof against [root, assocRoot, nullifierHash, recipient, fee, scope = this pool]; shared by the
+    ///      condition and the explain view so they cannot disagree.
+    function _proofOk(uint256 nullifierHash, uint256 root, uint256 assocRoot, address recipient, uint256 fee, bytes calldata proof) private view returns (Answer) {
         uint256[] memory inputs = new uint256[](6);
         inputs[0] = root;
         inputs[1] = assocRoot;
@@ -141,8 +149,9 @@ contract PrivatePool is PoseidonTree, Payouts {
         inputs[3] = uint256(uint160(recipient));
         inputs[4] = fee;
         inputs[5] = uint256(uint160(address(this)));
-        (bool s, bytes memory ret) = address(verifier).staticcall(abi.encodeCall(IVerifier.verify, (verifyData, inputs)));
-        return s && ret.length == 32 && abi.decode(ret, (uint256)) == 1;
+        (bool s, bytes memory ret) = address(verifier).staticcall(abi.encodeCall(IVerifier.verify, (proof, inputs)));
+        if (!s || ret.length != 32) return UNKNOWN;
+        return abi.decode(ret, (uint256)) == 1 ? YES : NO;
     }
 
     function action(bytes calldata popArgs, address) internal override {
@@ -150,5 +159,34 @@ contract PrivatePool is PoseidonTree, Payouts {
         uint256 amount = denomination - fee;
         emit Withdrawal(nullifierHash, recipient, amount, fee);
         _sendOrCredit(recipient, amount);
+    }
+
+    // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
+
+    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory, string memory, bytes memory) {
+        bool shaped = popArgs.length == 160 && uint256(bytes32(popArgs[96:128])) >> 160 == 0;
+        uint8[4] memory r = _explainChecks(shaped, popArgs, verifyData);
+        bool all = r[3] == FLOW_YES;
+        uint8 and_ = r[2] == FLOW_YES ? r[3] : FLOW_NO;
+        return (
+            "withdraw",
+            "t||Withdraw: nullifier, roots, recipient and fee, with a withdraw proof|;p|self-paying|the pool pays the gas, out of the note|0;c|compare|a recipient is set and the fee is within [minimum fee, denomination]|0;c||the deposit root is one this pool has had|0;c|membership-proof|the association set is an accepted one|0;c||the withdraw proof verifies (ZK): a deposit in the set, not yet spent, for this recipient and fee|0;o|and|AND|2,3,4,5;a||send denomination minus fee to the recipient|6",
+            abi.encodePacked(Flow.result(answer(shaped)), FLOW_YES, r[0], r[1], r[2], r[3], and_, Flow.runs(all))
+        );
+    }
+
+    /// @dev The four checks of the condition in order, each SKIPPED once an earlier one said no.
+    function _explainChecks(bool shaped, bytes calldata popArgs, bytes calldata verifyData) private view returns (uint8[4] memory r) {
+        r = [FLOW_SKIPPED, FLOW_SKIPPED, FLOW_SKIPPED, FLOW_SKIPPED];
+        if (!shaped) return r;
+        (uint256 nh, uint256 root, uint256 assoc, address to, uint256 fee) = _decode(popArgs);
+        bool fees = to != address(0) && fee >= minFee && fee <= denomination;
+        r[0] = fees ? FLOW_YES : FLOW_NO;
+        if (!fees) return r;
+        r[1] = _isKnownRoot(root) ? FLOW_YES : FLOW_NO;
+        if (r[1] == FLOW_NO) return r;
+        r[2] = _sload(_assocSlot(assoc)) == 1 ? FLOW_YES : FLOW_NO;
+        if (r[2] == FLOW_NO) return r;
+        r[3] = Flow.result(_proofOk(nh, root, assoc, to, fee, verifyData));
     }
 }

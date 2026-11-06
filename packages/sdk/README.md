@@ -61,13 +61,41 @@ with the payer's own code.
 The nonce key a trigger consumes is read from the rule contract's own `popcornNonceKey(bytes)` view, which runs the logic
 in the rule contract's context, so keys derived from its address or storage are exact (decision 75).
 
-## Modules
+## Blocks without Solidity
 
-| Module | Calls |
+Checks, joins and stateless actions are named after their blocks and put together as data, deployed on the shared
+rule-set engine (no compiler). Blocks that keep state (Reward Pool, Anonymous Vote, Key Rotation, Exit
+To An Address, Post-Quantum Mode, Repay) are Solidity only: inherit them from `contracts/src/blocks`.
+
+```ts
+import { blocks, deployRuleSet } from "@popcorn/sdk";
+const { build, allOf, noneOf, valueCrossesLine, getter, pauseTarget } = blocks;
+
+const spec = build({
+  name: "pause when the gauge goes over 100",
+  when: allOf(valueCrossesLine(getter(gauge, "value()"), "above", 100n), noneOf(valueCrossesLine(getter(pool, "paused()"), "above", 0n))),
+  then: pauseTarget(pool),
+});
+const { ruleContract } = await deployRuleSet(client.popcorn, spec, { fund: parseEther("0.3"), stake: true });
+```
+
+| Shape | Functions |
 |---|---|
-| Open Sponsor | `deployOpenSponsor`, `stakeOpenSponsor`, `configureOpenSponsor`, `sponsored(sponsor, membership?)` |
+| Checks | `valueCrossesLine`, `valueOutsideBand`, `ratioCrossesLine`, `valueCrossedLineSinceLastTime`, `valueMovesTooFast`, `contractCodeChanged`, `signedInstruction`, `reportersSigned` |
+| Joins | `allOf`, `anyOf`, `noneOf`, `atLeast`, `exactlyOne`, `exactly`, and `buildIfElse` for IF / ELSE |
+| Actions | `makeACall`, `pauseTarget` (another contract's `pause()`), `nothing` |
+| Sources | `getter`, `storage` (the build's own slot: public mempool), `ethBalance`, `erc20Balance` |
+
+`test/blocks.network.test.ts` runs the build above on the local devnet from a key with no ETH.
+
+## Builds
+
+| Build | Calls |
+|---|---|
+| Proof-of-Exploit Bounty | `bountyClaim(recipient, claimId, proof)`, `bountyWatch(reporter)` (proofs: `@popcorn/zk` `proveExploit`) |
+| Paymaster | `deployOpenSponsor`, `stakeOpenSponsor`, `configureOpenSponsor`, `sponsored(sponsor, membership?)` |
 | Private Pool | `deployPrivatePool`, `poolDeposit`, `setAssociationRoot`, `poolCommitments`, `poolWithdrawal` (proofs: `@popcorn/zk` `withdrawProof`) |
-| Stealth Address | `stealthKeys`, `stealthMetaAddress`, `prepareStealthPayment` (ML-KEM-768), `stealthPay`, `stealthAnnouncements`, `scanStealth`, `stealthSpend` |
+| Stealth Vault | `stealthKeys`, `stealthMetaAddress`, `prepareStealthPayment` (ML-KEM-768), `stealthPay`, `stealthAnnouncements`, `scanStealth`, `stealthSpend` |
 | Sovereign Account | `deploySovereignAccount`, `initializeAccount`, `spendTrigger`, `voteTrigger`, `quantumTrigger`, `migrateTrigger`, `exitTrigger`, `contestRecovery`, `finalizeRecovery` |
 | Recorder | `recordTrigger`, `recordRefusal`, `storyEntry`, `writeRun` (used by `scripts/record-examples.ts`) |
 

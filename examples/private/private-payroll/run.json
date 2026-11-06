@@ -12,8 +12,8 @@
     "payer": "the stealth vault"
   },
   "contracts": {
-    "stealthVault": "0x77347A56A301eBD72328182D836C9Ab9E5d4A2d7",
-    "privatePool": "0x23db6F6776297520C72170D4a983591d1D729eff"
+    "stealthVault": "0x6c49FEC30741b88D14c4AC679595Db6eb49baeE0",
+    "privatePool": "0xbA2f280DAAF214E1eCbE5C7eea4DAEb29574a2a4"
   },
   "steps": [
     {
@@ -23,8 +23,8 @@
           "mode": "VERIFY",
           "flags": 3,
           "target": "stealth vault",
-          "gasLimit": 263181,
-          "data": "0x1ff4e248…(256 bytes)",
+          "gasLimit": 263355,
+          "data": "0x038831ab…(256 bytes)",
           "explain": "the vault checks the spend proof for this commitment, recipient and fee, then approves execution and payment"
         },
         {
@@ -38,7 +38,7 @@
       ],
       "world": {
         "employee address balance": "0 ETH",
-        "stealth vault balance": "1.219885551997236932 ETH"
+        "stealth vault balance": "1.220438508050604725 ETH"
       }
     },
     {
@@ -47,11 +47,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 239256
+          "gas": 239414
         }
       ],
       "result": "READY",
-      "gasUsed": 239256
+      "gasUsed": 239414
     },
     {
       "stage": "admit",
@@ -62,7 +62,7 @@
           "name": "stealth vault",
           "staked": true,
           "budget": 2500000,
-          "used": 263181
+          "used": 263355
         },
         "checks": [
           {
@@ -73,28 +73,28 @@
           {
             "rule": "CANONICAL",
             "verdict": "warn",
-            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 263181 > 250000 (MAX_VERIFY_GAS)"
+            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 263355 > 250000 (MAX_VERIFY_GAS)"
           }
         ]
       }
     },
     {
       "stage": "include",
-      "tx": "0xf505140818d6d2c93fa844eb0694acab905b6a88bc05b8a81d2d502648797604",
-      "block": 791,
+      "tx": "0xa6fed93d33d43c175e7b04fb45b9d9766b6fbe3d39d9bc186888c8d588af2133",
+      "block": 7236,
       "status": "success",
       "payer": "stealth vault",
-      "gasUsed": 460335
+      "gasUsed": 460517
     },
     {
       "stage": "act",
       "before": {
         "employee address balance": "0 ETH",
-        "stealth vault balance": "1.219885551997236932 ETH"
+        "stealth vault balance": "1.220438508050604725 ETH"
       },
       "after": {
         "employee address balance": "1.1896625 ETH",
-        "stealth vault balance": "0.029302381994014587 ETH"
+        "stealth vault balance": "0.03050012324167055 ETH"
       },
       "events": [
         "stealth vault: 0xc1adca96",
@@ -103,8 +103,168 @@
       ]
     }
   ],
+  "flow": {
+    "source": "explain",
+    "trigger": "spend",
+    "evaluated": "inclusion",
+    "nodes": [
+      {
+        "index": 0,
+        "kind": "trigger",
+        "blockId": "",
+        "label": "Spend: commitment, recipient and fee, with a spend proof",
+        "result": "yes",
+        "inputs": []
+      },
+      {
+        "index": 1,
+        "kind": "payer",
+        "blockId": "self-paying",
+        "label": "the vault pays the gas, out of the payment",
+        "result": "yes",
+        "inputs": [
+          0
+        ]
+      },
+      {
+        "index": 2,
+        "kind": "condition",
+        "blockId": "",
+        "label": "the payment exists and has not been spent",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 3,
+        "kind": "condition",
+        "blockId": "compare",
+        "label": "a recipient is set and the fee is within [minimum fee, payment]",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 4,
+        "kind": "condition",
+        "blockId": "",
+        "label": "the spend proof verifies (ZK): the sender owns this payment",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 5,
+        "kind": "operator",
+        "blockId": "and",
+        "label": "AND",
+        "result": "yes",
+        "inputs": [
+          2,
+          3,
+          4
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 6,
+        "kind": "action",
+        "blockId": "",
+        "label": "send the payment minus the fee to the recipient",
+        "result": "yes",
+        "inputs": [
+          5
+        ],
+        "note": "ran: the action frame succeeded"
+      }
+    ]
+  },
   "failing": {
     "result": "NONCE_USED",
+    "tx": "0xedf4bf3ff68ed0e423dfd0b3cd5b9018f9ca8ffce9f680dc5cbb342daec8c960",
+    "flow": {
+      "source": "explain",
+      "trigger": "spend",
+      "evaluated": "current-state",
+      "nodes": [
+        {
+          "index": 0,
+          "kind": "trigger",
+          "blockId": "",
+          "label": "Spend: commitment, recipient and fee, with a spend proof",
+          "result": "yes",
+          "inputs": []
+        },
+        {
+          "index": 1,
+          "kind": "payer",
+          "blockId": "self-paying",
+          "label": "the vault pays the gas, out of the payment",
+          "result": "yes",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 2,
+          "kind": "condition",
+          "blockId": "",
+          "label": "the payment exists and has not been spent",
+          "result": "no",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 3,
+          "kind": "condition",
+          "blockId": "compare",
+          "label": "a recipient is set and the fee is within [minimum fee, payment]",
+          "result": "skipped",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 4,
+          "kind": "condition",
+          "blockId": "",
+          "label": "the spend proof verifies (ZK): the sender owns this payment",
+          "result": "skipped",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 5,
+          "kind": "operator",
+          "blockId": "and",
+          "label": "AND",
+          "result": "no",
+          "inputs": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "index": 6,
+          "kind": "action",
+          "blockId": "",
+          "label": "send the payment minus the fee to the recipient",
+          "result": "skipped",
+          "inputs": [
+            5
+          ]
+        }
+      ]
+    },
     "steps": [
       {
         "stage": "build",
@@ -114,7 +274,7 @@
             "flags": 3,
             "target": "stealth vault",
             "gasLimit": 251070,
-            "data": "0x1ff4e248…(256 bytes)"
+            "data": "0x038831ab…(256 bytes)"
           },
           {
             "mode": "SENDER",
@@ -125,7 +285,7 @@
           }
         ],
         "world": {
-          "stealth vault balance": "0.029302381994014587 ETH"
+          "stealth vault balance": "0.03050012324167055 ETH"
         }
       },
       {
@@ -158,49 +318,225 @@
   },
   "story": [
     {
-      "module": "stealth-address",
+      "module": "stealth-addresses",
       "role": "receive",
       "title": "The employer pays the salary to a stealth address only the employee can recognise (ML-KEM announcement)",
-      "tx": "0x2015ae07916d21e39f6960dae20e457940b079fd02b7471cda93a2d02e7f29d2",
-      "block": 787,
-      "gasUsed": 165764,
+      "tx": "0xd06ef0ed54e4d3e142108e61cfde4c492e5bf823f133f0dda2dfc4ca32e96d4f",
+      "block": 7232,
+      "gasUsed": 165798,
       "status": "success"
     },
     {
-      "module": "stealth-address",
+      "module": "stealth-addresses",
       "role": "spend",
       "title": "The employee moves it to a fresh address with no ETH; the vault pays the gas",
-      "tx": "0xf505140818d6d2c93fa844eb0694acab905b6a88bc05b8a81d2d502648797604",
-      "block": 791,
-      "gasUsed": 460335,
-      "status": "success"
+      "tx": "0xa6fed93d33d43c175e7b04fb45b9d9766b6fbe3d39d9bc186888c8d588af2133",
+      "block": 7236,
+      "gasUsed": 460517,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "spend",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Spend: commitment, recipient and fee, with a spend proof",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the vault pays the gas, out of the payment",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the payment exists and has not been spent",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "compare",
+            "label": "a recipient is set and the fee is within [minimum fee, payment]",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the spend proof verifies (ZK): the sender owns this payment",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3,
+              4
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 6,
+            "kind": "action",
+            "blockId": "",
+            "label": "send the payment minus the fee to the recipient",
+            "result": "yes",
+            "inputs": [
+              5
+            ],
+            "note": "ran: the action frame succeeded"
+          }
+        ]
+      }
     },
     {
-      "module": "private-pool",
+      "module": "privacy-pool",
       "role": "hold",
       "title": "Savings go into the private pool as a note",
-      "tx": "0x67b383c54d2e89b352a56b731e4c63504ca28dfe95e6fd60473f510ee5eb1bdb",
-      "block": 792,
-      "gasUsed": 3166356,
+      "tx": "0xb9f4c81282eefc53a502a3976d5e83aa918511588e7bd7336a98f53b45716974",
+      "block": 7237,
+      "gasUsed": 3166355,
       "status": "success"
     },
     {
-      "module": "association-set",
+      "module": "membership-proof",
       "role": "vouch",
       "title": "The association-set provider accepts the deposit",
-      "tx": "0x190b4316dfa16b7666e70c0fd2fccb4f4ab4b3ae62b6916807c3a85bad90d122",
-      "block": 793,
+      "tx": "0x84cd4a1ec9e1dd566885f7b90090ed5014a0d1b15f7e3d7cf0b6bd7293fe9b70",
+      "block": 7238,
       "gasUsed": 131372,
       "status": "success"
     },
     {
-      "module": "private-pool",
+      "module": "privacy-pool",
       "role": "withdraw",
       "title": "A withdrawal to a fresh address, paid by the pool, sent by a key with no ETH",
-      "tx": "0x5215c296ce6e6233ab77998fffaef29dc03c75d007803bcccebfcd562fc18c0e",
-      "block": 798,
-      "gasUsed": 486648,
-      "status": "success"
+      "tx": "0xce569b4c586e0de92ee82630cdb65a5391396461476fcea2e3632a1aeefe86d3",
+      "block": 7241,
+      "gasUsed": 486781,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "withdraw",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Withdraw: nullifier, roots, recipient and fee, with a withdraw proof",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "self-paying",
+            "label": "the pool pays the gas, out of the note",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "compare",
+            "label": "a recipient is set and the fee is within [minimum fee, denomination]",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the deposit root is one this pool has had",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 4,
+            "kind": "condition",
+            "blockId": "membership-proof",
+            "label": "the association set is an accepted one",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 5,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the withdraw proof verifies (ZK): a deposit in the set, not yet spent, for this recipient and fee",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 6,
+            "kind": "operator",
+            "blockId": "and",
+            "label": "AND",
+            "result": "yes",
+            "inputs": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 7,
+            "kind": "action",
+            "blockId": "",
+            "label": "send denomination minus fee to the recipient",
+            "result": "yes",
+            "inputs": [
+              6
+            ],
+            "note": "ran: the action frame succeeded"
+          }
+        ]
+      }
     }
   ],
   "sources": {

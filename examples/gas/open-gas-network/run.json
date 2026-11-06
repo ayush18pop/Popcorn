@@ -12,9 +12,9 @@
     "payer": "the open sponsor"
   },
   "contracts": {
-    "sponsor": "0xfd186d28c03A2847eaA9365847547466166D706b",
-    "verifier": "0x3E12E03EC8cCf981c1F272DeC356c21874CF15d3",
-    "app": "0x41feC055cc1036219a38a5d7F87A23Ac42665Cbf"
+    "sponsor": "0x9981A0c9267A174C82f1081D26e41C34b6B93513",
+    "verifier": "0x052a901E42dD20dB2B0552ef97A114be96651720",
+    "app": "0x7574900D7fD126b4D41b512248D15D9301F4af95"
   },
   "steps": [
     {
@@ -33,7 +33,7 @@
           "flags": 1,
           "target": "open sponsor",
           "gasLimit": 340000,
-          "data": "0x11aaacbc…(288 bytes)",
+          "data": "0x08dd25c7…(288 bytes)",
           "explain": "the sponsor checks the membership proof and its budget, then approves payment"
         },
         {
@@ -64,11 +64,11 @@
         {
           "label": "validation (frame 0)",
           "value": "READY",
-          "gas": 12914
+          "gas": 12965
         }
       ],
       "result": "READY",
-      "gasUsed": 12914
+      "gasUsed": 12965
     },
     {
       "stage": "admit",
@@ -97,11 +97,11 @@
     },
     {
       "stage": "include",
-      "tx": "0xecb5d47c2bb5f6fdf79076d8a322cfb01e0cae504b4bcdb1add19d9e845cdc0f",
-      "block": 890,
+      "tx": "0x1aca94acb14e305be26705fa28d5e7576513569683627caa2ddf04b532655053",
+      "block": 7251,
       "status": "success",
       "payer": "open sponsor",
-      "gasUsed": 839489
+      "gasUsed": 839593
     },
     {
       "stage": "act",
@@ -110,7 +110,7 @@
         "account admitted": "0"
       },
       "after": {
-        "sponsor balance": "9.998321021994123577 ETH",
+        "sponsor balance": "9.999497019753043925 ETH",
         "account admitted": "1"
       },
       "events": [
@@ -118,9 +118,104 @@
       ]
     }
   ],
+  "flow": {
+    "source": "explain",
+    "trigger": "count",
+    "evaluated": "inclusion",
+    "nodes": [
+      {
+        "index": 0,
+        "kind": "trigger",
+        "blockId": "",
+        "label": "Count: no data, anyone can send it with a payer",
+        "result": "yes",
+        "inputs": []
+      },
+      {
+        "index": 1,
+        "kind": "payer",
+        "blockId": "caller-pays",
+        "label": "the payer named in the transaction pays the gas",
+        "result": "yes",
+        "inputs": [
+          0
+        ]
+      },
+      {
+        "index": 2,
+        "kind": "condition",
+        "blockId": "",
+        "label": "the counter is armed (its owner called arm)",
+        "result": "yes",
+        "inputs": [
+          0
+        ],
+        "note": "derived: the transaction was included, so this held when it ran"
+      },
+      {
+        "index": 3,
+        "kind": "action",
+        "blockId": "",
+        "label": "count + 1, disarm, reward the payer",
+        "result": "yes",
+        "inputs": [
+          2
+        ],
+        "note": "ran: the action frame succeeded"
+      }
+    ]
+  },
   "failing": {
     "result": "PAYER_REFUSED",
     "core": "0x6d",
+    "tx": "0xee03dc8d9193afe2dd91890213d1b2b86e3384c83c51b047214d2caf7f0e3e7a",
+    "flow": {
+      "source": "explain",
+      "trigger": "count",
+      "evaluated": "current-state",
+      "nodes": [
+        {
+          "index": 0,
+          "kind": "trigger",
+          "blockId": "",
+          "label": "Count: no data, anyone can send it with a payer",
+          "result": "yes",
+          "inputs": []
+        },
+        {
+          "index": 1,
+          "kind": "payer",
+          "blockId": "caller-pays",
+          "label": "the payer named in the transaction pays the gas",
+          "result": "no",
+          "inputs": [
+            0
+          ],
+          "note": "0x9981A0c9267A174C82f1081D26e41C34b6B93513 refused: this membership nullifier was already used"
+        },
+        {
+          "index": 2,
+          "kind": "condition",
+          "blockId": "",
+          "label": "the counter is armed (its owner called arm)",
+          "result": "yes",
+          "inputs": [
+            0
+          ]
+        },
+        {
+          "index": 3,
+          "kind": "action",
+          "blockId": "",
+          "label": "count + 1, disarm, reward the payer",
+          "result": "skipped",
+          "inputs": [
+            2
+          ],
+          "note": "not reached: the payer refused"
+        }
+      ]
+    },
     "steps": [
       {
         "stage": "build",
@@ -137,7 +232,7 @@
             "flags": 1,
             "target": "open sponsor",
             "gasLimit": 340000,
-            "data": "0x23e0f940…(288 bytes)"
+            "data": "0x258e8046…(288 bytes)"
           },
           {
             "mode": "SENDER",
@@ -155,7 +250,7 @@
           }
         ],
         "world": {
-          "sponsor balance": "9.998321021994123577 ETH"
+          "sponsor balance": "9.999497019753043925 ETH"
         }
       },
       {
@@ -188,11 +283,11 @@
   },
   "story": [
     {
-      "module": "open-sponsor",
+      "module": "paymaster",
       "role": "policy",
       "title": "The community funds a sponsor and publishes its member set's root; no server signs anything",
-      "tx": "0xc2908e3b685b43862ce917337d153cf1df306959df86b5cbde2e3410d7ca0529",
-      "block": 885,
+      "tx": "0x72c6d2db964a03927d3c050c004b27c94e2cec25f9d5e6edeed0de5ecc9cf438",
+      "block": 7246,
       "gasUsed": 238461,
       "status": "success"
     },
@@ -200,10 +295,57 @@
       "module": "membership-proof",
       "role": "admit",
       "title": "A member proves they belong, without saying who, and the account is sponsored from then on",
-      "tx": "0xecb5d47c2bb5f6fdf79076d8a322cfb01e0cae504b4bcdb1add19d9e845cdc0f",
-      "block": 890,
-      "gasUsed": 839489,
-      "status": "success"
+      "tx": "0x1aca94acb14e305be26705fa28d5e7576513569683627caa2ddf04b532655053",
+      "block": 7251,
+      "gasUsed": 839593,
+      "status": "success",
+      "flow": {
+        "source": "explain",
+        "trigger": "count",
+        "evaluated": "inclusion",
+        "nodes": [
+          {
+            "index": 0,
+            "kind": "trigger",
+            "blockId": "",
+            "label": "Count: no data, anyone can send it with a payer",
+            "result": "yes",
+            "inputs": []
+          },
+          {
+            "index": 1,
+            "kind": "payer",
+            "blockId": "caller-pays",
+            "label": "the payer named in the transaction pays the gas",
+            "result": "yes",
+            "inputs": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "kind": "condition",
+            "blockId": "",
+            "label": "the counter is armed (its owner called arm)",
+            "result": "yes",
+            "inputs": [
+              0
+            ],
+            "note": "derived: the transaction was included, so this held when it ran"
+          },
+          {
+            "index": 3,
+            "kind": "action",
+            "blockId": "",
+            "label": "count + 1, disarm, reward the payer",
+            "result": "yes",
+            "inputs": [
+              2
+            ],
+            "note": "ran: the action frame succeeded"
+          }
+        ]
+      }
     }
   ],
   "sources": {

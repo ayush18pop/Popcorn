@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {RuleContract} from "src/rules/RuleContract.sol";
+import {ValueCrossesLine} from "src/blocks/checks/ValueCrossesLine.sol";
 
 /// @title ThresholdCondition
-/// @notice condition() = a uint256 read from `target` (STATICCALL of `selector` with no arguments) is strictly beyond
+/// @notice A one-block build: Value Crosses A Line as the whole condition, with the line fixed at deployment.
+///         condition() = a uint256 read from `target` (STATICCALL of `selector` with no arguments) is strictly beyond
 ///         `line`: Direction.Above -> value > line, Direction.Below -> value < line. A failed call, a short return,
 ///         or a revert make the condition false (fail closed). The developer still implements nonceKey() and action().
 ///
@@ -12,7 +13,7 @@ import {RuleContract} from "src/rules/RuleContract.sol";
 ///         (`unstaked sender accessed <target> slot <s>`) and which ethrex flags as non-canonical
 ///         (StorageReadNonSender) whatever the stake.
 ///         `readGas` bounds the STATICCALL so a misbehaving target cannot eat the condition budget.
-abstract contract ThresholdCondition is RuleContract {
+abstract contract ThresholdCondition is ValueCrossesLine {
     enum Direction {
         Above,
         Below
@@ -38,14 +39,14 @@ abstract contract ThresholdCondition is RuleContract {
     /// @notice (ok, value): ok is false when the read failed. Override to read the value elsewhere, e.g. from the
     ///         rule contract's own storage, which needs no stake and is canonical on ethrex (see SelfThresholdRule contract).
     function _readThreshold() internal view virtual returns (bool ok, uint256 value) {
-        (bool s, bytes memory ret) = thresholdTarget.staticcall{gas: thresholdReadGas}(abi.encodeWithSelector(thresholdSelector));
-        if (!s || ret.length != 32) return (false, 0);
+        (bool s, bytes memory ret) = _readWords(thresholdTarget, abi.encodeWithSelector(thresholdSelector), 1, thresholdReadGas);
+        if (!s) return (false, 0);
         return (true, abi.decode(ret, (uint256)));
     }
 
     /// @notice Pure comparison, exposed for tests and simulate().
     function thresholdCrossed(uint256 value) public view returns (bool) {
-        return thresholdDirection == Direction.Above ? value > thresholdLine : value < thresholdLine;
+        return _crossesLine(value, thresholdLine, thresholdDirection == Direction.Above ? Side.Above : Side.Below).isYes();
     }
 
     function condition() internal view virtual override returns (bool) {

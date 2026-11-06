@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {CallerPays} from "src/payers/CallerPays.sol";
+import {Flow, IPopcornExplain, FLOW_YES} from "src/rules/Explain.sol";
+import {answer} from "src/blocks/Answer.sol";
 
 /// @title PaidCounter (the SDK README's caller-pays example)
 /// @notice Same idea as ArmedCounter, but SENDER-PAYS (Core mode 1): every trigger has a separate PAYER (a searcher, a bot, any
@@ -11,7 +13,7 @@ import {CallerPays} from "src/payers/CallerPays.sol";
 ///
 ///         The reward is `reward` wei, paid from the rule contract's balance; if the balance is lower the payer is credited
 ///         (`rewardOwed`) instead. Condition reads only the rule contract's own storage.
-contract PaidCounter is CallerPays {
+contract PaidCounter is CallerPays, IPopcornExplain {
     bytes32 private constant COUNT = keccak256("popcorn.example.paidCounter.count");
     bytes32 private constant ARMED = keccak256("popcorn.example.paidCounter.armed");
 
@@ -46,6 +48,15 @@ contract PaidCounter is CallerPays {
         emit Popped(c, payer_);
         uint256 pay = address(this).balance < reward ? address(this).balance : reward;
         _payReward(address(0), pay);
+    }
+
+    function popcornExplain(bytes calldata, bytes calldata) external view returns (string memory, string memory, bytes memory) {
+        bool armed = _sload(ARMED) == 1;
+        return (
+            "count",
+            "t||Count: no data, anyone can send it with a payer|;p|caller-pays|the payer named in the transaction pays the gas|0;c||the counter is armed (its owner called arm)|0;a||count + 1, disarm, reward the payer|2",
+            abi.encodePacked(FLOW_YES, FLOW_YES, Flow.result(answer(armed)), Flow.runs(armed))
+        );
     }
 }
 

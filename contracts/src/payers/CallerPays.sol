@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {RuleContract} from "src/rules/RuleContract.sol";
+import {TokenOut} from "src/blocks/TokenOut.sol";
 
 /// @title CallerPays
 /// @notice Base for the logic of a caller-pays rule contract (Core mode 1). A separate payer's VERIFY frame (frame 1)
@@ -83,24 +84,9 @@ abstract contract CallerPays is RuleContract {
 
     // ------------------------------------------------------------------ internals
 
-    /// @dev ETH: CALL with `g` gas, no return data copied. ERC-20: transfer(to, amount) with `g` gas, success iff the call
-    ///      succeeded and returned nothing (from a contract) or one word == 1; at most 32 bytes of return data copied.
-    function _transferOut(address token, address to, uint256 amount, uint256 g) internal returns (bool ok) {
-        if (token == address(0)) {
-            assembly ("memory-safe") {
-                ok := call(g, to, amount, 0, 0, 0, 0)
-            }
-            return ok;
-        }
-        bytes memory data = abi.encodeWithSelector(0xa9059cbb, to, amount); // transfer(address,uint256)
-        uint256 rs;
-        uint256 word;
-        assembly ("memory-safe") {
-            ok := call(g, token, 0, add(data, 0x20), mload(data), 0, 0x20)
-            rs := returndatasize()
-            word := mload(0)
-        }
-        ok = ok && (rs == 0 ? token.code.length > 0 : (rs >= 32 && word == 1));
+    /// @dev See TokenOut.send: ETH by CALL with `g` gas; an ERC-20 transfer that succeeded and returned nothing or 1.
+    function _transferOut(address token, address to, uint256 amount, uint256 g) internal returns (bool) {
+        return TokenOut.send(token, to, amount, g);
     }
 
     function _owedSlot(address token, address payer) private pure returns (bytes32) {

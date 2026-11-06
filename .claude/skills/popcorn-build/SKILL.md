@@ -1,52 +1,80 @@
 ---
 name: popcorn-build
-description: Build something with Popcorn (frame-transaction modules for EIP-8141): turn a problem such as "pay salaries privately", "free transactions for our members", "survive a quantum break" or "let users exit if the guardians turn" into the right modules, start from the closest example project, deploy it to the local devnet and run it. Use when the user wants to build, deploy or adapt a Popcorn module or example.
+description: Build something with Popcorn (frame-transaction blocks for EIP-8141): turn a problem such as "pause our vault if it is drained", "pay salaries privately", "free transactions for our members", "survive a quantum break" or "let users exit if the guardians turn" into a build made of blocks, start from the closest example project, deploy it to the local devnet and run it. Use when the user wants to build, deploy or adapt a Popcorn block, build or example.
 ---
 
 # Building with Popcorn
 
-Popcorn is a library of modules for EIP-8141 frame transactions: a contract approves its own transaction when its
-condition is true, so anyone can send it, even from a key with no ETH, and a false condition costs nothing. Modules
-each do one job; examples are whole projects assembled from several modules, recorded on a devnet.
+Popcorn is a set of blocks for EIP-8141 frame transactions: a contract approves its own transaction when its
+conditions return YES, so anyone can send it, even from a key with no ETH, and a NO costs nothing. Every build is:
 
-Work from the user's problem, not from module names.
+    a gas payer + conditions (combined with logic operators) -> actions
 
-## 1. Find the modules
+- **conditions** return YES / NO / UNKNOWN (UNKNOWN never fires): Compare, Percent Change, Code Hash Changed, Signature,
+  K-of-N Attestation, Exploit Proof (ZK), Membership Proof (ZK)
+- **logic operators**: AND, OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE
+- **actions** do one thing: Call, Pause, Reward Pool, Anonymous Vote, Key Rotation, Withdraw All, Post-Quantum Mode, Repay
+- **gas payers**: Self-Paying, Caller Pays, Paymaster
 
-Use the `popcorn` MCP server (read-only; `packages/mcp`). If it is not connected, read `docs/catalog/<group>/*.md` and
+Block names on the site and in `docs/catalog` are these; the Solidity contracts and SDK functions still carry their
+earlier names (e.g. Compare is `ValueCrossesLine` / `blocks.valueCrossesLine`), listed on each block's page.
+
+Privacy Pool and Stealth Addresses are complete contracts (whole applications), not blocks. Work from the user's problem,
+not from block names.
+
+## 1. Find the blocks
+
+Use the `popcorn` MCP server (read-only; `packages/mcp`). If it is not connected, read `docs/catalog/<conditions|operators|actions|payers|complete>/*.md` and
 `examples/*/*/project.md` directly.
 
-- `list_examples` first: if an example project solves the same problem, start from it. Five exist: private payroll,
-  open gas network, quantum-ready treasury, walkaway exit, and the flagship Sovereign Account.
-- `list_modules` with a group (private, gas, protect, sign, prove), then `get_module` for each candidate. Read
-  "When it fires", "Runs on" and "Limits" before proposing it.
-- `how_to_build` gives an example's modules with their roles and the SDK calls for each.
+- `list_examples` first: if an example project solves the same problem, start from it (Proof-of-Exploit Bounty, private
+  payroll, open gas network, quantum-ready treasury, walkaway exit, and the flagship Sovereign Account).
+- `list_blocks` (optionally by shape or tier), then `get_block` for each candidate. Read its inputs, "Runs on" and
+  "Limits" before proposing it.
+- `how_to_build` gives an example's blocks with their roles and the code for each.
 
-Say plainly what each module does for the user and what it costs. Never claim a Groth16 module is post-quantum: it is
-zero-knowledge, not post-quantum. Post-quantum covers signatures (WOTS+, FORS, XMSS, SPHINCS+, Falcon) and the ML-KEM
-stealth announcement.
+Say plainly what each block does for the user and what it costs. Never claim a Groth16 block (a proof, a group vote) is
+post-quantum: it is zero-knowledge, not post-quantum. Post-quantum covers signatures (WOTS+, FORS, XMSS, SPHINCS+, Falcon)
+and the ML-KEM stealth announcement.
 
-## 2. Run it on the local devnet
+## 2. Pick a way to put the blocks together
 
-The devnet must be up (`devnet/README.md`). Proof modules need the sidecar with
-`SIDECAR_UNSTAKED_BUDGET=10000000 SIDECAR_STAKED_BUDGET=10000000` (decision 73), because Core makes every trigger declare
-its whole validation gas, including the stake trigger.
+- **No Solidity** (checks, joins, Call, Pause on another contract): the SDK's `blocks` functions build
+  the spec and `deployRuleSet` publishes it on the shared rule-set engine. Example: `packages/sdk/test/blocks.network.test.ts`.
+  ```ts
+  const { build, allOf, noneOf, valueCrossesLine, getter, pauseTarget } = blocks;
+  const spec = build({ when: allOf(valueCrossesLine(getter(gauge, "value()"), "above", 100n), noneOf(valueCrossesLine(getter(pool, "paused()"), "above", 0n))), then: pauseTarget(pool) });
+  const { ruleContract } = await deployRuleSet(client.popcorn, spec, { fund, stake: true });
+  ```
+- **Solidity** (any block, including the ones that keep state: Reward Pool, Anonymous Vote, Hand Over To A New
+  Key, Withdraw All, Post-Quantum Mode, Repay, Pause on the build itself): inherit the
+  blocks from `contracts/src/blocks` and wire them in `nonceKey` / `condition` / `action`. The builds in
+  `contracts/src/builds` are the worked examples (ProofOfExploitBounty, SovereignAccount, AutoRepayLoan); each block has a
+  test build in `contracts/test/blocks/BlockBuilds.sol`.
 
-- To reproduce an example exactly: `bun packages/sdk/scripts/record-examples.ts <example-id>`. It deploys every module,
-  runs the story, and rewrites `examples/<group>/<id>/run.json` with the real transactions.
+One build = one gas class: the most expensive check sets the validation floor for every trigger of that contract, so a
+cheap public-mempool trigger and a 200k proof check belong in separate builds if the cheap one must stay public.
+
+## 3. Run it on the local devnet
+
+The devnet must be up (`devnet/README.md`). Proof blocks need the sidecar with `SIDECAR_UNSTAKED_BUDGET=10000000`
+(decision 73), because Core makes every trigger declare its whole validation gas, including the stake trigger.
+
+- To reproduce an example exactly: `bun packages/sdk/scripts/record-examples.ts <example-id>`. It deploys the build, runs
+  the story, and rewrites `examples/<group>/<id>/run.json` with the real transactions.
 - To adapt one: copy that example's function from `packages/sdk/scripts/record-examples.ts` into a new script and change
-  the parameters (denomination, budgets, guardians, threshold, recovery delay, exit address). The SDK calls it uses are
-  the public API: `deployPrivatePool`, `deployStealthVault`, `deployOpenSponsor`, `stakeOpenSponsor`, `sponsored`,
-  `deploySovereignAccount`, `initializeAccount`, and the trigger builders.
-- Proofs come from `@popcorn/zk` (`withdrawProof`, `stealthProof`, `membershipProof`). The circuits must be built once:
-  `cd packages/zk && bun run build`.
+  the parameters. The SDK calls it uses are the public API: `deployPrivatePool`, `deployStealthVault`,
+  `deployOpenSponsor`, `stakeOpenSponsor`, `sponsored`, `deploySovereignAccount`, `initializeAccount`, `bountyClaim`,
+  `bountyWatch`, and the trigger builders.
+- Proofs come from `@popcorn/zk` (`proveExploit`, `withdrawProof`, `stealthProof`, `membershipProof`). The circuits must be
+  compiled once: `cd packages/zk && bash scripts/build.sh`.
 
 Before sending anything, call `can_trigger` (or the SDK's `canTrigger`) and show the user the verdict. If it is refused,
 use the popcorn-debug skill.
 
-## 3. Hand back
+## 4. Hand back
 
-Report the deployed addresses, each transaction hash with what it did, and which module did it. Point the user at the
+Report the deployed addresses, each transaction hash with what it did, and which block did it. Point the user at the
 example's page on the developer site (`apps/web`, `#/examples/<group>/<id>`) to replay it frame by frame.
 
 Never print or copy private keys. Local keys live in `devnet/keys/` and are git-ignored.

@@ -6,8 +6,8 @@ import { Cursor } from "@/components/motion";
 import { useRoute } from "@/lib/route";
 import { useTheme } from "@/lib/theme";
 import Home from "@/pages/Home";
-import Modules from "@/pages/Modules";
-import ModulePage from "@/pages/ModulePage";
+import Blocks from "@/pages/Blocks";
+import BlockPage from "@/pages/BlockPage";
 import Examples from "@/pages/Examples";
 import Explorer from "@/pages/Explorer";
 import Skills from "@/pages/Skills";
@@ -26,9 +26,9 @@ export default function App() {
       <CommandMenu open={menu} onOpenChange={setMenu} onToggleTheme={toggle} />
       <main>
         {page === "home" && <Home />}
-        {page === "modules" && (parts.length >= 2 ? <ModulePage key={parts[1]} corner={parts[0]} id={parts[1]} /> : <Modules corner={parts[0]} />)}
+        {page === "blocks" && (parts.length >= 1 ? <BlockPage key={parts[0]} id={parts[0]} /> : <Blocks />)}
         {page === "examples" && <Examples key={parts.join("/")} runKey={parts.length >= 2 ? `${parts[0]}/${parts[1]}` : undefined} />}
-        {page === "explorer" && <Explorer />}
+        {page === "explorer" && <Explorer key={parts[0] ?? ""} initial={parts[0]} />}
         {page === "skills" && <Skills />}
         {page === "mcp" && <Mcp />}
         {page === "docs" && <Docs section={parts[0]} anchor={parts[1]} />}

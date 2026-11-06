@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, Loader2, Search } from "lucide-react";
 import { formatEther, getAddress, isAddress, isHash, type Address, type Hex } from "viem";
-import { devnets, explorerTxUrl, getAdmissionStatus, getReceipt, rpcRequest, type DevnetName } from "@popcorn/sdk/transport";
+import { devnets, explorerTxUrl, rpcRequest, type DevnetName } from "@popcorn/sdk/transport";
+import { inspectTransaction, type Inspection, type Stage } from "@popcorn/sdk/inspect";
+import { FlowGraph, FlowVerdict } from "@/components/FlowGraph";
+import { go } from "@/lib/route";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SnippetCopyButton } from "@/components/kibo-ui/snippet";
 import { Reveal } from "@/components/motion";
 import { useScramble } from "@/lib/useScramble";
 import { cn } from "@/lib/utils";
-import { RUNS, fmt, step, type Run, type RunStep } from "@/lib/runs";
+import { RUNS } from "@/lib/runs";
 import { PROJECTS } from "@/lib/catalog";
 
 // Read-only views of a devnet, straight from the browser. Nothing here signs or sends a transaction.
@@ -47,19 +50,13 @@ function decodeArgs(hex: string): Args {
 type Lookup =
   | { kind: "rule"; address: Address; core: "match" | "mismatch" | "unchecked"; args: Args; balance: bigint; stake: bigint | null; logicHasCode: boolean }
   | { kind: "other"; address: Address; codeSize: number; balance: bigint }
-  | { kind: "tx"; hash: Hex; receipt: Awaited<ReturnType<typeof getReceipt>>; admission: Awaited<ReturnType<typeof getAdmissionStatus>> | null }
+  | { kind: "tx"; ins: Inspection }
   | { kind: "error"; message: string };
 
 async function lookup(devnet: DevnetName, q: string): Promise<Lookup> {
   const d = devnets[devnet];
   try {
-    if (isHash(q)) {
-      const [receipt, admission] = await Promise.all([
-        getReceipt(q as Hex, { devnet }).catch(() => null),
-        getAdmissionStatus(q as Hex, d.sidecarUrl).catch(() => null),
-      ]);
-      return { kind: "tx", hash: q as Hex, receipt, admission };
-    }
+    if (isHash(q)) return { kind: "tx", ins: await inspectTransaction(q as Hex, { devnet }) };
     if (!isAddress(q)) return { kind: "error", message: "Enter a rule contract address or a transaction hash." };
     const address = getAddress(q);
     const [code, bal] = await Promise.all([rpcRequest<Hex>(d.rpcUrl, "eth_getCode", [address, "latest"]), rpcRequest<Hex>(d.rpcUrl, "eth_getBalance", [address, "latest"])]);
@@ -83,24 +80,42 @@ async function lookup(devnet: DevnetName, q: string): Promise<Lookup> {
   }
 }
 
-async function listAdmissions(devnet: DevnetName) {
-  const d = devnets[devnet];
-  return rpcRequest<unknown>(d.sidecarUrl, "skandha_explorer_listAdmissions", [{ limit: 20 }]);
+interface AdmissionRow {
+  txHash: Hex;
+  sender: string;
+  outcome: string;
+  at: number;
+  checks?: { rule: string; verdict: string; detail?: string }[];
 }
 
-export default function Explorer() {
+async function listAdmissions(devnet: DevnetName): Promise<AdmissionRow[]> {
+  const d = devnets[devnet];
+  const r = await rpcRequest<{ items?: AdmissionRow[] } | AdmissionRow[]>(d.sidecarUrl, "skandha_explorer_listAdmissions", [{ limit: 30 }]);
+  return Array.isArray(r) ? r : (r.items ?? []);
+}
+
+export default function Explorer({ initial }: { initial?: string }) {
   const [devnet, setDevnet] = useState<DevnetName>("local");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initial ?? "");
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<Lookup | null>(null);
-  const [adm, setAdm] = useState<{ ok: boolean; data: unknown } | null>(null);
+  const [adm, setAdm] = useState<{ ok: true; rows: AdmissionRow[] } | { ok: false; error: string } | null>(null);
   const d = devnets[devnet];
 
-  const submit = async () => {
+  const run = async (value: string) => {
     setBusy(true);
-    setRes(await lookup(devnet, q.trim()));
+    setRes(await lookup(devnet, value.trim()));
     setBusy(false);
   };
+  const submit = () => {
+    const v = q.trim();
+    if (isHash(v)) go("explorer", v);
+    else void run(v);
+  };
+  useEffect(() => {
+    if (initial) void run(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
 
   return (
     <div className="relative overflow-x-clip">
@@ -108,9 +123,9 @@ export default function Explorer() {
       <div className="relative mx-auto max-w-[1120px] px-4 pb-32 pt-36 sm:px-6">
         <Reveal>
           <p className="label-mono mb-4">Explorer · read-only</p>
-          <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Look inside a rule contract.</h1>
-          <p className="mt-5 max-w-[600px] text-[16px] leading-relaxed text-muted-foreground">
-            Reads a devnet directly from your browser: a rule contract's settings, balance and stake, or a trigger's receipt and admission. It never signs or sends anything.
+          <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">See where a transaction passed or failed.</h1>
+          <p className="mt-5 max-w-[640px] text-[16px] leading-relaxed text-muted-foreground">
+            Paste any frame transaction hash, included or refused. You get each stage (mempool admission, Core, payer, the build's condition, inclusion) and the build's flow, block by block: green said YES, red said NO, grey was never reached. A rule contract address shows its settings. Reads a devnet from your browser; it never signs or sends anything.
           </p>
         </Reveal>
 
@@ -133,13 +148,13 @@ export default function Explorer() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="0x… rule contract address or transaction hash"
+                placeholder="0x… transaction hash, or a rule contract address"
                 spellCheck={false}
                 className="h-12 min-w-0 flex-1 bg-transparent font-mono text-[13px] outline-none placeholder:text-faint"
               />
             </div>
             <button disabled={!q || busy} className="btn-solid flex h-12 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-[13px] font-medium text-background disabled:opacity-30 disabled:shadow-none">
-              {busy && <Loader2 className="size-4 animate-spin" />} Read
+              {busy && <Loader2 className="size-4 animate-spin" />} Inspect
             </button>
           </form>
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 px-2 font-mono text-[11px] text-faint">
@@ -157,24 +172,24 @@ export default function Explorer() {
           )}
         </AnimatePresence>
 
-        <Lanes />
+        <Recorded onPick={(h) => (setQ(h), go("explorer", h))} />
 
-        {/* triggers */}
+        {/* recent admissions: every one opens in the inspector */}
         <section className="mt-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="label-mono mb-3">Recent triggers</p>
-              <h2 className="text-[24px] font-semibold tracking-tight">Admissions, rule by rule.</h2>
+              <p className="label-mono mb-3">Recent transactions</p>
+              <h2 className="text-[24px] font-semibold tracking-tight">Admitted and refused, straight from the sidecar.</h2>
               <p className="mt-2 max-w-[560px] text-[13px] leading-relaxed text-muted-foreground">
-                From the sidecar's <code className="font-mono">skandha_explorer_listAdmissions</code>. It keeps only what it holds in memory, so a missing trigger does not mean it never happened: check the receipt above.
+                The sidecar keeps what it holds in memory (<code className="font-mono">skandha_explorer_listAdmissions</code>). Click a row to see its flow.
               </p>
             </div>
             <button
               onClick={async () => {
                 try {
-                  setAdm({ ok: true, data: await listAdmissions(devnet) });
+                  setAdm({ ok: true, rows: await listAdmissions(devnet) });
                 } catch (e) {
-                  setAdm({ ok: false, data: e instanceof Error ? e.message : String(e) });
+                  setAdm({ ok: false, error: e instanceof Error ? e.message : String(e) });
                 }
               }}
               className="glass h-10 rounded-full px-5 text-[13px] text-muted-foreground hover:text-foreground"
@@ -183,12 +198,25 @@ export default function Explorer() {
             </button>
           </div>
           <div className="glass mt-6 min-h-[120px] overflow-hidden rounded-[24px]">
-            {adm ? (
-              <pre className={cn("max-h-[420px] overflow-auto p-5 font-mono text-[11.5px] leading-relaxed", adm.ok ? "text-muted-foreground" : "text-foreground")}>
-                {adm.ok ? JSON.stringify(adm.data, null, 2) : `✕ ${adm.data}\n\nThe sidecar needs its explorer enabled and CORS for this origin; the local devnet's sidecar serves both.`}
-              </pre>
-            ) : (
-              <p className="p-5 font-mono text-[12px] text-faint">Nothing loaded yet.</p>
+            {!adm && <p className="p-5 font-mono text-[12px] text-faint">Nothing loaded yet.</p>}
+            {adm && !adm.ok && <p className="p-5 font-mono text-[12px]">✕ {adm.error}. The sidecar needs its explorer enabled and CORS for this origin; the local devnet's sidecar serves both.</p>}
+            {adm?.ok && (
+              <div className="max-h-[420px] divide-y divide-[var(--glass-border)] overflow-auto">
+                {adm.rows.length === 0 && <p className="p-5 font-mono text-[12px] text-faint">The sidecar holds no transactions right now.</p>}
+                {[...adm.rows].sort((x, y) => y.at - x.at).map((r) => {
+                  const failed = r.checks?.find((c) => c.verdict === "fail");
+                  return (
+                    <button key={r.txHash + r.at} onClick={() => (setQ(r.txHash), go("explorer", r.txHash))} className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-5 py-3 text-left font-mono text-[12px] hover:bg-foreground/[0.03]">
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10.5px]", r.outcome === "rejected" ? "bg-red-500/15 text-red-600 dark:text-red-400" : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400")}>{r.outcome}</span>
+                      <span className="min-w-0 truncate text-foreground/90">
+                        {r.txHash.slice(0, 18)}…{r.txHash.slice(-6)} <span className="text-faint">· sender {r.sender.slice(0, 8)}…</span>
+                        {failed && <span className="block truncate text-[11px] text-muted-foreground">{failed.rule}: {failed.detail}</span>}
+                      </span>
+                      <span className="text-faint">{new Date(r.at).toLocaleTimeString()}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </section>
@@ -243,35 +271,7 @@ function Result({ r, devnet }: { r: Lookup; devnet: DevnetName }) {
         <p className="mt-3 text-[13px] text-muted-foreground">{r.codeSize ? `${r.codeSize.toLocaleString("en-US")} bytes of code that is not Core followed by 101 argument bytes.` : "No code at this address."} Balance {formatEther(r.balance)} ETH.</p>
       </div>
     );
-  if (r.kind === "tx")
-    return (
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="glass rounded-[24px] p-6">
-          <p className="label-mono">Receipt · from the chain</p>
-          {r.receipt ? (
-            <div className="mt-4 font-mono text-[12px]">
-              <Row k="status" v={String((r.receipt as { status?: unknown }).status ?? "—")} />
-              <Row k="block" v={String((r.receipt as { blockNumber?: unknown }).blockNumber ?? "—")} />
-              <Row k="gas used" v={String((r.receipt as { gasUsed?: unknown }).gasUsed ?? "—")} />
-              <Row k="payer" v={String((r.receipt as { payer?: unknown }).payer ?? "—")} />
-            </div>
-          ) : (
-            <p className="mt-4 text-[13px] text-muted-foreground">No receipt yet: not included, or not on this devnet.</p>
-          )}
-        </div>
-        <div className="glass rounded-[24px] p-6">
-          <p className="label-mono">Admission · from the sidecar</p>
-          <div className="mt-4 font-mono text-[12px]">
-            <Row k="known" v={r.admission ? String(r.admission.known) : "unreachable"} />
-            <Row k="outcome" v={r.admission?.outcome ?? "—"} />
-            <Row k="reason" v={r.admission?.reason ?? "—"} />
-          </div>
-          <a href={explorerTxUrl(r.hash, devnet)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground">
-            Open in the devnet's explorer <ArrowUpRight className="size-3.5" />
-          </a>
-        </div>
-      </div>
-    );
+  if (r.kind === "tx") return <TxView ins={r.ins} devnet={devnet} />;
   const a = r.args;
   return (
     <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
@@ -314,85 +314,117 @@ function Result({ r, devnet }: { r: Lookup; devnet: DevnetName }) {
   );
 }
 
-/* ------------------------------------------------- three lanes (decision 66) */
+/* ------------------------------------------------- a transaction, stage by stage and node by node */
 
-// A transaction's path in three lanes: what the rule decided (validation), what the network decided (admission), what
-// happened (inclusion and its effect). Shown for each example's recorded transaction and its recorded refusal.
-function Lanes() {
-  const keys = PROJECTS.map((p) => p.key).filter((k) => RUNS[k]?.recorded);
-  const [key, setKey] = useState(keys[0] ?? "");
-  const [refused, setRefused] = useState(false);
-  const run = RUNS[key];
-  if (!run) return null;
-  const steps = refused ? run.failing.steps : run.steps;
+const STAGE_TONE: Record<Stage["state"], string> = {
+  pass: "border-emerald-500/60 bg-emerald-500/[0.08]",
+  fail: "border-red-500/70 bg-red-500/[0.09]",
+  skipped: "border-foreground/10 opacity-55",
+  unknown: "border-dashed border-foreground/25",
+};
+const STAGE_MARK: Record<Stage["state"], string> = { pass: "✓", fail: "✕", skipped: "·", unknown: "?" };
+
+function TxView({ ins, devnet }: { ins: Inspection; devnet: DevnetName }) {
+  const head =
+    ins.status === "included" ? "Included" : ins.status === "refused" ? "Refused" : ins.status === "action-reverted" ? "Included, but the action reverted" : ins.status === "pending" ? "Pending" : "Not found";
+  const checks = ins.stages.find((s) => s.checks)?.checks;
+  return (
+    <div className="space-y-6">
+      <div className="glass rounded-[24px] p-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={cn("rounded-full px-3 py-1 font-mono text-[11px]", ins.status === "included" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ins.status === "unknown" ? "bg-foreground/[0.06] text-muted-foreground" : "bg-red-500/15 text-red-600 dark:text-red-400")}>{head}</span>
+          {ins.flow && <span className="label-mono">trigger · {ins.flow.trigger}</span>}
+        </div>
+        <p className="mt-3 break-all font-mono text-[12.5px] text-foreground/90">{ins.hash}</p>
+        <div className="mt-3 grid gap-x-8 gap-y-1 font-mono text-[11.5px] text-muted-foreground sm:grid-cols-2">
+          {ins.build && <span>build {ins.build}</span>}
+          {ins.payer && <span>payer {ins.payer}</span>}
+          {ins.block !== null && <span>block {ins.block.toLocaleString("en-US")}</span>}
+          {ins.seenAt !== null && <span>seen by the sidecar {new Date(ins.seenAt).toLocaleString()}</span>}
+          <span>found on {ins.foundOn === "node" ? "the node" : ins.foundOn === "sidecar" ? "the sidecar" : "neither"}</span>
+        </div>
+      </div>
+
+      {/* the stages, left to right */}
+      <div className="flex flex-wrap items-stretch gap-2">
+        {ins.stages.map((s, i) => (
+          <div key={s.id + i} className="flex items-center gap-2">
+            <div className={cn("w-[200px] rounded-2xl border px-3 py-2.5", STAGE_TONE[s.state])} title={s.detail}>
+              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-faint">
+                {STAGE_MARK[s.state]} {s.state === "skipped" ? "not reached" : s.state}
+              </p>
+              <p className="mt-1 text-[13px] font-semibold tracking-tight">{s.title}</p>
+              <p className="mt-0.5 line-clamp-3 text-[11.5px] leading-snug text-muted-foreground">{s.detail}</p>
+            </div>
+            {i < ins.stages.length - 1 && <span className="text-faint">→</span>}
+          </div>
+        ))}
+      </div>
+
+      {ins.refusal && (
+        <p className="rounded-2xl border border-red-500/40 bg-red-500/[0.06] px-4 py-3 text-[13px] leading-relaxed">
+          <span className="font-mono text-[11px] text-red-600 dark:text-red-400">frame {ins.refusal.frame} · {ins.refusal.who}</span> {ins.refusal.meaning}
+        </p>
+      )}
+
+      {ins.flow ? (
+        <div className="glass rounded-[24px] p-6">
+          <p className="label-mono mb-4">The build's flow</p>
+          <FlowGraph flow={ins.flow} />
+          <FlowVerdict flow={ins.flow} />
+        </div>
+      ) : (
+        ins.foundOn !== "nowhere" && <p className="text-[13px] text-muted-foreground">Not a Popcorn trigger (no pop(bytes) frame), so there is no flow to draw.</p>
+      )}
+
+      {checks && (
+        <details className="glass rounded-[24px] p-6">
+          <summary className="label-mono cursor-pointer">Every admission check</summary>
+          <div className="mt-4 font-mono text-[12px]">
+            {checks.map((c, i) => (
+              <Row key={c.rule + i} k={c.rule} v={`${c.verdict}${c.detail ? ` · ${c.detail}` : ""}`} />
+            ))}
+          </div>
+        </details>
+      )}
+      <a href={explorerTxUrl(ins.hash, devnet)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground">
+        Open in the devnet's explorer <ArrowUpRight className="size-3.5" />
+      </a>
+    </div>
+  );
+}
+
+/** The examples' recorded transactions, one click each: the included one and the refused one. */
+function Recorded({ onPick }: { onPick: (hash: string) => void }) {
+  const rows = PROJECTS.map((p) => ({ p, run: RUNS[p.key] })).filter((x) => x.run?.recorded);
   return (
     <section className="mt-20">
-      <p className="label-mono mb-3">Recorded transactions</p>
-      <h2 className="text-[24px] font-semibold tracking-tight">Every transaction in three lanes.</h2>
-      <p className="mt-2 max-w-[620px] text-[13px] leading-relaxed text-muted-foreground">What the rule decided, what the network decided, and what happened, for each example recorded on the local devnet. Switch to the refused case to see where it stopped and why.</p>
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        {keys.map((k) => (
-          <button key={k} onClick={() => setKey(k)} className={cn("rounded-full border px-3 py-1.5 text-[12px]", k === key ? "border-foreground/40 text-foreground" : "border-[var(--glass-border)] text-muted-foreground hover:text-foreground")}>
-            {PROJECTS.find((p) => p.key === k)?.name ?? k}
-          </button>
-        ))}
-        <button onClick={() => setRefused(!refused)} className={cn("ml-auto rounded-full px-4 py-1.5 text-[12px]", refused ? "bg-foreground text-background" : "glass text-muted-foreground hover:text-foreground")}>
-          {refused ? "Showing the refused case" : "Show the refused case"}
-        </button>
-      </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <Lane title="What the rule decided" body={ruleLane(steps)} />
-        <Lane title="What the network decided" body={networkLane(steps)} />
-        <Lane title="What happened" body={refused ? [["Result", `${run.failing.result}${run.failing.core ? ` (${run.failing.core})` : ""}`], ["Cost", "nothing: the transaction was never valid"]] : happenedLane(run)} />
+      <p className="label-mono mb-3">Try a recorded transaction</p>
+      <p className="max-w-[620px] text-[13px] leading-relaxed text-muted-foreground">
+        Each example's featured transaction (included) and its refused case (sent to the sidecar and refused), on the local devnet.
+      </p>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {rows.map(({ p, run }) => {
+          const inc = run!.steps.find((s) => s.stage === "include") as { tx?: string } | undefined;
+          return (
+            <div key={p.key} className="glass rounded-2xl p-4">
+              <p className="text-[14px] font-semibold tracking-tight">{p.name}</p>
+              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[11px]">
+                {inc?.tx && (
+                  <button onClick={() => onPick(inc.tx!)} className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-400">
+                    included · {inc.tx.slice(0, 10)}…
+                  </button>
+                )}
+                {run!.failing.tx && (
+                  <button onClick={() => onPick(run!.failing.tx!)} className="rounded-full bg-red-500/15 px-3 py-1 text-red-600 hover:bg-red-500/25 dark:text-red-400">
+                    refused · {run!.failing.tx.slice(0, 10)}…
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
-}
-
-function Lane({ title, body }: { title: string; body: [string, string][] }) {
-  return (
-    <motion.div layout className="glass rounded-[22px] p-5">
-      <p className="label-mono mb-3">{title}</p>
-      <dl className="space-y-2">
-        {body.map(([k, v], i) => (
-          <div key={k + i} className="grid grid-cols-[96px_1fr] gap-3 text-[12.5px]">
-            <dt className="font-mono text-[10.5px] uppercase tracking-[0.05em] text-faint">{k}</dt>
-            <dd className="break-words text-foreground/90">{v}</dd>
-          </div>
-        ))}
-      </dl>
-    </motion.div>
-  );
-}
-
-function ruleLane(steps: RunStep[]): [string, string][] {
-  const b = step(steps, "build");
-  const v = step(steps, "validate");
-  return [
-    ["Frames", b ? b.frames.map((f) => `${f.mode} ${f.flags}`).join(" · ") : "—"],
-    ["Verdict", v?.result ?? "—"],
-    ...(v?.reads ?? []).map((r) => [r.label, `${r.value}${r.gas ? ` · ${fmt(r.gas)} gas` : ""}`] as [string, string]),
-  ];
-}
-
-function networkLane(steps: RunStep[]): [string, string][] {
-  const a = step(steps, "admit");
-  if (!a) return [["Outcome", "—"]];
-  return [
-    ["Mempool", a.report.mempool],
-    ["Outcome", a.report.outcome],
-    ...(a.report.entity ? [["Entity", `${a.report.entity.name} · ${a.report.entity.staked ? "staked" : "unstaked"} · declared ${fmt(a.report.entity.used)} gas`] as [string, string]] : []),
-    ...a.report.checks.map((c) => [c.rule, `${c.verdict}: ${c.detail}`] as [string, string]),
-  ];
-}
-
-function happenedLane(run: Run): [string, string][] {
-  const i = step(run.steps, "include");
-  const a = step(run.steps, "act");
-  return [
-    ["Included", i ? `block ${fmt(i.block)} · ${i.status}` : "—"],
-    ["Gas", i ? `${fmt(i.gasUsed)}, paid by ${i.payer}` : "—"],
-    ["Tx", i ? `${i.tx.slice(0, 12)}…${i.tx.slice(-6)}` : "—"],
-    ...Object.entries(a?.after ?? {}).map(([k, v]) => [k, `${a?.before[k] ?? "—"} → ${v}`] as [string, string]),
-  ];
 }

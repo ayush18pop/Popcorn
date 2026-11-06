@@ -17,20 +17,25 @@ new ways for a DeFi team to get things wrong. Popcorn is the safe default for ea
 A **rule contract** acts when its **condition** is true, not when a key signs. Anyone can **trigger** it, even from a wallet
 with no ETH; if the condition is false the transaction is invalid, so a failed attempt costs nothing.
 
+Everything is built from **blocks**, each with one job: **conditions** (YES, NO or UNKNOWN), **logic operators** (AND,
+OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE), **actions** and **gas payers**. A build is always a gas payer,
+conditions combined with logic operators, and actions: inherit the blocks in Solidity, or put the stateless ones together with the SDK's `blocks`
+functions and no Solidity at all.
+
 ## What is here
 
 | Path | Contents |
 |---|---|
-| [`contracts/`](contracts) | Core (Yul), the rule contract base, factory, stake and owner, conditions, signers, the rule-set engine, payers, templates |
+| [`contracts/`](contracts) | Core (Yul), the rule contract base, factory, stake and owner, the blocks (`src/blocks`), the example builds (`src/builds`), signers, the rule-set engine, payers |
 | [`packages/sdk`](packages/sdk) | `@popcorn/sdk`: a viem extension (`deployRule`, `canTrigger`, `trigger`, `simulate`, `watch`) and every signer |
 | [`packages/simulator`](packages/simulator) | `@popcorn/simulator`: which mempool will accept a transaction, which rule blocks it, and the fix |
 | [`packages/zk`](packages/zk) | `@popcorn/zk`: the membership, withdraw and stealth circuits (Groth16), their development keys and proving helpers |
 | [`packages/mcp`](packages/mcp) | `@popcorn/mcp`: a read-only MCP server (catalog, examples, refusal codes, simulate, unsigned triggers) |
 | [`.claude/skills`](.claude/skills) | Claude skills: `popcorn-build` (problem to running project) and `popcorn-debug` (why a trigger was refused) |
 | [`devnet/`](devnet) | A local devnet with per-entity validation budgets, started by one command |
-| [`apps/web`](apps/web) | The developer site: modules in five use-case groups, example projects, explorer, docs |
-| [`docs/catalog/`](docs/catalog) | One file per module, in five use-case groups: what it does, when it fires, where it runs, code, limits |
-| [`examples/`](examples) | Example projects: `project.md` (problem, modules and roles) and `run.json` recorded on the local devnet |
+| [`apps/web`](apps/web) | The developer site: blocks by tier and shape, example projects, explorer, docs |
+| [`docs/catalog/`](docs/catalog) | One file per block, by shape: what it does, its inputs, its answer or result, presets, code, where it runs, limits |
+| [`examples/`](examples) | Example projects: `project.md` (problem, blocks and their roles) and `run.json` recorded on the local devnet |
 | [`journal/`](journal) | The decisions behind the design |
 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | Project context for a new contributor or agent |
 
@@ -41,16 +46,15 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 | Core | hardened VERIFY: frame-layout check, fee caps, once per event, re-entry lock, rule-pays and caller-pays, hybrid ECDSA + WOTS+ owner | public mempool, alternative mempool |
 | Conditions | threshold on another contract's value, proof of a statement (Groth16), rule sets (AND / OR / NOT / k-of-n over compare, range, crossing, delta, ratio, balance, code hash, flag, with an action per rule) | public mempool for the rule contract's own storage; alternative mempool, staked, for reads of other contracts |
 | Signers | ECDSA, P256 / WebAuthn passkeys, WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon-512, hybrids, M-of-N multisig, k-of-n attested facts | alternative mempool (all schemes); public mempool for ECDSA and WOTS+ |
-| Templates | a vault that pauses itself when its invariant breaks and pays a whitehat for a zero-knowledge proof of its bug; a loan shield that repays when health falls | alternative mempool |
+| Blocks | checks: value crosses a line, value moves too fast, contract code changed, signed instruction, statement signed by k of n reporters, proof that the rules were broken, prove you're in the group; joins: all of, any of, none of, at least k of n, exactly one of, if / else; actions: make a call, pause the target, pay the reward, anonymous group vote, hand over to a new key, exit to an address, switch to quantum-safe only, repay a loan; payers: contract pays the gas, payer gets rewarded, public gas sponsor | public mempool where a block reads only the build's own storage; alternative mempool otherwise |
+| Builds | Proof-of-Exploit Bounty (Demo Vault + proof, pause and reward blocks), Auto-Repay Loan, Sovereign Account | alternative mempool |
 | Privacy | a private pool whose withdrawals pay their own gas, with association sets; stealth payments announced with ML-KEM-768 | alternative mempool, staked |
 | Gas | an open sponsor: a payer contract with a public policy (budgets, fee cap, allowlists, a private membership gate) | alternative mempool, staked |
-| Accounts | the Sovereign Account: ECDSA + Falcon owner, hidden guardians, a quantum switch with a committed post-quantum backup key, a forced exit | alternative mempool, staked |
-| Examples | five projects recorded on the local devnet: private payroll, open gas network, quantum-ready treasury, walkaway exit, Sovereign Account | |
+| Examples | six projects recorded on the local devnet: Proof-of-Exploit Bounty, private payroll, open gas network, quantum-ready treasury, walkaway exit, Sovereign Account | |
 | Tooling | simulator, SDK, ZK circuits, local devnet, recorder, read-only MCP server, Claude skills, developer site | |
 
-Planned, in this order: an action library (pause, repay, exit, reward pool), pause modules for common invariants, position
-protection and exits, fair liquidation with keyed-nonce tickets, safe gas sponsorship, ERC-8286 wallet validators, a CLI,
-Claude skills and an MCP server, and an example-based developer site.
+Planned: fair liquidation with keyed-nonce tickets, ERC-8286 wallet validators, a CLI, and a visual way to put blocks
+together.
 
 ## Quickstart
 
@@ -60,8 +64,8 @@ Needs [Bun](https://bun.sh), [Foundry](https://getfoundry.sh), `python3` and `cu
 bun install
 scripts/install-solc.sh                              # solc 0.8.33
 bash contracts/core/build.sh                          # builds Core; prints its size
-(cd contracts && forge build && forge test)           # 238 tests
-bun run --cwd packages/sdk test                       # 303 offline tests
+(cd contracts && forge build && forge test)           # 285 tests
+bun run --cwd packages/sdk test                       # 313 offline tests
 
 devnet/up.sh                                          # local devnet, about 10 minutes the first time
 POPCORN_DEVNET=local bun packages/sdk/examples/01-rule-pays.ts
@@ -80,7 +84,7 @@ with no account and no ETH. See [`packages/sdk/README.md`](packages/sdk/README.m
 | Alternative-mempool sidecar | `https://altmempool.forshtat.com/rpc`, no validation limit | `http://127.0.0.1:14338/rpc`, 250,000 unstaked / 2,500,000 staked per entity by default; `SIDECAR_UNSTAKED_BUDGET` raises it (decision 73) |
 | Canonical mempool (the node's own) | 100,000 gas | 250,000 gas |
 
-Every module runs on the public devnet through its alternative-mempool sidecar; the local devnet is a reproducible copy
+Every build runs on the public devnet through its alternative-mempool sidecar; the local devnet is a reproducible copy
 for development and offline work. The `RuleFactory` is at `0x1EdD695a30f001B270e7A0F3A2781628A69E8380` on both. See
 [`devnet/README.md`](devnet/README.md) for exactly what differs.
 

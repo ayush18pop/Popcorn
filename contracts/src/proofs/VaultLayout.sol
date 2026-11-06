@@ -1,23 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @notice The demo vault's storage (docs/guarded-vault.md §4), ERC-7201 namespaced so it cannot collide with
-/// anything Core or RuleContract keep. GuardedVault and ExploitBounty both use it,
-/// and ExploitInputs.fromStorage reads slots 0 and 1 of it raw.
+/// @notice The Demo Vault's storage (docs/guarded-vault.md §4), ERC-7201 namespaced so it cannot collide with anything
+/// Core, RuleContract or a block keeps. ExploitInputs.fromStorage reads slots 0 and 1 of it raw, and the exploit circuit's
+/// public inputs are those words, so the layout of slots 0 and 1 is fixed.
 ///
-///   slot base+0: totalAssets uint120 [bits 0..119] | totalSupply uint120 [120..239] | paused bool [240..247]
-///   slot base+1: minAssetsPerShare uint88 [0..87] | pauseEpoch uint64 [88..151]
+///   slot base+0: totalAssets uint120 [bits 0..119] | totalSupply uint120 [120..239] | reserved bool [240..247]
+///   slot base+1: minAssetsPerShare uint88 [0..87] | reserved uint64 [88..151]
 ///   slot base+2: asset address
 ///   slot base+3: owner address
 ///   slot base+4: balanceOf mapping (balance of a = keccak256(abi.encode(a, base+4)))
+///
+/// The two reserved fields held the pause flag and the pause epoch when the vault paused itself. The pause switch is now
+/// the Pause The Target block, with its own storage; the fields stay so slots 2 to 4 do not move.
 library VaultLayout {
     /// @custom:storage-location erc7201:popcorn.vault.demo
     struct VaultState {
         uint120 totalAssets;
         uint120 totalSupply;
-        bool paused;
+        bool reserved0;
         uint88 minAssetsPerShare;
-        uint64 pauseEpoch;
+        uint64 reserved1;
         address asset;
         address owner;
         mapping(address => uint256) balanceOf;

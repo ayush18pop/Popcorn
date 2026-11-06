@@ -72,6 +72,8 @@ function worstNode(n: Node, exact: boolean): number {
     case "and":
     case "kofn":
       return M.node + n.children.reduce((a, c) => a + worstNode(c, exact), 0);
+    case "exactly":
+      return M.node + n.children.reduce((a, c) => a + worstNode(c, true), 0);
     case "or": {
       const w = n.children.map((c) => worstNode(c, exact));
       return M.node + (exact ? w.reduce((a, b) => a + b, 0) : Math.max(...w) + M.hop * (n.children.length - 1) + 200);

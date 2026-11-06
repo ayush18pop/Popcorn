@@ -454,7 +454,7 @@ contract NonceProbe {
     }
 }
 
-/// like bountyNonceKey: keccak256(abi.encode("bounty", address(this), epoch-from-storage)).
+/// like the Proof-of-Exploit Bounty build: keccak256(abi.encode("claim", address(this), pause epoch)).
 contract EpochKeyRule is RuleContract {
     function nonceKey() internal view override returns (uint256) {
         return uint256(keccak256(abi.encode("bounty", address(this), _sload(keccak256("epoch")) >> 88)));

@@ -1,7 +1,10 @@
 // Reading a rule-set rule contract and explaining a trigger per node, through the rule contract's forward path (Core+ forwards ordinary
 // calls to the logic; popcornDebug is a `view`, so these are eth_calls that change nothing).
 import { decodeFunctionResult, encodeFunctionData, getAddress, type Address, type Hex } from "viem";
-import type { PopcornContext } from "../actions.ts";
+/** What the read paths need: a client that can eth_call. A full PopcornContext fits; so does { publicClient } in a browser. */
+export interface ReadContext {
+  publicClient: { call: (args: { to: Address; data: Hex }) => Promise<{ data?: Hex | undefined }> };
+}
 import { PopcornError } from "../errors.ts";
 import { decodeRuleSet, layoutRuleSet, type NodeInfo } from "./encode.ts";
 import type { Node, RuleSetSpec } from "./spec.ts";
@@ -44,7 +47,7 @@ export const ruleSetAbi = [
 ] as const;
 
 /** A rule contract's rule set, read from its logic (the config lives in the logic's data contract). */
-export async function readRuleSet(ctx: PopcornContext, ruleContract: Address): Promise<{ config: Hex; spec: RuleSetSpec }> {
+export async function readRuleSet(ctx: ReadContext, ruleContract: Address): Promise<{ config: Hex; spec: RuleSetSpec }> {
   const ret = await ctx.publicClient.call({ to: getAddress(ruleContract), data: encodeFunctionData({ abi: ruleSetAbi, functionName: "ruleSetConfig" }) });
   if (!ret.data) throw new PopcornError(`rule contract ${ruleContract} has no ruleSetConfig(): it is not a RuleSetContract`);
   const config = decodeFunctionResult({ abi: ruleSetAbi, functionName: "ruleSetConfig", data: ret.data });
@@ -111,6 +114,8 @@ export function nodeLabel(n: Node): string {
       return "NOT";
     case "kofn":
       return `${n.k} of ${n.children.length}`;
+    case "exactly":
+      return n.k === 1 ? `exactly one of ${n.children.length}` : `exactly ${n.k} of ${n.children.length}`;
     case "cmp":
       return `${srcLabel(n.source)} ${n.op} ${n.value}`;
     case "range":
@@ -145,7 +150,7 @@ export interface ExplainOptions {
  * Calls the rule contract's popcornDebug view and maps it onto the rule set: each node's result, the false/unknown nodes that block
  * the rule, the earlier rules of an else set, and the OR hints a trigger needs. Sends nothing.
  */
-export async function explainRule(ctx: PopcornContext, ruleContract: Address, o: ExplainOptions): Promise<RuleExplanation> {
+export async function explainRule(ctx: ReadContext, ruleContract: Address, o: ExplainOptions): Promise<RuleExplanation> {
   const spec = o.spec ?? (await readRuleSet(ctx, ruleContract)).spec;
   const triggerData = o.triggerData ?? triggerDataFor(o.ruleId);
   const data = encodeFunctionData({ abi: ruleSetAbi, functionName: "popcornDebug", args: [BigInt(o.ruleId), triggerData, o.verifyData ?? "0x"] });
@@ -188,7 +193,7 @@ export async function explainRule(ctx: PopcornContext, ruleContract: Address, o:
  * The witness a trigger of `ruleId` needs right now: the debug view's OR hints. Predicate witnesses (signatures, proofs) are not
  * known here: pass them in `extra`.
  */
-export async function witnessFor(ctx: PopcornContext, ruleContract: Address, o: { ruleId: number; extra?: WitnessEntry[]; spec?: RuleSetSpec; triggerData?: Hex }): Promise<{ verifyData: Hex; explanation: RuleExplanation }> {
+export async function witnessFor(ctx: ReadContext, ruleContract: Address, o: { ruleId: number; extra?: WitnessEntry[]; spec?: RuleSetSpec; triggerData?: Hex }): Promise<{ verifyData: Hex; explanation: RuleExplanation }> {
   const first = await explainRule(ctx, ruleContract, { ruleId: o.ruleId, ...(o.spec ? { spec: o.spec } : {}), ...(o.triggerData ? { triggerData: o.triggerData } : {}) });
   const verifyData = encodeWitness([...first.hints, ...(o.extra ?? [])]);
   const explanation = await explainRule(ctx, ruleContract, { ruleId: o.ruleId, verifyData, ...(o.spec ? { spec: o.spec } : {}), ...(o.triggerData ? { triggerData: o.triggerData } : {}) });

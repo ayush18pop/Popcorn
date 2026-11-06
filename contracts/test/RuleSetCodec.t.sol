@@ -83,10 +83,21 @@ contract RuleSetCodecTest {
             );
             return _one(t, 2, ACTION_NONE, "", 0);
         }
+        if (i == 5) return _elseVector();
         if (i == 4) {
             bytes memory t = RuleSetCodec.or_(_k2(RuleSetCodec.predicate(A1, 120_000, hex"0102030405"), RuleSetCodec.codehash(A2, H32, false)));
             return _one(t, 1, ACTION_NONE, "", 0);
         }
+        if (i == 6) {
+            bytes memory t = RuleSetCodec.exactly(
+                1, _k3(RuleSetCodec.cmp(RuleSetCodec.srcGetter(A1, SEL, 30_000), OP_GT, 5), RuleSetCodec.cmp(RuleSetCodec.srcGetter(A2, SEL, 25_000), OP_EQ, 1), RuleSetCodec.constant_(false))
+            );
+            return _one(t, 1, ACTION_NONE, "", 0);
+        }
+        revert("no such vector");
+    }
+
+    function _elseVector() internal pure returns (bytes memory) {
         RuleSetCodec.Rule[] memory r = new RuleSetCodec.Rule[](3);
         r[0] = RuleSetCodec.withRetry(RuleSetCodec.rule(RuleSetCodec.cmp(RuleSetCodec.srcGetter(A1, SEL, 30_000), OP_GT, 100), 1, ACTION_CALL, RuleSetCodec.actionCall(A2, 0, hex"12345678"), 50_000));
         r[1] = RuleSetCodec.rule(RuleSetCodec.cmp(RuleSetCodec.srcGetter(A1, SEL, 30_000), OP_GT, 10), 1, ACTION_NONE, "", 0);
@@ -104,7 +115,7 @@ contract RuleSetCodecTest {
 
     function test_solidity_builders_match_the_sdk_encoder_byte_for_byte() public view {
         string memory json = vm.readFile("test/fixtures/ruleset-vectors.json");
-        for (uint256 i; i < 6; ++i) {
+        for (uint256 i; i < 7; ++i) {
             bytes memory fromSdk = vm.parseJsonBytes(json, string.concat(".valid[", _s(i), "].config"));
             bytes memory fromSol = _vector(i);
             require(keccak256(fromSdk) == keccak256(fromSol), string.concat("vector ", _s(i), ": SDK and Solidity encoders differ"));
@@ -114,7 +125,7 @@ contract RuleSetCodecTest {
 
     function test_both_validators_refuse_every_invalid_vector() public view {
         string memory json = vm.readFile("test/fixtures/ruleset-vectors.json");
-        for (uint256 i; i < 16; ++i) {
+        for (uint256 i; i < 18; ++i) {
             bytes memory c = vm.parseJsonBytes(json, string.concat(".invalid[", _s(i), "].config"));
             require(!_ok(c), string.concat("invalid vector ", _s(i), " was accepted by the Solidity validator"));
         }

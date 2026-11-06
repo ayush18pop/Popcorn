@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import {IVerifier} from "src/interfaces/IVerifier.sol";
 import {Payouts} from "src/privacy/Payouts.sol";
+import {Flow, IPopcornExplain, FLOW_YES} from "src/rules/Explain.sol";
+import {Answer, YES, NO, UNKNOWN, answer} from "src/blocks/Answer.sol";
 
 /// @title StealthVault
 /// @notice Receive to a stealth address that nobody can link to you, and spend it without a gas top-up that would.
@@ -27,7 +29,7 @@ import {Payouts} from "src/privacy/Payouts.sol";
 ///         Post-quantum where it matters for privacy: the announcement is ML-KEM, so recording it today does not reveal
 ///         the receiver later. The spend proof is Groth16: zero-knowledge, not post-quantum (a quantum computer could
 ///         forge a spend, not unmask a receiver).
-contract StealthVault is Payouts {
+contract StealthVault is Payouts, IPopcornExplain {
     /// @dev keccak256("popcorn.stealthVault"): balance(commitment) at keccak256(abi.encode(commitment, BASE)).
     bytes32 private constant VAULT = 0x48f3e26583839ac8928e303e9f3e72e168da062935641b4659088f63dfe32202;
     uint256 internal constant R = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -88,12 +90,18 @@ contract StealthVault is Payouts {
         uint256 fee = _word(popArgs, 2);
         uint256 bal = _sload(_balanceSlot(commitment));
         if (bal == 0 || recipient == address(0) || fee < minFee || fee > bal) return false;
+        return _proofOk(commitment, recipient, fee, verifyData).isYes();
+    }
+
+    /// @dev The spend proof against [commitment, recipient, fee]; shared by the condition and the explain view.
+    function _proofOk(uint256 commitment, address recipient, uint256 fee, bytes calldata proof) private view returns (Answer) {
         uint256[] memory inputs = new uint256[](3);
         inputs[0] = commitment;
         inputs[1] = uint256(uint160(recipient));
         inputs[2] = fee;
-        (bool s, bytes memory ret) = address(verifier).staticcall(abi.encodeCall(IVerifier.verify, (verifyData, inputs)));
-        return s && ret.length == 32 && abi.decode(ret, (uint256)) == 1;
+        (bool s, bytes memory ret) = address(verifier).staticcall(abi.encodeCall(IVerifier.verify, (proof, inputs)));
+        if (!s || ret.length != 32) return UNKNOWN;
+        return abi.decode(ret, (uint256)) == 1 ? YES : NO;
     }
 
     function action(bytes calldata popArgs, address) internal override {
@@ -104,5 +112,22 @@ contract StealthVault is Payouts {
         _sstore(_balanceSlot(commitment), 0);
         emit Spent(commitment, recipient, bal - fee, fee);
         _sendOrCredit(recipient, bal - fee);
+    }
+
+    // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
+
+    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory, string memory, bytes memory) {
+        bool shaped = popArgs.length == 96 && uint256(bytes32(popArgs[32:64])) >> 160 == 0;
+        uint256 c = shaped ? uint256(bytes32(popArgs[0:32])) : 0;
+        uint256 bal = _sload(_balanceSlot(c));
+        address to = shaped ? address(uint160(uint256(bytes32(popArgs[32:64])))) : address(0);
+        uint256 fee = shaped ? uint256(bytes32(popArgs[64:96])) : 0;
+        bool fees = bal > 0 && to != address(0) && fee >= minFee && fee <= bal;
+        Answer proof = fees ? _proofOk(c, to, fee, verifyData) : NO;
+        return (
+            "spend",
+            "t||Spend: commitment, recipient and fee, with a spend proof|;p|self-paying|the vault pays the gas, out of the payment|0;c||the payment exists and has not been spent|0;c|compare|a recipient is set and the fee is within [minimum fee, payment]|0;c||the spend proof verifies (ZK): the sender owns this payment|0;o|and|AND|2,3,4;a||send the payment minus the fee to the recipient|5",
+            abi.encodePacked(Flow.result(answer(shaped)), FLOW_YES, Flow.after_(shaped, answer(bal > 0)), Flow.after_(shaped && bal > 0, answer(fees)), Flow.after_(fees, proof), Flow.result(fees ? proof : NO), Flow.runs(fees && proof.isYes()))
+        );
     }
 }

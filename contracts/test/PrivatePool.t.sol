@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
+import {ExplainCheck} from "test/ExplainCheck.sol";
 
 import {CoreHarness} from "test/CoreHarness.sol";
 import {PrivatePool} from "src/privacy/PrivatePool.sol";
@@ -89,7 +90,7 @@ contract PrivatePoolTest {
         bytes memory proof = vm.parseJsonBytes(json, ".pool.proof");
         bytes memory a = _args(assoc, RECIPIENT, fee);
         CoreHarness h = CoreHarness(payable(POOL));
-        require(h.condition(a, proof), "valid withdrawal");
+        require(ExplainCheck.cond(h, a, proof), "valid withdrawal");
         (bool ok, uint256 key) = h.nonceKey(a);
         require(ok && key == vm.parseJsonUint(json, ".pool.nullifierHash"), "nullifier is the nonce key");
         h.pop(a, proof);
@@ -105,22 +106,22 @@ contract PrivatePoolTest {
         uint256 assoc = vm.parseJsonUint(json, ".pool.assocRoot");
         bytes memory proof = vm.parseJsonBytes(json, ".pool.proof");
         CoreHarness h = CoreHarness(payable(POOL));
-        require(!h.condition(_args(assoc, RECIPIENT, fee), proof), "association root not accepted yet");
+        require(!ExplainCheck.cond(h, _args(assoc, RECIPIENT, fee), proof), "association root not accepted yet");
         vm.prank(PROVIDER);
         _pool().setAssociationRoot(assoc, true);
-        require(!h.condition(_args(assoc, address(0xdead), fee), proof), "recipient is bound to the proof");
-        require(!h.condition(_args(assoc, RECIPIENT, fee + 1), proof), "fee is bound to the proof");
-        require(!h.condition(_args(assoc, RECIPIENT, 0), proof), "below the minimum fee");
+        require(!ExplainCheck.cond(h, _args(assoc, address(0xdead), fee), proof), "recipient is bound to the proof");
+        require(!ExplainCheck.cond(h, _args(assoc, RECIPIENT, fee + 1), proof), "fee is bound to the proof");
+        require(!ExplainCheck.cond(h, _args(assoc, RECIPIENT, 0), proof), "below the minimum fee");
         uint256 outside = vm.parseJsonUint(json, ".pool.outsideAssocRoot");
         vm.prank(PROVIDER);
         _pool().setAssociationRoot(outside, true);
-        require(!h.condition(_args(outside, RECIPIENT, fee), proof), "a set without this deposit");
+        require(!ExplainCheck.cond(h, _args(outside, RECIPIENT, fee), proof), "a set without this deposit");
         bytes memory bad = proof;
         bad[40] = bytes1(uint8(bad[40]) ^ 1);
-        require(!h.condition(_args(assoc, RECIPIENT, fee), bad), "tampered proof");
+        require(!ExplainCheck.cond(h, _args(assoc, RECIPIENT, fee), bad), "tampered proof");
         vm.prank(PROVIDER);
         _pool().setAssociationRoot(assoc, false);
-        require(!h.condition(_args(assoc, RECIPIENT, fee), proof), "a withdrawn association root");
+        require(!ExplainCheck.cond(h, _args(assoc, RECIPIENT, fee), proof), "a withdrawn association root");
     }
 
     function test_only_the_provider_publishes_association_roots_and_deposits_are_exact() public {

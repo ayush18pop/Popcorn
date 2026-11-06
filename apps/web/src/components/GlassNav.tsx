@@ -6,7 +6,7 @@ import { href, type Page } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
 export const NAV: { page: Page; label: string }[] = [
-  { page: "modules", label: "Modules" },
+  { page: "blocks", label: "Blocks" },
   { page: "examples", label: "Examples" },
   { page: "explorer", label: "Explorer" },
   { page: "skills", label: "Skills" },
@@ -76,10 +76,10 @@ export function GlassNav({ page, theme, onToggleTheme, onOpenMenu }: { page: Pag
             {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
           <a
-            href={href("modules")}
+            href={href("blocks")}
             className="hidden h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-[13px] font-medium text-background transition-opacity hover:opacity-90 sm:flex"
           >
-            Browse modules <ArrowRight className="size-3.5" />
+            Browse blocks <ArrowRight className="size-3.5" />
           </a>
           <button
             onClick={() => setOpen((o) => !o)}
