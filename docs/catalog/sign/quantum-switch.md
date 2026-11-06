@@ -2,12 +2,12 @@
 name: "Quantum Switch"
 group: sign
 trigger: people
-priority: 2
+priority: 6
 status: built
 runsOn: [alternative-staked]
 gas: { total: 488794, tag: measured, network: local }
 example: examples/sign/quantum-ready-treasury/run.json
-related: [post-quantum-signer, hidden-guardians, hybrid-owner-key]
+related: [wots-signer, hidden-guardians, hybrid-owner-key]
 postQuantum: true
 code: ["contracts/src/account/SovereignAccount.sol", "packages/sdk/src/account.ts"]
 ---

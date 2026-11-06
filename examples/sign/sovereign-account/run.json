@@ -210,7 +210,7 @@
       "status": "success"
     },
     {
-      "module": "post-quantum-signer",
+      "module": "wots-signer",
       "role": "migrate",
       "title": "The committed post-quantum key moves everything to its new home",
       "tx": "0xb1a05cc76fd275e025440bef32ac9d0135c8f148fc4da839dfb3a8202a2e5696",

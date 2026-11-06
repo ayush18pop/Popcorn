@@ -701,3 +701,15 @@ only for logic built before the view existed.
 
 **Why.** It removes a class of wrong keys instead of special-casing one, and it needs nothing from the node beyond
 eth_call.
+
+## 76. The post-quantum signers are named modules again
+
+**Context.** Decision 72 merged WOTS+, XMSS, FORS, SPHINCS+ and Falcon into one post-quantum signer page. A reader skimming
+the Modules page then saw no post-quantum scheme by name, only one generic card.
+
+**Choice.** Each scheme is its own module again, first in "Sign and recover", each card marked post-quantum, with the
+validation gas measured on the local devnet (WOTS+ 93,765, XMSS 94,076 and FORS 90,176 in their inline forms, all within
+the public mempool's 100,000; SPHINCS+ 216,764 and Falcon about 1.5 million on the alternative mempool). Cards also show
+a "private" mark for the privacy modules. The rest of decision 72 stands.
+
+**Why.** Post-quantum is one of the library's headline properties; it has to be visible without opening a page.

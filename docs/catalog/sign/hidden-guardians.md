@@ -2,7 +2,7 @@
 name: "Hidden Guardians"
 group: sign
 trigger: proof
-priority: 3
+priority: 7
 status: built
 runsOn: [alternative-staked]
 gas: null

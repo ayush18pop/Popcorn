@@ -195,7 +195,7 @@
       "status": "success"
     },
     {
-      "module": "post-quantum-signer",
+      "module": "wots-signer",
       "role": "migrate",
       "title": "The committed WOTS+ backup key moves everything to a post-quantum account",
       "tx": "0x7cf6b31a3b0fb61cc6239bf905a4e947f9427c3017e84fb0e81c55e6b9472675",
