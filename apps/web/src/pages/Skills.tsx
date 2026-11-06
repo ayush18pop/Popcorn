@@ -19,7 +19,7 @@ const SKILLS: { id: string; groups: ShapeId[]; does: string; tools: string[] }[]
 const CONVO = [
   { who: "you", text: "Our community wants free transactions for members, without a paymaster server that can cut people off." },
   { who: "claude", text: "That is the Open Gas Network example: a Public Gas Sponsor whose policy is public code, Prove You're In The Group so each member admits one account without saying who, and an app account that lets the sponsor pay. I'll run it on your local devnet." },
-  { who: "claude", text: "can_trigger: ready. Sent from a key with no ETH and included; the sponsor paid, 839,489 gas. A second account from the same member is refused by the sponsor with 0x6d: nullifier already used." },
+  { who: "claude", text: "can_trigger: ready. Sent from a key with no ETH and included; the sponsor paid, 839,535 gas. A second account from the same member is refused by the sponsor with 0x6d: nullifier already used." },
 ];
 
 const RULE = `# .claude/skills/popcorn-build/SKILL.md
