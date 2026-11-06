@@ -4,52 +4,48 @@ import { AuroraBackground } from "@/components/ui/aurora-background";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Reveal, Spotlight } from "@/components/motion";
 import { Code, StatusBadge } from "@/components/bits";
-import { CORNERS, MODULES, type CornerId } from "@/lib/catalog";
+import { CORNERS, MODULES, type GroupId } from "@/lib/catalog";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
-// The Claude skills are planned (journal decision 41; docs/ui-handoff.md "Skills page"). This page shows what each
-// one is for and which catalog pages it reads. It does not claim any of them can be installed yet.
+// The Claude skills live in the repo at .claude/skills/ (popcorn-build, popcorn-debug): opening the repository in Claude
+// Code loads them, together with the read-only MCP server from .mcp.json.
 
-const SKILLS: { id: string; corner: CornerId; does: string; tools: string[] }[] = [
-  { id: "popcorn-pause", corner: "protect", does: "Turns “pause my protocol if …” into a pause rule for your contracts.", tools: ["list_modules", "plan_rule", "check_rule"] },
-  { id: "popcorn-protect", corner: "protect", does: "Protects a lending position before liquidation: repay or top up.", tools: ["get_module", "plan_rule", "check_rule"] },
-  { id: "popcorn-exit", corner: "protect", does: "Gets funds out of a venue when its market or accounting breaks.", tools: ["get_module", "plan_rule", "check_rule"] },
-  { id: "popcorn-payout", corner: "prove", does: "Sets up bounties and rewards that only the payer or a proof can claim.", tools: ["get_module", "plan_rule"] },
-  { id: "popcorn-liquidate", corner: "protect", does: "Designs liquidations with one winner per event.", tools: ["get_module", "plan_rule"] },
-  { id: "popcorn-gas", corner: "gas", does: "Chooses rule-pays or caller-pays and sizes the fee caps.", tools: ["get_module", "check_rule"] },
-  { id: "popcorn-sign", corner: "sign", does: "Picks a signer, including post-quantum ones, and wires the intent.", tools: ["get_module", "plan_rule"] },
-  { id: "popcorn-debug", corner: "prove", does: "Explains why a trigger was refused, rule by rule, and the fix.", tools: ["explain_rule", "rule_status", "decode_frame_tx", "admission_report"] },
+const SKILLS: { id: string; groups: GroupId[]; does: string; tools: string[] }[] = [
+  { id: "popcorn-build", groups: ["private", "gas", "protect", "sign", "prove"], does: "Turns a problem (“pay salaries privately”, “free transactions for our members”) into modules, starts from the closest example project, deploys it on the local devnet and runs it.", tools: ["list_examples", "how_to_build", "get_module", "can_trigger", "build_trigger"] },
+  { id: "popcorn-debug", groups: ["gas", "sign", "private"], does: "Explains why a trigger was refused: which frame said no, the code in plain words, who paid (usually nobody) and the one change that fixes it.", tools: ["can_trigger", "explain_code", "rule_contract_info"] },
 ];
 
 const CONVO = [
-  { who: "you", text: "Protect my vault: pause it if assets per share drop 20% below par." },
-  { who: "claude", text: "That is the share-price invariant, read from your vault's own storage, so it fits the public mempool with no stake. I'll start from the Guarded Vault pause profile with a floor of 0.8." },
-  { who: "claude", text: "check_rule: ✓ public EIP-8141 · ✓ alternative, unstaked. The trigger is free for the reporter; the vault pays." },
+  { who: "you", text: "Our community wants free transactions for members, without a paymaster server that can cut people off." },
+  { who: "claude", text: "That is the Open Gas Network example: an Open Sponsor whose policy is public code, a membership proof so each member admits one account without saying who, and caller-pays for your app. I'll run it on your local devnet." },
+  { who: "claude", text: "can_trigger: ready. Sent from a key with no ETH and included; the sponsor paid, 839,489 gas. A second account from the same member is refused by the sponsor with 0x6d: nullifier already used." },
 ];
 
-const RULE = `# vault-floor.rule.yaml (illustration of a planned skill's output)
-module: guarded-vault
-corner: pause
-condition: totalAssets * 1e18 < totalSupply * 0.8e18
-action: pause
-payer: rule-pays
-reward: { to: payer, from: reward pool }`;
+const RULE = `# .claude/skills/popcorn-build/SKILL.md
+name: popcorn-build
+description: Build something with Popcorn: turn a problem into the right
+  modules, start from the closest example project, deploy it to the local
+  devnet and run it.
+
+# the commands it runs
+bun packages/sdk/scripts/record-examples.ts open-gas-network
+bun test packages/mcp/test/        # the MCP tools it calls`;
 
 export default function Skills() {
   const [sel, setSel] = useState(SKILLS[0].id);
   const skill = SKILLS.find((s) => s.id === sel)!;
-  const pages = MODULES.filter((m) => m.corner === skill.corner);
+  const pages = MODULES.filter((m) => skill.groups.includes(m.group) && m.status === "built").slice(0, 12);
 
   return (
     <div className="relative overflow-x-clip">
       <AuroraBackground className="h-[560px] bg-transparent">
         <div className="relative z-10 mx-auto w-full max-w-[1120px] px-4 pt-24 sm:px-6">
           <Reveal>
-            <p className="label-mono mb-4">Claude skills · planned</p>
-            <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Describe the protection. Get the rule.</h1>
+            <p className="label-mono mb-4">Claude skills</p>
+            <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Describe the problem. Get a running project.</h1>
             <p className="mt-5 max-w-[580px] text-[16px] leading-relaxed text-muted-foreground">
-              One skill per corner of the catalog. Each reads the module pages and the SDK reference, plans a rule file and checks which mempool admits it. They are planned; this page shows the design.
+              Two skills ship in the repository: one builds from a problem, one explains a refusal. Open Popcorn in Claude Code and both load, with the read-only MCP server.
             </p>
           </Reveal>
         </div>
@@ -68,28 +64,30 @@ export default function Skills() {
               ))}
             </div>
             <svg className="w-10 sm:w-24" viewBox="0 0 100 320" preserveAspectRatio="none" aria-hidden>
-              {SKILLS.map((s, i) => {
-                const j = CORNERS.findIndex((c) => c.id === s.corner);
-                const on = s.id === sel;
-                return (
-                  <motion.path
-                    key={s.id}
-                    d={`M0 ${20 + i * 40} C 50 ${20 + i * 40}, 50 ${20 + j * 40}, 100 ${20 + j * 40}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={on ? 1.5 : 0.6}
-                    className={on ? "text-foreground" : "text-foreground/15"}
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.9, delay: i * 0.05 }}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                );
-              })}
+              {SKILLS.flatMap((s, i) =>
+                s.groups.map((g) => {
+                  const j = CORNERS.findIndex((c) => c.id === g);
+                  const on = s.id === sel;
+                  return (
+                    <motion.path
+                      key={s.id + g}
+                      d={`M0 ${20 + i * 40} C 50 ${20 + i * 40}, 50 ${20 + j * 40}, 100 ${20 + j * 40}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={on ? 1.5 : 0.6}
+                      className={on ? "text-foreground" : "text-foreground/15"}
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.9, delay: i * 0.05 }}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                }),
+              )}
             </svg>
             <div className="space-y-1.5">
               {CORNERS.map((c) => (
-                <a key={c.id} href={href("modules", c.id)} className={cn("block rounded-xl px-3 py-2 text-[12px] transition-colors sm:text-[13px]", c.id === skill.corner ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                <a key={c.id} href={href("modules", c.id)} className={cn("block rounded-xl px-3 py-2 text-[12px] transition-colors sm:text-[13px]", skill.groups.includes(c.id) ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
                   {c.name}
                 </a>
               ))}
@@ -103,7 +101,7 @@ export default function Skills() {
             <div className="glass rounded-[24px] p-6">
               <div className="flex items-center justify-between">
                 <p className="font-mono text-[14px]">{skill.id}</p>
-                <StatusBadge status="planned" />
+                <StatusBadge status="built" />
               </div>
               <p className="mt-4 text-[15px] leading-relaxed text-foreground/85">{skill.does}</p>
               <p className="label-mono mt-6">Methods (MCP tools it calls)</p>
@@ -119,7 +117,7 @@ export default function Skills() {
               <p className="label-mono">Reads these catalog pages</p>
               <div className="mt-3 space-y-1">
                 {pages.map((m) => (
-                  <a key={m.id} href={href("modules", m.corner, m.id)} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[13px] text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground">
+                  <a key={m.id} href={href("modules", m.group, m.id)} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[13px] text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground">
                     <span>{m.name}</span>
                     <span className="font-mono text-[10.5px] text-faint">{m.status}</span>
                   </a>
@@ -135,7 +133,7 @@ export default function Skills() {
           <div>
             <Reveal>
               <p className="label-mono mb-3">A sample conversation</p>
-              <h2 className="text-chrome text-[30px] font-semibold tracking-[-0.03em]">From one sentence to a checked rule.</h2>
+              <h2 className="text-chrome text-[30px] font-semibold tracking-[-0.03em]">From one sentence to a running project.</h2>
             </Reveal>
             <div className="mt-8 space-y-4">
               {CONVO.map((c, i) => (
@@ -151,8 +149,8 @@ export default function Skills() {
             </div>
           </div>
           <Reveal delay={0.3}>
-            <Code files={[{ filename: "vault-floor.rule.yaml", lang: "text", code: RULE }]} />
-            <p className="mt-3 text-[12px] text-faint">Illustration of the planned output format; the rule-file schema is not final.</p>
+            <Code files={[{ filename: "popcorn-build", lang: "text", code: RULE }]} />
+            <p className="mt-3 text-[12px] text-faint">The numbers in the conversation are from the Open Gas Network run recorded on the local devnet.</p>
           </Reveal>
         </section>
       </div>
