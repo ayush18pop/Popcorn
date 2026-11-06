@@ -1,5 +1,5 @@
 ---
-name: "Exit To An Address"
+name: "Withdraw All"
 shape: action
 tier: 2
 status: built
@@ -9,30 +9,39 @@ inputs:
   - { name: "address", what: "committed once at setup (forced exit), or chosen at the time and signed by a committed key (migrate)" }
 perTrigger: "nothing"
 output: "everything sent, once; the build refuses everything after"
-presets: ["Forced exit after a contested takeover (Walkaway Exit)", "Migrate with the post-quantum backup key (Quantum-Ready Treasury)"]
+useCases:
+  ready: ["Forced exit after a contested takeover: Walkaway Exit", "Migrate with the backup key: Quantum-Ready Treasury"]
+  configs: []
+  ideas: ["Exit when a dependency is upgraded (with Code Hash Changed)"]
 sdk: "exitTrigger"
-related: [hand-over-to-a-new-key, switch-to-quantum-safe-only]
+related: [key-rotation, post-quantum-mode]
 code: ["contracts/src/blocks/actions/ExitToAddress.sol"]
 ---
 
-# Exit To An Address
+# Withdraw All
 
-## What it does
+## Overview
 
 Sends everything the build holds to one address, once. A committed address cannot be changed later, so whoever takes control of the build cannot redirect the exit.
 
-## Inputs
+## Configuration
 
 - **address**: committed once at setup (forced exit), or chosen at the time and signed by a committed key (migrate)
-- **each trigger brings**: nothing
-- **result**: everything sent, once; the build refuses everything after
+- **trigger payload**: nothing
+- **effect**: everything sent, once; the build refuses everything after
 
-## Presets
+## Use cases
 
-- Forced exit after a contested takeover (Walkaway Exit)
-- Migrate with the post-quantum backup key (Quantum-Ready Treasury)
+### Ready to use
 
-## Code
+- Forced exit after a contested takeover: Walkaway Exit
+- Migrate with the backup key: Quantum-Ready Treasury
+
+### Other use cases (not built)
+
+- Exit when a dependency is upgraded (with Code Hash Changed)
+
+## Usage
 
 ```ts
 await anyone.trigger(account, exitTrigger());
@@ -43,10 +52,10 @@ if (_contested()) _exit();                 // forced exit to the committed addre
 else if (_quantumSafeOnly()) _exitTo(signedTarget); // migrate
 ```
 
-## Runs on
+## Mempool
 
 The block itself keeps plain storage and adds no mempool limit. The builds that use it today also check proofs or read other contracts, so they are staked on the alternative mempool.
 
-## Limits
+## Gotchas
 
 - A receiver that refuses ETH is credited and claims later; nothing is lost.

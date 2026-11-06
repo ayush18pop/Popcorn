@@ -1,5 +1,5 @@
 ---
-name: "At Least k Of n"
+name: "K-of-N"
 shape: join
 tier: 3
 status: built
@@ -10,30 +10,35 @@ inputs:
   - { name: "checks", what: "n checks" }
 perTrigger: "nothing"
 output: "yes once k say yes"
-presets: ["Two of three oracles below the floor"]
+useCases:
+  ready: []
+  configs: ["2 of 3 oracles below the floor"]
+  ideas: []
 sdk: "blocks.atLeast"
-related: [exactly-one-of, any-of]
+related: [exactly-one, or]
 code: ["contracts/src/blocks/Answer.sol"]
 ---
 
-# At Least k Of n
+# K-of-N
 
-## What it does
+## Overview
 
 Yes once at least k of the connected checks say yes; no once too few are left that could still say yes.
 
-## Inputs
+## Configuration
 
 - **k**: how many must say yes
 - **checks**: n checks
-- **each trigger brings**: nothing
-- **answers**: yes once k say yes
+- **trigger payload**: nothing
+- **returns**: yes once k say yes
 
-## Presets
+## Use cases
 
-- Two of three oracles below the floor
+### Common configurations
 
-## Code
+- 2 of 3 oracles below the floor
+
+## Usage
 
 ```ts
 blocks.atLeast(2, below(oracleA), below(oracleB), below(oracleC))
@@ -43,6 +48,6 @@ blocks.atLeast(2, below(oracleA), below(oracleB), below(oracleC))
 return Join.atLeast(2, Join.list(_oracleA(), _oracleB(), _oracleC())).isYes();
 ```
 
-## Runs on
+## Mempool
 
 As strict as the strictest check inside it.

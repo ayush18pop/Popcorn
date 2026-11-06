@@ -1,5 +1,5 @@
 ---
-name: "All Of"
+name: "AND"
 shape: join
 tier: 1
 status: built
@@ -9,30 +9,38 @@ inputs:
   - { name: "checks", what: "two or more checks" }
 perTrigger: "nothing"
 output: "yes when every check says yes; no if any says no; otherwise unknown"
-presets: ["An oracle and the reporters agree", "Below the floor and not already paused"]
+useCases:
+  ready: ["Gauge above 100 AND target not paused: SDK blocks devnet test"]
+  configs: ["Oracle AND reporters agree"]
+  ideas: []
 sdk: "blocks.allOf"
-related: [any-of, none-of]
+related: [or, not]
 code: ["contracts/src/blocks/Answer.sol"]
 ---
 
-# All Of
+# AND
 
-## What it does
+## Overview
 
 Yes when every connected check says yes. One no is enough for no; a check that cannot answer makes the whole answer unknown, never yes.
 
-## Inputs
+## Configuration
 
 - **checks**: two or more checks
-- **each trigger brings**: nothing
-- **answers**: yes when every check says yes; no if any says no; otherwise unknown
+- **trigger payload**: nothing
+- **returns**: yes when every check says yes; no if any says no; otherwise unknown
 
-## Presets
+## Use cases
 
-- An oracle and the reporters agree
-- Below the floor and not already paused
+### Ready to use
 
-## Code
+- Gauge above 100 AND target not paused: SDK blocks devnet test
+
+### Common configurations
+
+- Oracle AND reporters agree
+
+## Usage
 
 ```ts
 blocks.allOf(blocks.valueCrossesLine(price, "below", floor), blocks.reportersSigned(signer, ST, 2, reporters))
@@ -42,6 +50,6 @@ blocks.allOf(blocks.valueCrossesLine(price, "below", floor), blocks.reportersSig
 return Join.allOf(_belowFloor(), Join.noneOf(_alreadyPaused())).isYes();
 ```
 
-## Runs on
+## Mempool
 
 As strict as the strictest check inside it.

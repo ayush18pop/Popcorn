@@ -1,5 +1,5 @@
 ---
-name: "Make A Call"
+name: "Call"
 shape: action
 tier: 1
 status: built
@@ -11,33 +11,41 @@ inputs:
   - { name: "gas cap", what: "the most the call may use" }
 perTrigger: "nothing (or the call itself, in a signed instruction)"
 output: "the call happened, or a failure is reported"
-presets: ["A wallet spend (with Signed Instruction)", "Swap out of a depegged asset", "Withdraw from a protocol that was just upgraded"]
+useCases:
+  ready: ["Account spends: Sovereign Account"]
+  configs: ["Swap out of a depegged asset", "Withdraw from a protocol after an upgrade"]
+  ideas: []
 sdk: "blocks.makeACall"
-related: [signed-instruction, pause-the-target]
+related: [signature, pause]
 code: ["contracts/src/blocks/actions/MakeACall.sol"]
 ---
 
-# Make A Call
+# Call
 
-## What it does
+## Overview
 
 Calls any contract from the build. Best effort: a failed call is reported in an event and the action carries on, because the trigger's key is already spent.
 
-## Inputs
+## Configuration
 
 - **target**: any contract
 - **data and value**: what to call, with how much ETH
 - **gas cap**: the most the call may use
-- **each trigger brings**: nothing (or the call itself, in a signed instruction)
-- **result**: the call happened, or a failure is reported
+- **trigger payload**: nothing (or the call itself, in a signed instruction)
+- **effect**: the call happened, or a failure is reported
 
-## Presets
+## Use cases
 
-- A wallet spend (with Signed Instruction)
+### Ready to use
+
+- Account spends: Sovereign Account
+
+### Common configurations
+
 - Swap out of a depegged asset
-- Withdraw from a protocol that was just upgraded
+- Withdraw from a protocol after an upgrade
 
-## Code
+## Usage
 
 ```ts
 blocks.makeACall(vault, { data: encodeFunctionData({ abi, functionName: "withdrawAll" }), gas: 200_000 })
@@ -47,10 +55,10 @@ blocks.makeACall(vault, { data: encodeFunctionData({ abi, functionName: "withdra
 _makeCall(to, value, data, 200_000);
 ```
 
-## Runs on
+## Mempool
 
 Actions run after validation, so they do not decide where a build runs.
 
-## Limits
+## Gotchas
 
 - The build pays for a failed call too: cap the gas when the callee is not trusted.

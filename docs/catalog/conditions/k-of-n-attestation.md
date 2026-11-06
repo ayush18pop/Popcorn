@@ -1,5 +1,5 @@
 ---
-name: "Statement Signed By k Of n Reporters"
+name: "K-of-N Attestation"
 shape: check
 tier: 3
 status: built
@@ -10,31 +10,40 @@ inputs:
   - { name: "k and reporters", what: "how many of which reporters must sign" }
 perTrigger: "k signatures (verify data)"
 output: "yes / no / unknown"
-presets: ["Second opinion next to an oracle (All Of)", "An off-chain event: a bridge halt, a court order, a receipt"]
+useCases:
+  ready: []
+  configs: ["Second opinion next to an oracle (AND with Compare)"]
+  ideas: ["A bridge halt reported by 3 of 5 watchers", "An off-chain receipt or court order"]
 sdk: "blocks.reportersSigned"
-related: [value-crosses-a-line, all-of, signed-instruction]
+related: [compare, and, signature]
 code: ["contracts/src/blocks/checks/ReporterStatement.sol"]
 ---
 
-# Statement Signed By k Of n Reporters
+# K-of-N Attestation
 
-## What it does
+## Overview
 
-Yes when at least k of n named reporters signed that a statement holds for this exact trigger. Use it for facts that are not on chain, or next to Value Crosses A Line so that one manipulated oracle is not enough.
+Yes when at least k of n named reporters signed that a statement holds for this exact trigger. Use it for facts that are not on chain, or next to Compare so that one manipulated oracle is not enough.
 
-## Inputs
+## Configuration
 
 - **statement**: a hash of the fact, agreed off chain ("ETH/USD below 1,800", "the bridge halted")
 - **k and reporters**: how many of which reporters must sign
-- **each trigger brings**: k signatures (verify data)
-- **answers**: yes / no / unknown
+- **trigger payload**: k signatures (verify data)
+- **returns**: yes / no / unknown
 
-## Presets
+## Use cases
 
-- Second opinion next to an oracle (All Of)
-- An off-chain event: a bridge halt, a court order, a receipt
+### Common configurations
 
-## Code
+- Second opinion next to an oracle (AND with Compare)
+
+### Other use cases (not built)
+
+- A bridge halt reported by 3 of 5 watchers
+- An off-chain receipt or court order
+
+## Usage
 
 ```ts
 const spec = blocks.build({
@@ -49,10 +58,10 @@ function condition(bytes calldata data, bytes calldata sigs) internal view overr
 }
 ```
 
-## Runs on
+## Mempool
 
 The signatures are checked by a stateless signer contract that reads no storage, so no stake is needed; it has been run on the alternative mempool.
 
-## Limits
+## Gotchas
 
 - Reporters are trusted for the statement they sign; choose k so that no single reporter decides.

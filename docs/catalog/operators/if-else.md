@@ -1,5 +1,5 @@
 ---
-name: "If / Else"
+name: "IF / ELSE"
 shape: join
 tier: 3
 status: built
@@ -9,29 +9,38 @@ inputs:
   - { name: "rules", what: "an ordered list of checks, each with its action" }
 perTrigger: "which rule (trigger data)"
 output: "rule i fires only when its check is yes and every earlier check is a definite no"
-presets: ["High / medium / default responses to one number"]
+useCases:
+  ready: ["High / medium / default responses to one number: SDK example 07"]
+  configs: ["Escalating responses: warn, then pause"]
+  ideas: []
 sdk: "blocks.buildIfElse"
-related: [any-of, all-of]
+related: [or, and]
 code: ["contracts/src/blocks/Answer.sol"]
 ---
 
-# If / Else
+# IF / ELSE
 
-## What it does
+## Overview
 
 Ordered rules: the first rule whose check says yes is the one that may fire, and only when every earlier check says a definite no.
 
-## Inputs
+## Configuration
 
 - **rules**: an ordered list of checks, each with its action
-- **each trigger brings**: which rule (trigger data)
-- **answers**: rule i fires only when its check is yes and every earlier check is a definite no
+- **trigger payload**: which rule (trigger data)
+- **returns**: rule i fires only when its check is yes and every earlier check is a definite no
 
-## Presets
+## Use cases
 
-- High / medium / default responses to one number
+### Ready to use
 
-## Code
+- High / medium / default responses to one number: SDK example 07
+
+### Common configurations
+
+- Escalating responses: warn, then pause
+
+## Usage
 
 ```ts
 blocks.buildIfElse({ when: above(v, 100n), then: pauseTarget(p) }, { when: above(v, 10n), then: makeACall(alarm) })
@@ -41,10 +50,10 @@ blocks.buildIfElse({ when: above(v, 100n), then: pauseTarget(p) }, { when: above
 Answer r = Join.ifElse(_severe(), _pauseAnswer(), _warnAnswer());
 ```
 
-## Runs on
+## Mempool
 
 As strict as the strictest check inside it.
 
-## Limits
+## Gotchas
 
 - Earlier checks are evaluated exactly, so a signed instruction can only be in the last rule.

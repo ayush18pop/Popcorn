@@ -158,7 +158,7 @@
   },
   "story": [
     {
-      "module": "stealth-vault",
+      "module": "stealth-addresses",
       "role": "receive",
       "title": "The employer pays the salary to a stealth address only the employee can recognise (ML-KEM announcement)",
       "tx": "0x40a6c6dc0c7774d705dc8083b751d1cb7adad854688fdc1895ea86542633dd32",
@@ -167,7 +167,7 @@
       "status": "success"
     },
     {
-      "module": "stealth-vault",
+      "module": "stealth-addresses",
       "role": "spend",
       "title": "The employee moves it to a fresh address with no ETH; the vault pays the gas",
       "tx": "0xcc612b8307eb676f2afbbade5ed4d369743297e0db0e5f76bbeb6508aac4ef67",
@@ -176,7 +176,7 @@
       "status": "success"
     },
     {
-      "module": "private-pool",
+      "module": "privacy-pool",
       "role": "hold",
       "title": "Savings go into the private pool as a note",
       "tx": "0xb280c30ec3d03e283f6e9f620b03bbb5b7ce63662ecd89d48a62c620bb093794",
@@ -185,7 +185,7 @@
       "status": "success"
     },
     {
-      "module": "prove-youre-in-the-group",
+      "module": "membership-proof",
       "role": "vouch",
       "title": "The association-set provider accepts the deposit",
       "tx": "0xf891b4d537c3ea8d163c9a46524b43bc099f0975612c6db29f465848c9e1fd41",
@@ -194,7 +194,7 @@
       "status": "success"
     },
     {
-      "module": "private-pool",
+      "module": "privacy-pool",
       "role": "withdraw",
       "title": "A withdrawal to a fresh address, paid by the pool, sent by a key with no ETH",
       "tx": "0xa1a58c855ee3496a47e56a9a72d77957cab723a62f2b650f8bc879e799c89548",

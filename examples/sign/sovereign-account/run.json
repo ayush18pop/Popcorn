@@ -167,7 +167,7 @@
       "status": "success"
     },
     {
-      "module": "stealth-vault",
+      "module": "stealth-addresses",
       "role": "receive",
       "title": "Someone pays the account's stealth meta-address (ML-KEM)",
       "tx": "0x85f76cb2484a0a818e3db33d039e3cf04d6507666fa275b86c46dac4d3037700",
@@ -176,7 +176,7 @@
       "status": "success"
     },
     {
-      "module": "stealth-vault",
+      "module": "stealth-addresses",
       "role": "sweep",
       "title": "The account sweeps it in; the vault pays the gas",
       "tx": "0xfab5044cd0fa64b05c821f00abeb7b852e532bbff17d272e4aaa6cb657fa29df",
@@ -185,7 +185,7 @@
       "status": "success"
     },
     {
-      "module": "signed-instruction",
+      "module": "signature",
       "role": "spend",
       "title": "The owner spends; the account pays its own gas and the sender holds no ETH",
       "tx": "0x5d22d1cb9276507e3c798134640e56a8e37bb92f330cfb5aae676dac809e338c",
@@ -194,7 +194,7 @@
       "status": "success"
     },
     {
-      "module": "anonymous-group-vote",
+      "module": "anonymous-vote",
       "role": "vote",
       "title": "Guardians, unnamed, vote to flip the quantum switch",
       "tx": "0x92af8a4cd9f1ca8b94548e0b0d149a7f5b681099f3f42daa6485945a62cb8d03",
@@ -203,7 +203,7 @@
       "status": "success"
     },
     {
-      "module": "switch-to-quantum-safe-only",
+      "module": "post-quantum-mode",
       "role": "switch",
       "title": "Quorum: owner signatures stop working",
       "tx": "0x71bd83d721fedce25e2b3127663671a53dfc01d947edb63875fa3acd2ea4ec9c",
@@ -212,7 +212,7 @@
       "status": "success"
     },
     {
-      "module": "exit-to-an-address",
+      "module": "withdraw-all",
       "role": "migrate",
       "title": "The committed post-quantum key moves everything to its new home",
       "tx": "0x979175a5dfa27ddffb46f0420db0c024788efccef77d80bac05ac5e42dd8cdbe",

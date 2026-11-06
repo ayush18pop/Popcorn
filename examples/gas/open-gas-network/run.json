@@ -188,7 +188,7 @@
   },
   "story": [
     {
-      "module": "public-gas-sponsor",
+      "module": "paymaster",
       "role": "policy",
       "title": "The community funds a sponsor and publishes its member set's root; no server signs anything",
       "tx": "0xe943b685a5c78da62e988c0bbdca815084f269ac4f7e142dd3e5142276a1052a",
@@ -197,7 +197,7 @@
       "status": "success"
     },
     {
-      "module": "prove-youre-in-the-group",
+      "module": "membership-proof",
       "role": "admit",
       "title": "A member proves they belong, without saying who, and the account is sponsored from then on",
       "tx": "0x75a380048af00a27acb980a99d4b432b7a8d2320d5d3aae812360e893840931f",

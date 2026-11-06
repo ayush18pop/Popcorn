@@ -1,5 +1,5 @@
 ---
-name: "None Of"
+name: "NOT / NOR"
 shape: join
 tier: 1
 status: built
@@ -9,30 +9,38 @@ inputs:
   - { name: "checks", what: "one or more checks" }
 perTrigger: "nothing"
 output: "yes when no check says yes; unknown stays unknown"
-presets: ["Reopen only when the vault is healthy again (Proof-of-Exploit Bounty)", "Act only if not already paused"]
+useCases:
+  ready: ["Reopen only when NOT below the floor: Proof-of-Exploit Bounty"]
+  configs: ["Act only if NOT already paused"]
+  ideas: []
 sdk: "blocks.noneOf"
-related: [all-of, any-of]
+related: [and, or]
 code: ["contracts/src/blocks/Answer.sol"]
 ---
 
-# None Of
+# NOT / NOR
 
-## What it does
+## Overview
 
 Yes when none of the connected checks says yes. A check that cannot answer stays unknown here too, so a broken read can never be turned into yes by negation.
 
-## Inputs
+## Configuration
 
 - **checks**: one or more checks
-- **each trigger brings**: nothing
-- **answers**: yes when no check says yes; unknown stays unknown
+- **trigger payload**: nothing
+- **returns**: yes when no check says yes; unknown stays unknown
 
-## Presets
+## Use cases
 
-- Reopen only when the vault is healthy again (Proof-of-Exploit Bounty)
-- Act only if not already paused
+### Ready to use
 
-## Code
+- Reopen only when NOT below the floor: Proof-of-Exploit Bounty
+
+### Common configurations
+
+- Act only if NOT already paused
+
+## Usage
 
 ```ts
 blocks.noneOf(blocks.valueCrossesLine(blocks.getter(target, "paused()"), "above", 0n))
@@ -44,10 +52,10 @@ function _safeToReopen() internal view override returns (bool) {
 }
 ```
 
-## Runs on
+## Mempool
 
 As strict as the strictest check inside it.
 
-## Limits
+## Gotchas
 
-- A signed instruction or a proof cannot sit under None Of: their no only means the signature or proof failed.
+- A signed instruction or a proof cannot sit under NOT: their no only means the signature or proof failed.

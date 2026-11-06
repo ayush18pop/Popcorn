@@ -1,5 +1,5 @@
 ---
-name: "Pause The Target"
+name: "Pause"
 shape: action
 tier: 1
 status: built
@@ -10,31 +10,40 @@ inputs:
   - { name: "safe to reopen", what: "the check that must hold before the owner can reopen" }
 perTrigger: "nothing"
 output: "paused, and a new pause epoch"
-presets: ["Vault guards itself (Proof-of-Exploit Bounty)", "Security council pauses a protocol (with Anonymous Group Vote)"]
+useCases:
+  ready: ["The vault pauses itself: Proof-of-Exploit Bounty", "Pause another contract: SDK blocks devnet test"]
+  configs: []
+  ideas: ["Security council pause (with Anonymous Vote)"]
 sdk: "blocks.pauseTarget"
-related: [value-crosses-a-line, proof-that-the-rules-were-broken, none-of]
+related: [compare, exploit-proof, not]
 code: ["contracts/src/blocks/actions/PauseTarget.sol"]
 ---
 
-# Pause The Target
+# Pause
 
-## What it does
+## Overview
 
 Stops a protocol. Each pause opens a new pause epoch, which is what a build keys its triggers on: one pause and one payout per broken state. Reopening is the owner's, and only when the build's check says it is safe.
 
-## Inputs
+## Configuration
 
 - **target**: the build itself (a protocol that guards itself), or another contract with pause() that lets the build call it
 - **safe to reopen**: the check that must hold before the owner can reopen
-- **each trigger brings**: nothing
-- **result**: paused, and a new pause epoch
+- **trigger payload**: nothing
+- **effect**: paused, and a new pause epoch
 
-## Presets
+## Use cases
 
-- Vault guards itself (Proof-of-Exploit Bounty)
-- Security council pauses a protocol (with Anonymous Group Vote)
+### Ready to use
 
-## Code
+- The vault pauses itself: Proof-of-Exploit Bounty
+- Pause another contract: SDK blocks devnet test
+
+### Other use cases (not built)
+
+- Security council pause (with Anonymous Vote)
+
+## Usage
 
 ```ts
 blocks.pauseTarget(pool) // calls pool.pause(); grant the build the pauser role
@@ -48,10 +57,10 @@ contract MyVault is DemoVault /* is PauseTarget */ {
 }
 ```
 
-## Runs on
+## Mempool
 
 The pause flag lives in the build's own storage, so a check that reads it stays on the public mempool.
 
-## Limits
+## Gotchas
 
 - An outside target's pause() is called best effort: if it refuses, the action still completes and reports it.

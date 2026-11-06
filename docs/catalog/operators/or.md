@@ -1,5 +1,5 @@
 ---
-name: "Any Of"
+name: "OR"
 shape: join
 tier: 1
 status: built
@@ -9,30 +9,38 @@ inputs:
   - { name: "checks", what: "two or more checks" }
 perTrigger: "which check is true (a hint the sender gives)"
 output: "yes when one check says yes"
-presets: ["Oracle too low or too high", "The oracle, or the reporters"]
+useCases:
+  ready: []
+  configs: ["Price too low OR too high"]
+  ideas: ["The oracle OR the reporters"]
 sdk: "blocks.anyOf"
-related: [all-of, at-least-k-of-n]
+related: [and, k-of-n]
 code: ["contracts/src/blocks/Answer.sol"]
 ---
 
-# Any Of
+# OR
 
-## What it does
+## Overview
 
 Yes when at least one connected check says yes. The sender names which one; a wrong name can only make the answer no, so it cannot be abused.
 
-## Inputs
+## Configuration
 
 - **checks**: two or more checks
-- **each trigger brings**: which check is true (a hint the sender gives)
-- **answers**: yes when one check says yes
+- **trigger payload**: which check is true (a hint the sender gives)
+- **returns**: yes when one check says yes
 
-## Presets
+## Use cases
 
-- Oracle too low or too high
-- The oracle, or the reporters
+### Common configurations
 
-## Code
+- Price too low OR too high
+
+### Other use cases (not built)
+
+- The oracle OR the reporters
+
+## Usage
 
 ```ts
 blocks.anyOf(blocks.valueCrossesLine(price, "below", lo), blocks.valueCrossesLine(price, "above", hi))
@@ -42,6 +50,6 @@ blocks.anyOf(blocks.valueCrossesLine(price, "below", lo), blocks.valueCrossesLin
 return Join.anyOf(_tooLow(), _tooHigh()).isYes();
 ```
 
-## Runs on
+## Mempool
 
 As strict as the strictest check inside it.

@@ -1,5 +1,5 @@
 ---
-name: "Contract Pays The Gas"
+name: "Self-Paying"
 shape: payer
 tier: 1
 status: built
@@ -10,31 +10,35 @@ inputs:
   - { name: "fee caps", what: "the most it pays per gas" }
 perTrigger: "nothing: no signature, no account"
 output: "the build pays for every valid trigger"
-presets: ["Whitehat claims from a fresh key (Proof-of-Exploit Bounty)", "An account that pays its own gas (Sovereign Account)"]
+useCases:
+  ready: ["Every recorded example except Open Gas Network"]
+  configs: []
+  ideas: []
 sdk: "deployRule"
-related: [payer-gets-rewarded, public-gas-sponsor]
+related: [caller-pays, paymaster]
 code: ["contracts/src/payers/RulePays.sol"]
 ---
 
-# Contract Pays The Gas
+# Self-Paying
 
-## What it does
+## Overview
 
 The build pays for its own triggers, so anyone can send one from a wallet with no ETH, and an invalid trigger is never included and costs nothing.
 
-## Inputs
+## Configuration
 
 - **balance**: ETH the build holds
 - **fee caps**: the most it pays per gas
-- **each trigger brings**: nothing: no signature, no account
-- **result**: the build pays for every valid trigger
+- **trigger payload**: nothing: no signature, no account
+- **effect**: the build pays for every valid trigger
 
-## Presets
+## Use cases
 
-- Whitehat claims from a fresh key (Proof-of-Exploit Bounty)
-- An account that pays its own gas (Sovereign Account)
+### Ready to use
 
-## Code
+- Every recorded example except Open Gas Network
+
+## Usage
 
 ```ts
 const { ruleContract } = await deployer.deployRule({ logic: { bytecode }, fund: parseEther("0.01") });
@@ -45,10 +49,10 @@ const hash = await anyone.trigger(ruleContract); // no account, no ETH
 contract MyBuild is PauseTarget, RulePays { ... }
 ```
 
-## Runs on
+## Mempool
 
 The public mempool and the alternative mempool.
 
-## Limits
+## Gotchas
 
 - Keep the balance at or above the worst-case cost of one trigger (maxCostPerTrigger).

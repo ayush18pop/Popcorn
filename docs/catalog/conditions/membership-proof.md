@@ -1,5 +1,5 @@
 ---
-name: "Prove You're In The Group"
+name: "Membership Proof (ZK)"
 shape: check
 tier: 2
 status: built
@@ -10,32 +10,41 @@ inputs:
   - { name: "signal and scope", what: "what the member approves, and where (one proof per member per scope)" }
 perTrigger: "a nullifier hash and the signal (trigger data), the proof (verify data)"
 output: "yes / no / unknown"
-presets: ["Association set: my deposit is one of the accepted ones (Private Pool)", "One sponsored account per member (Public Gas Sponsor)", "A vote (Anonymous Group Vote)"]
+useCases:
+  ready: ["Association set: Private Payroll (Privacy Pool)", "One sponsored account per member: Open Gas Network", "Guardian votes: Walkaway Exit"]
+  configs: []
+  ideas: ["An allowlisted claim that does not link the claimer's addresses"]
 sdk: "membershipProof (@popcorn/zk)"
-related: [anonymous-group-vote, public-gas-sponsor]
+related: [anonymous-vote, paymaster]
 code: ["contracts/src/blocks/checks/GroupMembership.sol"]
 ---
 
-# Prove You're In The Group
+# Membership Proof (ZK)
 
-## What it does
+## Overview
 
 Proves the sender is one of a group without saying which member. The same member proving twice for the same scope gives the same nullifier; used as the nonce key, the protocol itself refuses the second time.
 
-## Inputs
+## Configuration
 
 - **group**: a Poseidon Merkle root of the members (or of accepted deposits: an association set)
 - **signal and scope**: what the member approves, and where (one proof per member per scope)
-- **each trigger brings**: a nullifier hash and the signal (trigger data), the proof (verify data)
-- **answers**: yes / no / unknown
+- **trigger payload**: a nullifier hash and the signal (trigger data), the proof (verify data)
+- **returns**: yes / no / unknown
 
-## Presets
+## Use cases
 
-- Association set: my deposit is one of the accepted ones (Private Pool)
-- One sponsored account per member (Public Gas Sponsor)
-- A vote (Anonymous Group Vote)
+### Ready to use
 
-## Code
+- Association set: Private Payroll (Privacy Pool)
+- One sponsored account per member: Open Gas Network
+- Guardian votes: Walkaway Exit
+
+### Other use cases (not built)
+
+- An allowlisted claim that does not link the claimer's addresses
+
+## Usage
 
 ```ts
 const tree = await MerkleTree.create(20, members.map((m) => m.commitment));
@@ -49,10 +58,10 @@ function condition(bytes calldata data, bytes calldata proof) internal view over
 }
 ```
 
-## Runs on
+## Mempool
 
 A Groth16 check costs about 200k gas: a staked build on the alternative mempool.
 
-## Limits
+## Gotchas
 
 - Zero-knowledge, not post-quantum. Development trusted setup.

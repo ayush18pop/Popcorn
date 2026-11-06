@@ -169,7 +169,7 @@
       "status": "success"
     },
     {
-      "module": "signed-instruction",
+      "module": "signature",
       "role": "spend",
       "title": "A normal payment signed by the owner",
       "tx": "0x30a6571d926ed6a1969c5018d12b02ea4ee06212acfbf73d3eecc10ed47ec2c3",
@@ -178,7 +178,7 @@
       "status": "success"
     },
     {
-      "module": "anonymous-group-vote",
+      "module": "anonymous-vote",
       "role": "vote",
       "title": "A guardian votes to flip the quantum switch, without revealing who",
       "tx": "0x9fa3ef753f42114382ce3a224a7ec27fa03bfc840a84d6501caa155b91f1052f",
@@ -187,7 +187,7 @@
       "status": "success"
     },
     {
-      "module": "switch-to-quantum-safe-only",
+      "module": "post-quantum-mode",
       "role": "switch",
       "title": "The second vote reaches the quorum: from now on ECDSA alone moves nothing",
       "tx": "0xc49e5ade2be6e553275cef45da336fe40b58b29d67a9119aaf5b4d161b3f4e26",
@@ -196,7 +196,7 @@
       "status": "success"
     },
     {
-      "module": "exit-to-an-address",
+      "module": "withdraw-all",
       "role": "migrate",
       "title": "The committed WOTS+ backup key moves everything to a post-quantum account",
       "tx": "0xe40a739add022f238cb1f36c7048053f773b19c410c1279e69a902275e88b059",

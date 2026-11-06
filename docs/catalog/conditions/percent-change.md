@@ -1,45 +1,53 @@
 ---
-name: "Value Moves Too Fast"
+name: "Percent Change"
 shape: check
 tier: 3
 status: built
 runsOn: [public, alternative-staked]
 gas: null
 inputs:
-  - { name: "value", what: "where the number comes from (as in Value Crosses A Line)" }
+  - { name: "value", what: "where the number comes from (as in Compare)" }
   - { name: "bps", what: "how far it may move, in basis points" }
   - { name: "move", what: "up, down or either" }
   - { name: "baseline", what: "the value to measure from; the build moves it forward each time it fires" }
 perTrigger: "nothing"
 output: "yes / no / unknown"
-presets: ["Outflow spike: assets fell 20% since the last check", "Price jump", "Supply mint spike"]
+useCases:
+  ready: []
+  configs: ["Outflow spike: assets down 20% since the last check", "Price jump: 10% either way"]
+  ideas: ["Token supply minted faster than expected"]
 sdk: "blocks.valueMovesTooFast"
-related: [value-crosses-a-line, pause-the-target]
+related: [compare, pause]
 code: ["contracts/src/blocks/checks/ValueMovesTooFast.sol"]
 ---
 
-# Value Moves Too Fast
+# Percent Change
 
-## What it does
+## Overview
 
 Has a number moved more than a set percentage from where it was last time? The block remembers the last value in the build's own storage and measures from it.
 
-## Inputs
+## Configuration
 
-- **value**: where the number comes from (as in Value Crosses A Line)
+- **value**: where the number comes from (as in Compare)
 - **bps**: how far it may move, in basis points
 - **move**: up, down or either
 - **baseline**: the value to measure from; the build moves it forward each time it fires
-- **each trigger brings**: nothing
-- **answers**: yes / no / unknown
+- **trigger payload**: nothing
+- **returns**: yes / no / unknown
 
-## Presets
+## Use cases
 
-- Outflow spike: assets fell 20% since the last check
-- Price jump
-- Supply mint spike
+### Common configurations
 
-## Code
+- Outflow spike: assets down 20% since the last check
+- Price jump: 10% either way
+
+### Other use cases (not built)
+
+- Token supply minted faster than expected
+
+## Usage
 
 ```ts
 const spec = blocks.build({
@@ -58,10 +66,10 @@ function action() internal override {
 }
 ```
 
-## Runs on
+## Mempool
 
 Measuring the build's own storage runs on the public mempool; measuring another contract needs a staked build.
 
-## Limits
+## Gotchas
 
 - Until a baseline is set the answer is no, so a fresh build never fires on its first reading.

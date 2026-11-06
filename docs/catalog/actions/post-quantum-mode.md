@@ -1,5 +1,5 @@
 ---
-name: "Switch To Quantum-Safe Only"
+name: "Post-Quantum Mode"
 shape: action
 tier: 3
 status: built
@@ -10,31 +10,36 @@ inputs:
   - { name: "who flips", what: "the owner's signature, or a group vote" }
 perTrigger: "the owner's signature, or a vote's quorum"
 output: "switched: everyday signatures stop working"
-presets: ["Quantum-Ready Treasury", "Sovereign Account"]
+useCases:
+  ready: ["Quantum-Ready Treasury", "Sovereign Account"]
+  configs: []
+  ideas: []
 sdk: "quantumData"
-related: [exit-to-an-address, signed-instruction, anonymous-group-vote]
+related: [withdraw-all, signature, anonymous-vote]
 code: ["contracts/src/blocks/actions/QuantumSafeSwitch.sol"]
 ---
 
-# Switch To Quantum-Safe Only
+# Post-Quantum Mode
 
-## What it does
+## Overview
 
 A one-way switch. Before it flips, the everyday key works. After it flips, only the committed post-quantum backup key can act. A key committed long before a break cannot be added by an attacker at the time of the break.
 
-## Inputs
+## Configuration
 
 - **backup key**: a post-quantum key, committed as a hash and never revealed until used
 - **who flips**: the owner's signature, or a group vote
-- **each trigger brings**: the owner's signature, or a vote's quorum
-- **result**: switched: everyday signatures stop working
+- **trigger payload**: the owner's signature, or a vote's quorum
+- **effect**: switched: everyday signatures stop working
 
-## Presets
+## Use cases
+
+### Ready to use
 
 - Quantum-Ready Treasury
 - Sovereign Account
 
-## Code
+## Usage
 
 ```ts
 await anyone.trigger(account, { triggerData: quantumData, verifyData: ownerSignature });
@@ -45,10 +50,10 @@ if (_quantumSafeOnly()) return NO; // owner spends stop
 _switchToQuantumSafe(byGroup);
 ```
 
-## Runs on
+## Mempool
 
 The block itself keeps plain storage and adds no mempool limit. The builds that use it today also check proofs or read other contracts, so they are staked on the alternative mempool.
 
-## Limits
+## Gotchas
 
 - One way: there is no switch back.

@@ -1,5 +1,5 @@
 ---
-name: "Repay A Loan"
+name: "Repay"
 shape: action
 tier: 3
 status: built
@@ -11,39 +11,44 @@ inputs:
   - { name: "borrower and amount", what: "whose loan, how much" }
 perTrigger: "nothing"
 output: "repaid, or why not (approve failed, repay refused)"
-presets: ["Auto-Repay Loan: a quarter of the debt when health drops below 1.1"]
-related: [value-crosses-a-line, payer-gets-rewarded]
+useCases:
+  ready: ["A quarter of the debt when health drops below 1.1: Auto-Repay Loan (tested build)"]
+  configs: []
+  ideas: []
+related: [compare, caller-pays]
 code: ["contracts/src/blocks/actions/RepayLoan.sol"]
 ---
 
-# Repay A Loan
+# Repay
 
-## What it does
+## Overview
 
 Repays part of a borrower's loan from a reserve the build holds. Best effort: on failure it clears the allowance and reports why, and never reverts.
 
-## Inputs
+## Configuration
 
 - **pool**: the lending pool (repayFor)
 - **token**: the debt token the build holds as a reserve
 - **borrower and amount**: whose loan, how much
-- **each trigger brings**: nothing
-- **result**: repaid, or why not (approve failed, repay refused)
+- **trigger payload**: nothing
+- **effect**: repaid, or why not (approve failed, repay refused)
 
-## Presets
+## Use cases
 
-- Auto-Repay Loan: a quarter of the debt when health drops below 1.1
+### Ready to use
 
-## Code
+- A quarter of the debt when health drops below 1.1: Auto-Repay Loan (tested build)
+
+## Usage
 
 ```solidity
 RepayFailure f = _repayLoan(address(pool), address(token), user, amount);
 ```
 
-## Runs on
+## Mempool
 
 The block itself adds no mempool limit; Auto-Repay Loan reads the pool and the token, so it is staked on the alternative mempool.
 
-## Limits
+## Gotchas
 
 - The reserve must be in the build before the loan gets unhealthy.

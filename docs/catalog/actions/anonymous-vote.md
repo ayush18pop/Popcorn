@@ -1,5 +1,5 @@
 ---
-name: "Anonymous Group Vote"
+name: "Anonymous Vote (K-of-N)"
 shape: action
 tier: 2
 status: built
@@ -11,33 +11,42 @@ inputs:
   - { name: "what quorum does", what: "the block the build plugs in next: hand over, switch, pause" }
 perTrigger: "a proposal and a nullifier (trigger data), a membership proof (verify data)"
 output: "a vote counted; at k votes, the next block runs"
-presets: ["Guardians recover an account (Walkaway Exit, Sovereign Account)", "A security council pauses a protocol", "Guardians flip the quantum switch"]
+useCases:
+  ready: ["Guardian recovery: Walkaway Exit", "Guardians turn on Post-Quantum Mode: Quantum-Ready Treasury"]
+  configs: []
+  ideas: ["Security council pause", "DAO committee decisions"]
 sdk: "voteTrigger"
-related: [prove-youre-in-the-group, hand-over-to-a-new-key, switch-to-quantum-safe-only]
+related: [membership-proof, key-rotation, post-quantum-mode]
 code: ["contracts/src/blocks/actions/AnonymousGroupVote.sol"]
 ---
 
-# Anonymous Group Vote
+# Anonymous Vote (K-of-N)
 
-## What it does
+## Overview
 
 k of n members agree on a proposal, and the chain never learns which members voted. None of them can be singled out, and none needs ETH: the build pays for the votes.
 
-## Inputs
+## Configuration
 
 - **group**: the members' root
 - **k**: how many votes decide
 - **what quorum does**: the block the build plugs in next: hand over, switch, pause
-- **each trigger brings**: a proposal and a nullifier (trigger data), a membership proof (verify data)
-- **result**: a vote counted; at k votes, the next block runs
+- **trigger payload**: a proposal and a nullifier (trigger data), a membership proof (verify data)
+- **effect**: a vote counted; at k votes, the next block runs
 
-## Presets
+## Use cases
 
-- Guardians recover an account (Walkaway Exit, Sovereign Account)
-- A security council pauses a protocol
-- Guardians flip the quantum switch
+### Ready to use
 
-## Code
+- Guardian recovery: Walkaway Exit
+- Guardians turn on Post-Quantum Mode: Quantum-Ready Treasury
+
+### Other use cases (not built)
+
+- Security council pause
+- DAO committee decisions
+
+## Usage
 
 ```ts
 const p = await membershipProof({ secret, tree, index, signalHash: guardianSignal(proposal, round), externalNullifier: guardianScope(account, round) });
@@ -51,10 +60,10 @@ function _onQuorum(bytes32 proposal) internal override {
 }
 ```
 
-## Runs on
+## Mempool
 
 Each vote carries a Groth16 proof (about 200k gas): a staked build on the alternative mempool.
 
-## Limits
+## Gotchas
 
 - Zero-knowledge, not post-quantum.
