@@ -556,3 +556,16 @@ filling, a value changing. Every animation respects `prefers-reduced-motion`.
 
 **Why.** A security library should look precise rather than playful, and the animation is how the site shows the
 mechanism without asking the reader to learn frame transactions first.
+
+## 65. Organise the library by CROPS; DeFi is a filter, not a section
+
+**Context.** The first catalog had eight corners built around DeFi actions (pause, repay, exit, liquidate, and so on).
+Much of it is not needed to make the library useful, and the work with the most value to the ecosystem is censorship
+resistance, open source, privacy and security.
+
+**Choice.** Modules are grouped by the four CROPS properties, each landing ordered from the basic building block to the
+modules built on it. Post-quantum is a property shown on any module, not a group. The existing DeFi modules stay and are
+placed under the property they serve; "Used in: DeFi" is a filter on any module, not a section of its own.
+
+**Why.** The library should read as one progression from a basic block to the things built from it, not as a pile of
+unrelated templates, and its headline should be what makes it different.
