@@ -47,7 +47,10 @@ Lighthouse beacon nodes and a validator, waits for the fork that activates frame
 devnet's contract library (Uniswap v4, Permit2, USDC, WETH9, Tornado, Railgun and others, at the same addresses),
 starts the sidecar with automatic bundling, builds the explorer, and deploys `RuleFactory` at a fixed address.
 
-Environment variables: `SIDECAR_DIR` (an existing patched checkout), `POPCORN_KEYS_DIR` (extra keys whose addresses are
+Environment variables: `SIDECAR_UNSTAKED_BUDGET` and `SIDECAR_STAKED_BUDGET` (the per-entity validation budgets, default
+250,000 and 2,500,000; `SIDECAR_UNSTAKED_BUDGET=10000000` behaves like the public devnet's sidecar, which has no limit and is
+what a module whose every trigger declares more than 250,000 gas, such as a proof check, needs before it can send its own
+stake trigger), `SIDECAR_DIR` (an existing patched checkout), `POPCORN_KEYS_DIR` (extra keys whose addresses are
 pre-funded), `LOCAL_LIBRARY=0|bg` (skip, or replay in the background, the contract library), `LOCAL_GENESIS_DELAY`.
 
 ## Keys and data
