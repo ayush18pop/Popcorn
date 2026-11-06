@@ -718,3 +718,16 @@ presets of the check. This supersedes decision 68's use-case grouping and decisi
 
 **Why.** A block that does one job can be reused in any build, and an example can then name each block once with one
 role. The owner asked for Lego-like pieces that anyone can put together.
+
+## 77. Blocks compose by inheritance into one build; stateless pieces stay separate contracts
+
+**Options.** Deploy every block as its own contract and call it, or inherit the blocks into one build.
+
+**Choice.** Blocks are abstract Solidity contracts inherited into one build, which wires them in `nonceKey`,
+`condition` and `action`. Only stateless pieces stay separate contracts: signers, proof verifiers, the Yul sponsor,
+and rule-set leaves. A build has one gas class: its most expensive check sets the validation floor for every trigger,
+so a public-mempool trigger and a 200k proof check belong in separate builds when the cheap one must stay public.
+
+**Why.** Validation may read the sender's own storage freely, but reading another contract's storage needs a staked
+build on the alternative mempool. Inherited blocks keep their state in the build's own storage, so they stay on the
+public mempool where their checks allow it, and cost less gas.
