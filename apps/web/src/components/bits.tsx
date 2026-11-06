@@ -21,7 +21,7 @@ export function StatusBadge({ status, className }: { status: Status; className?:
 
 /** Where the block runs, as positive chips only (decision 67), with the reason on hover. */
 export function MempoolBadges({ m, className }: { m: Block; className?: string }) {
-  const why = m.sections["Runs on"];
+  const why = m.sections["Mempool"];
   return (
     <div className={cn("flex flex-wrap gap-1.5 font-mono text-[11px]", className)} title={why}>
       {m.runsOn.map((r) => (

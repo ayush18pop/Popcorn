@@ -71,7 +71,7 @@ export default function Blocks() {
           <p className="label-mono mb-4">Blocks</p>
           <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Blocks</h1>
           <p className="mt-5 max-w-[640px] text-[16px] leading-relaxed text-muted-foreground">
-            Every build is a payer, checks joined together, and actions. Pick blocks, plug them together: in Solidity by inheriting them, or with no Solidity through the SDK's{" "}
+            Every build is a gas payer, conditions combined with logic operators, and actions. Pick blocks, plug them together: in Solidity by inheriting them, or with no Solidity through the SDK's{" "}
             <code className="font-mono text-[0.9em] text-foreground">blocks</code> functions.
           </p>
         </Reveal>
@@ -106,8 +106,8 @@ export default function Blocks() {
             <section key={t.id} className="mt-12">
               <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-[var(--glass-border)] pb-3">
                 <h2 className="text-[20px] font-semibold tracking-tight">
-                  <span className="mr-3 font-pixel text-[13px] text-faint">Tier {t.id}</span>
                   {t.title}
+                  <span className="mt-1 block text-[13px] font-normal text-muted-foreground">{t.sub}</span>
                 </h2>
                 <span className="font-mono text-[11px] text-faint">{mods.length}</span>
               </div>
@@ -115,19 +115,19 @@ export default function Blocks() {
             </section>
           );
         })}
-        {list.length === 0 && <p className="mt-16 text-center text-[14px] text-muted-foreground">No block of this shape yet.</p>}
+        {list.length === 0 && <p className="mt-16 text-center text-[14px] text-muted-foreground">No block of this kind yet.</p>}
 
         {READY_MADE.length > 0 && (
           <section className="mt-20">
             <div className="mb-5 border-b border-[var(--glass-border)] pb-3">
-              <h2 className="text-[20px] font-semibold tracking-tight">Ready-made builds</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Whole applications made of blocks.</p>
+              <h2 className="text-[20px] font-semibold tracking-tight">Complete contracts</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Whole applications you can deploy as they are, or fork.</p>
             </div>
             <Grid list={READY_MADE} />
           </section>
         )}
 
-        <p className="mt-12 text-[12px] leading-relaxed text-faint">Source: docs/catalog/&lt;checks|joins|actions|payers|ready-made&gt;/&lt;block&gt;.md. Hover a mempool chip for the reason.</p>
+        <p className="mt-12 text-[12px] leading-relaxed text-faint">Source: docs/catalog/&lt;conditions|operators|actions|payers|complete&gt;/&lt;block&gt;.md. Hover a mempool chip for the reason.</p>
       </div>
     </div>
   );

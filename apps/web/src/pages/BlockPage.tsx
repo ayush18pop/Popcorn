@@ -20,8 +20,8 @@ const items = (md?: string) => {
 const ROW = "grid gap-1 py-3 text-[14px] sm:grid-cols-[180px_1fr] sm:gap-4";
 
 function codeFiles(m: Block) {
-  return fencedAll(m.sections["Code"]).map((c) => ({
-    filename: c.lang === "ts" || c.lang === "typescript" ? (m.sdk ? `SDK · ${m.sdk}` : "SDK") : (m.code.find((f) => f.endsWith(".sol")) ?? m.code[0] ?? c.lang),
+  return fencedAll(m.sections["Usage"]).map((c) => ({
+    filename: c.lang === "ts" || c.lang === "typescript" ? "SDK (no Solidity)" : "Solidity",
     lang: c.lang,
     code: c.code,
   }));
@@ -36,24 +36,29 @@ export default function BlockPage({ id }: { id: string }) {
   const isCheck = m?.shape === "check" || m?.shape === "join";
   const ready = m?.shape === "ready-made";
   const code = m ? codeFiles(m) : [];
-  const limits = items(m?.sections["Limits"]);
-  const presets = m?.presets.length ? m.presets : items(m?.sections["Presets"]);
+  const limits = items(m?.sections["Gotchas"]);
+  const uses = m?.useCases ?? { ready: [], configs: [], ideas: [] };
+  const useGroups = [
+    { t: "Ready to use", note: "a build or a recorded example already does this", list: uses.ready },
+    { t: "Common configurations", note: "set the configuration; no new code", list: uses.configs },
+    { t: "Other use cases", note: "not built yet", list: uses.ideas },
+  ].filter((g) => g.list.length > 0);
   const used = m ? projectsUsing(m.id) : [];
   const related = (m?.related ?? []).map(blockById).filter(Boolean) as Block[];
   const builtFrom = m?.builtFrom ?? [];
   const siblings = ready ? READY_MADE : BLOCKS.filter((x) => x.shape === m?.shape);
 
   const toc = [
-    { id: "what", t: "What it does" },
-    ...(ready && (builtFrom.length || m?.sections["Built from"]) ? [{ id: "built-from", t: "Built from" }] : []),
-    { id: "inputs", t: "Inputs" },
-    ...(presets.length ? [{ id: "presets", t: "Presets" }] : []),
-    ...(used.length ? [{ id: "used-in", t: "Used in" }] : []),
-    ...(code.length || m?.code.length ? [{ id: "code", t: "Code" }] : []),
-    { id: "runs-on", t: "Runs on" },
+    { id: "what", t: "Overview" },
+    ...(ready && (builtFrom.length || m?.sections["Composed of"]) ? [{ id: "built-from", t: "Composed of" }] : []),
+    { id: "inputs", t: "Configuration" },
+    ...(useGroups.length ? [{ id: "presets", t: "Use cases" }] : []),
+    ...(used.length ? [{ id: "used-in", t: "In the examples" }] : []),
+    ...(code.length || m?.code.length ? [{ id: "code", t: "Usage" }] : []),
+    { id: "runs-on", t: "Mempool" },
     ...(m?.gas ? [{ id: "gas", t: "Gas" }] : []),
-    ...(limits.length ? [{ id: "limits", t: "Limits" }] : []),
-    ...(related.length ? [{ id: "related", t: "Related" }] : []),
+    ...(limits.length ? [{ id: "limits", t: "Gotchas" }] : []),
+    ...(related.length ? [{ id: "related", t: "Works well with" }] : []),
   ];
 
   useEffect(() => {
@@ -100,7 +105,7 @@ export default function BlockPage({ id }: { id: string }) {
               <span className="rounded-full border border-foreground/30 px-2.5 py-1 font-mono text-[11px]">{shapeLabel(m)}</span>
               {tier && (
                 <span className="rounded-full border border-[var(--glass-border)] px-2.5 py-1 font-mono text-[11px] text-muted-foreground" title={tier.title}>
-                  tier {tier.id} · {tier.title}
+                  {tier.title}
                 </span>
               )}
               <StatusBadge status={m.status} />
@@ -109,13 +114,13 @@ export default function BlockPage({ id }: { id: string }) {
             <p id="what" className="mt-5 max-w-[680px] scroll-mt-28 text-[17px] leading-relaxed text-foreground/85">{prose(m.summary)}</p>
           </Reveal>
 
-          {/* built from (ready-made builds) */}
-          {ready && (builtFrom.length > 0 || m.sections["Built from"]) && (
+          {/* built from (complete contracts) */}
+          {ready && (builtFrom.length > 0 || m.sections["Composed of"]) && (
             <section id="built-from" className="mt-16 scroll-mt-28">
               <Reveal>
-                <p className="label-mono mb-3">Built from</p>
+                <p className="label-mono mb-3">Composed of</p>
                 <div className="glass rounded-[24px] p-6">
-                  {m.sections["Built from"] && <p className="text-[14px] leading-relaxed text-foreground/85">{prose(m.sections["Built from"])}</p>}
+                  {m.sections["Composed of"] && <p className="text-[14px] leading-relaxed text-foreground/85">{prose(m.sections["Composed of"])}</p>}
                   {builtFrom.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
                       {builtFrom.map((b) => {
@@ -138,7 +143,7 @@ export default function BlockPage({ id }: { id: string }) {
           {/* inputs */}
           <section id="inputs" className="mt-16 scroll-mt-28">
             <Reveal>
-              <p className="label-mono mb-3">Inputs</p>
+              <p className="label-mono mb-3">Configuration</p>
               <dl className="divide-y divide-[var(--glass-border)] border-y border-[var(--glass-border)]">
                 {m.inputs.map((x) => (
                   <div key={x.name} className={ROW}>
@@ -148,13 +153,13 @@ export default function BlockPage({ id }: { id: string }) {
                 ))}
                 {m.perTrigger && (
                   <div className={ROW}>
-                    <dt className="font-mono text-[11px] uppercase tracking-[0.06em] text-faint">Each trigger brings</dt>
+                    <dt className="font-mono text-[11px] uppercase tracking-[0.06em] text-faint">Trigger payload</dt>
                     <dd className="leading-relaxed text-foreground/85">{prose(m.perTrigger)}</dd>
                   </div>
                 )}
                 {m.output && (
                   <div className={ROW}>
-                    <dt className="font-mono text-[11px] uppercase tracking-[0.06em] text-faint">{isCheck ? "Answers" : "Result"}</dt>
+                    <dt className="font-mono text-[11px] uppercase tracking-[0.06em] text-faint">{isCheck ? "Returns" : "Effect"}</dt>
                     <dd className="leading-relaxed text-foreground/85">{prose(m.output)}</dd>
                   </div>
                 )}
@@ -162,14 +167,22 @@ export default function BlockPage({ id }: { id: string }) {
             </Reveal>
           </section>
 
-          {/* presets */}
-          {presets.length > 0 && (
+          {/* use cases, in three groups */}
+          {useGroups.length > 0 && (
             <section id="presets" className="mt-16 scroll-mt-28">
               <Reveal>
-                <p className="label-mono mb-3">Presets</p>
-                <div className="flex flex-wrap gap-2">
-                  {presets.map((p) => (
-                    <span key={p} className="glass rounded-2xl px-4 py-2.5 text-[13px] text-foreground/85">{prose(p)}</span>
+                <p className="label-mono mb-3">Use cases</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {useGroups.map((g) => (
+                    <div key={g.t} className="glass rounded-[20px] p-5">
+                      <p className="text-[14px] font-semibold tracking-tight">{g.t}</p>
+                      <p className="mt-0.5 font-mono text-[10.5px] text-faint">{g.note}</p>
+                      <ul className="mt-3 space-y-2">
+                        {g.list.map((x) => (
+                          <li key={x} className="text-[13px] leading-relaxed text-foreground/85">{prose(x)}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
                 </div>
               </Reveal>
@@ -180,7 +193,7 @@ export default function BlockPage({ id }: { id: string }) {
           {used.length > 0 && (
             <section id="used-in" className="mt-16 scroll-mt-28">
               <Reveal>
-                <p className="label-mono mb-3">Used in</p>
+                <p className="label-mono mb-3">In the examples</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {used.map((p) => {
                     const role = p.modules.find((x) => x.id === m.id)?.role;
@@ -223,10 +236,10 @@ export default function BlockPage({ id }: { id: string }) {
           {/* where it runs (decision 67: positive chips only) */}
           <section id="runs-on" className="mt-16 scroll-mt-28">
             <Reveal>
-              <p className="label-mono mb-3">Runs on</p>
+              <p className="label-mono mb-3">Mempool</p>
               <div className="glass rounded-[24px] p-6">
                 <MempoolBadges m={m} />
-                {m.sections["Runs on"] && <p className="mt-4 text-[14px] leading-relaxed text-foreground/85">{prose(m.sections["Runs on"])}</p>}
+                {m.sections["Mempool"] && <p className="mt-4 text-[14px] leading-relaxed text-foreground/85">{prose(m.sections["Mempool"])}</p>}
               </div>
             </Reveal>
           </section>
@@ -246,7 +259,7 @@ export default function BlockPage({ id }: { id: string }) {
           {limits.length > 0 && (
             <section id="limits" className="mt-16 scroll-mt-28">
               <Reveal>
-                <p className="label-mono mb-3">Limits</p>
+                <p className="label-mono mb-3">Gotchas</p>
                 <ul className="divide-y divide-[var(--glass-border)] border-y border-[var(--glass-border)]">
                   {limits.map((l, i) => (
                     <li key={i} className="grid grid-cols-[32px_1fr] gap-3 py-4 text-[14px] leading-relaxed text-foreground/85">
@@ -290,7 +303,7 @@ export default function BlockPage({ id }: { id: string }) {
               ))}
             </div>
             <div className="mt-8 space-y-1">
-              <p className="label-mono mb-2">{ready ? "Ready-made builds" : `${shapeLabel(m)}s`}</p>
+              <p className="label-mono mb-2">{ready ? "Complete contracts" : `${shapeLabel(m)}s`}</p>
               {siblings.map((x) => (
                 <a key={x.id} href={href("blocks", x.id)} className={cn("block truncate text-[12.5px]", x.id === m.id ? "text-foreground" : "text-faint hover:text-muted-foreground")}>
                   {x.name}

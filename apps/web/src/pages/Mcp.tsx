@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 const TOOLS: { name: string; does: string; input: string; local?: (arg: string) => unknown }[] = [
   {
-    name: "list_blocks", does: "The blocks and ready-made builds, optionally for one shape.", input: `{ "shape": "check" }`,
+    name: "list_blocks", does: "The blocks and complete contracts, optionally for one kind.", input: `{ "shape": "check" }`,
     local: (a) => {
       const f = safe(a) as { shape?: string };
       return CATALOG.filter((m) => !f.shape || m.shape === f.shape).map((m) => ({ id: m.id, name: m.name, shape: m.shape, tier: m.tier, status: m.status, runsOn: m.runsOn }));
@@ -24,7 +24,7 @@ const TOOLS: { name: string; does: string; input: string; local?: (arg: string) 
     local: (a) => {
       const m = CATALOG.find((x) => x.id === (safe(a) as { id?: string }).id);
       return m
-        ? { id: m.id, name: m.name, shape: m.shape, tier: m.tier, status: m.status, runsOn: m.runsOn, whatItDoes: m.summary, inputs: m.inputs, eachTriggerBrings: m.perTrigger, output: m.output, presets: m.presets, builtFrom: m.builtFrom.length ? m.builtFrom : undefined, sdk: m.sdk, limits: m.sections["Limits"], code: m.code }
+        ? { id: m.id, name: m.name, shape: m.shape, tier: m.tier, status: m.status, runsOn: m.runsOn, overview: m.summary, inputs: m.inputs, triggerPayload: m.perTrigger, output: m.output, useCases: m.useCases, builtFrom: m.builtFrom.length ? m.builtFrom : undefined, sdk: m.sdk, gotchas: m.sections["Gotchas"], code: m.code }
         : { error: "no such block" };
     },
   },

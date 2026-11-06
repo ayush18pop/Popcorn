@@ -243,7 +243,7 @@ function Index() {
                     ))}
                   </dl>
                   <div className="mt-6">
-                    <p className="label-mono mb-3">Built from</p>
+                    <p className="label-mono mb-3">Blocks used</p>
                     <BlockRoles p={p} dense />
                   </div>
                   <div className="mt-8">

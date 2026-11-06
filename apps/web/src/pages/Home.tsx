@@ -235,7 +235,7 @@ export default function Home() {
         <div className="mx-auto max-w-[1120px]">
           <SectionHead label="Blocks" title="A payer, checks, joins and actions." sub="Every build is a payer, checks joined together, and actions. Pick the blocks; plug them together in Solidity or through the SDK." />
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {[...SHAPES.map((sh) => ({ id: sh.id, name: sh.plural, does: sh.does, mods: BLOCKS.filter((m) => m.shape === sh.id) })), { id: "ready-made", name: "Ready-made builds", does: "Whole applications made of blocks.", mods: READY_MADE }].map((c, i) => {
+            {[...SHAPES.map((sh) => ({ id: sh.id, name: sh.plural, does: sh.does, mods: BLOCKS.filter((m) => m.shape === sh.id) })), { id: "ready-made", name: "Complete contracts", does: "Whole applications made of blocks.", mods: READY_MADE }].map((c, i) => {
               const built = c.mods.filter((m) => m.status === "built").length;
               return (
                 <Reveal key={c.id} delay={(i % 4) * 0.06}>

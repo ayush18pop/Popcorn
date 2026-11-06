@@ -27,17 +27,17 @@ export interface Shape {
 
 /** The four block shapes. A build is a payer, checks joined together, and actions. */
 export const SHAPES: Shape[] = [
-  { id: "check", name: "Check", plural: "Checks", does: "Answers yes, no or unknown. Unknown never fires." },
-  { id: "join", name: "Join", plural: "Joins", does: "Combines checks into one answer: all of, any of, none of, at least k of n, exactly one of, if / else." },
-  { id: "action", name: "Action", plural: "Actions", does: "Does one thing when the checks say yes." },
-  { id: "payer", name: "Payer", plural: "Payers", does: "Pays the gas." },
+  { id: "check", name: "Condition", plural: "Conditions", does: "Returns YES, NO or UNKNOWN. UNKNOWN never fires." },
+  { id: "join", name: "Logic operator", plural: "Logic operators", does: "Combines conditions: AND, OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE." },
+  { id: "action", name: "Action", plural: "Actions", does: "Does one thing when the conditions return YES." },
+  { id: "payer", name: "Gas payer", plural: "Gas payers", does: "Decides who pays the gas." },
 ];
 export const shapeById = (id: string) => SHAPES.find((s) => s.id === id);
 
-export const TIERS: { id: TierId; title: string }[] = [
-  { id: 1, title: "Without these, nothing works" },
-  { id: 2, title: "With these, the headline examples work" },
-  { id: 3, title: "With these, the rest of the listed use cases work" },
+export const TIERS: { id: TierId; title: string; sub: string }[] = [
+  { id: 1, title: "Core", sub: "The minimum for any build: a gas payer, a condition, an action, and the logic operators." },
+  { id: 2, title: "Common", sub: "What most real builds add: proofs, rewards, voting, key recovery, exits." },
+  { id: 3, title: "Specialized", sub: "Oracles and attestations, upgrade watching, post-quantum keys, lending." },
 ];
 
 export interface Block {
@@ -45,7 +45,7 @@ export interface Block {
   name: string;
   /** "ready-made" for whole builds (Private Pool, Stealth Vault). */
   shape: ShapeId | "ready-made";
-  /** Absent for ready-made builds. */
+  /** Absent for complete contracts. */
   tier: TierId | null;
   status: Status;
   runsOn: RunsOn[];
@@ -53,12 +53,13 @@ export interface Block {
   inputs: { name: string; what: string }[];
   perTrigger: string;
   output: string;
-  presets: string[];
+  /** Use cases in three groups: ready to use (a build or example exists), common configurations, other ideas (not built). */
+  useCases: { ready: string[]; configs: string[]; ideas: string[] };
   builtFrom: string[];
   sdk: string | null;
   related: string[];
   code: string[];
-  /** Markdown sections by heading ("What it does", "Inputs", "Code", ...). */
+  /** Markdown sections by heading ("Overview", "Configuration", "Usage", "Mempool", "Gotchas", ...). */
   sections: Record<string, string>;
   summary: string;
 }
@@ -105,13 +106,17 @@ function parseFile(path: string, raw: string): Block {
     inputs: ((fm.inputs as { name: unknown; what: unknown }[]) ?? []).map((x) => ({ name: String(x.name), what: String(x.what ?? "") })),
     perTrigger: String(fm.perTrigger ?? ""),
     output: String(fm.output ?? ""),
-    presets: strings(fm.presets),
+    useCases: {
+      ready: strings((fm.useCases as Record<string, unknown> | undefined)?.ready),
+      configs: strings((fm.useCases as Record<string, unknown> | undefined)?.configs),
+      ideas: strings((fm.useCases as Record<string, unknown> | undefined)?.ideas),
+    },
     builtFrom: strings(fm.builtFrom),
     sdk: typeof fm.sdk === "string" ? fm.sdk : null,
     related: strings(fm.related),
     code: strings(fm.code),
     sections,
-    summary: sections["What it does"] ?? "",
+    summary: sections["Overview"] ?? "",
   };
 }
 
@@ -122,9 +127,9 @@ const shapeOrder = (b: Block) => (b.shape === "ready-made" ? 99 : SHAPES.findInd
 export const BLOCKS: Block[] = ALL.filter((b) => b.shape !== "ready-made").sort(
   (a, b) => (a.tier ?? 9) - (b.tier ?? 9) || shapeOrder(a) - shapeOrder(b) || a.name.localeCompare(b.name),
 );
-/** Ready-made builds: whole applications made of blocks. */
+/** Complete contracts: whole applications made of blocks. */
 export const READY_MADE: Block[] = ALL.filter((b) => b.shape === "ready-made").sort((a, b) => a.name.localeCompare(b.name));
-/** Blocks and ready-made builds together. */
+/** Blocks and complete contracts together. */
 export const CATALOG: Block[] = [...BLOCKS, ...READY_MADE];
 export const MODULES = CATALOG;
 
@@ -132,7 +137,7 @@ export const blockById = (id: string) => CATALOG.find((m) => m.id === id);
 export const moduleById = blockById;
 
 /** "Check", "Join", ..., or "Ready-made build". */
-export const shapeLabel = (b: Block) => (b.shape === "ready-made" ? "Ready-made build" : (shapeById(b.shape)?.name ?? b.shape));
+export const shapeLabel = (b: Block) => (b.shape === "ready-made" ? "Complete contract" : (shapeById(b.shape)?.name ?? b.shape));
 
 // ---------------------------------------------------------------- example projects
 
@@ -153,7 +158,7 @@ export interface Project {
   group: GroupId;
   name: string;
   problem: string;
-  /** Block ids (and ready-made build ids) with the role each plays here. */
+  /** Block ids (and complete contract ids) with the role each plays here. */
   modules: { id: string; role: string }[];
   /** What the build protects or acts on, when it is a demo contract and not a block. */
   target: string | null;
@@ -196,3 +201,32 @@ export const projectsUsing = (blockId: string) => PROJECTS.filter((p) => p.modul
 
 export const REPO = "https://github.com/ayush18pop/Popcorn";
 export const repoFile = (path: string) => `${REPO}/blob/main/${path}`;
+
+/** Block ids before the developer renaming, so old links still open the right page. */
+export const OLD_BLOCK_IDS: Record<string, string> = {
+  "all-of": "and",
+  "any-of": "or",
+  "none-of": "not",
+  "at-least-k-of-n": "k-of-n",
+  "exactly-one-of": "exactly-one",
+  "value-crosses-a-line": "compare",
+  "value-moves-too-fast": "percent-change",
+  "contract-code-changed": "code-hash-changed",
+  "signed-instruction": "signature",
+  "statement-signed-by-reporters": "k-of-n-attestation",
+  "proof-that-the-rules-were-broken": "exploit-proof",
+  "prove-youre-in-the-group": "membership-proof",
+  "make-a-call": "call",
+  "pause-the-target": "pause",
+  "pay-the-reward": "reward-pool",
+  "anonymous-group-vote": "anonymous-vote",
+  "hand-over-to-a-new-key": "key-rotation",
+  "exit-to-an-address": "withdraw-all",
+  "switch-to-quantum-safe-only": "post-quantum-mode",
+  "repay-a-loan": "repay",
+  "contract-pays-the-gas": "self-paying",
+  "payer-gets-rewarded": "caller-pays",
+  "public-gas-sponsor": "paymaster",
+  "private-pool": "privacy-pool",
+  "stealth-vault": "stealth-addresses"
+};
