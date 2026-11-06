@@ -94,8 +94,11 @@ async function listAdmissions(devnet: DevnetName): Promise<AdmissionRow[]> {
   return Array.isArray(r) ? r : (r.items ?? []);
 }
 
-export default function Explorer({ initial }: { initial?: string }) {
-  const [devnet, setDevnet] = useState<DevnetName>("local");
+/** The network the explorer starts on: VITE_DEFAULT_DEVNET at build time (the deployed site sets "devnet1"), else local. */
+export const DEFAULT_DEVNET: DevnetName = import.meta.env.VITE_DEFAULT_DEVNET === "devnet1" ? "devnet1" : "local";
+
+export default function Explorer({ initial, network }: { initial?: string; network?: DevnetName }) {
+  const [devnet, setDevnet] = useState<DevnetName>(network ?? DEFAULT_DEVNET);
   const [q, setQ] = useState(initial ?? "");
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<Lookup | null>(null);
@@ -109,7 +112,7 @@ export default function Explorer({ initial }: { initial?: string }) {
   };
   const submit = () => {
     const v = q.trim();
-    if (isHash(v)) go("explorer", v);
+    if (isHash(v)) go("explorer", devnet, v);
     else void run(v);
   };
   useEffect(() => {
@@ -172,7 +175,7 @@ export default function Explorer({ initial }: { initial?: string }) {
           )}
         </AnimatePresence>
 
-        <Recorded onPick={(h) => (setQ(h), go("explorer", h))} />
+        <Recorded onPick={(h) => (setQ(h), go("explorer", "local", h))} />
 
         {/* recent admissions: every one opens in the inspector */}
         <section className="mt-20">
@@ -206,7 +209,7 @@ export default function Explorer({ initial }: { initial?: string }) {
                 {[...adm.rows].sort((x, y) => y.at - x.at).map((r) => {
                   const failed = r.checks?.find((c) => c.verdict === "fail");
                   return (
-                    <button key={r.txHash + r.at} onClick={() => (setQ(r.txHash), go("explorer", r.txHash))} className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-5 py-3 text-left font-mono text-[12px] hover:bg-foreground/[0.03]">
+                    <button key={r.txHash + r.at} onClick={() => (setQ(r.txHash), go("explorer", devnet, r.txHash))} className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-5 py-3 text-left font-mono text-[12px] hover:bg-foreground/[0.03]">
                       <span className={cn("rounded-full px-2 py-0.5 text-[10.5px]", r.outcome === "rejected" ? "bg-red-500/15 text-red-600 dark:text-red-400" : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400")}>{r.outcome}</span>
                       <span className="min-w-0 truncate text-foreground/90">
                         {r.txHash.slice(0, 18)}…{r.txHash.slice(-6)} <span className="text-faint">· sender {r.sender.slice(0, 8)}…</span>
@@ -326,7 +329,7 @@ const STAGE_MARK: Record<Stage["state"], string> = { pass: "✓", fail: "✕", s
 
 function TxView({ ins, devnet }: { ins: Inspection; devnet: DevnetName }) {
   const head =
-    ins.status === "included" ? "Included" : ins.status === "refused" ? "Refused" : ins.status === "action-reverted" ? "Included, but the action reverted" : ins.status === "pending" ? "Pending" : "Not found";
+    ins.status === "included" ? "Included" : ins.status === "refused" ? "Refused" : ins.status === "action-reverted" ? "Included, but the action reverted" : ins.status === "pending" ? "Pending" : ins.status === "dropped" ? "Admitted, then dropped" : "Not found";
   const checks = ins.stages.find((s) => s.checks)?.checks;
   return (
     <div className="space-y-6">
@@ -401,7 +404,7 @@ function Recorded({ onPick }: { onPick: (hash: string) => void }) {
     <section className="mt-20">
       <p className="label-mono mb-3">Try a recorded transaction</p>
       <p className="max-w-[620px] text-[13px] leading-relaxed text-muted-foreground">
-        Each example's featured transaction (included) and its refused case (sent to the sidecar and refused), on the local devnet.
+        Each example's featured transaction (included) and its refused case (sent to the sidecar and refused). They were recorded on the local devnet, so they open there: run <code className="font-mono">devnet/up.sh</code> to inspect them live.
       </p>
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {rows.map(({ p, run }) => {

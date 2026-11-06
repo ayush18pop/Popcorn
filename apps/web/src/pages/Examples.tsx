@@ -126,7 +126,7 @@ function ProjectPage({ p }: { p: Project }) {
                         <span>block {fmt(s.block)} · {fmt(s.gasUsed)} gas · {s.status}</span>
                       </div>
                       <p className="mt-2 text-[14px] leading-relaxed text-foreground/90">{s.title}</p>
-                      <a href={href("explorer", s.tx)} className="mt-2 inline-block font-mono text-[11px] text-muted-foreground hover:text-foreground" title={s.tx}>{shortHash(s.tx)} · explorer →</a>
+                      <a href={href("explorer", run!.network.name === "local" ? "local" : "devnet1", s.tx)} className="mt-2 inline-block font-mono text-[11px] text-muted-foreground hover:text-foreground" title={s.tx}>{shortHash(s.tx)} · explorer →</a>
                     </div>
                   </motion.li>
                 );
@@ -311,7 +311,7 @@ function RunFlows({ run, featured }: { run: Run; featured: string }) {
         <FlowVerdict flow={cur.flow} />
       </div>
       {cur.tx && (
-        <a href={href("explorer", cur.tx)} className="mt-4 inline-flex items-center gap-1.5 font-mono text-[11.5px] text-muted-foreground hover:text-foreground">
+        <a href={href("explorer", run.network.name === "local" ? "local" : "devnet1", cur.tx)} className="mt-4 inline-flex items-center gap-1.5 font-mono text-[11.5px] text-muted-foreground hover:text-foreground">
           {cur.tx.slice(0, 18)}… · open in the explorer →
         </a>
       )}
