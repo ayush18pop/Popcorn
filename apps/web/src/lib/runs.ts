@@ -18,6 +18,8 @@ export type RunStep =
   | { stage: "include"; tx: string; block: number; status: string; payer: string; gasUsed: number }
   | { stage: "act"; before: Record<string, string>; after: Record<string, string>; events?: string[] };
 
+import type { Flow } from "@popcorn/sdk/inspect";
+
 export interface Run {
   module: string;
   recorded: boolean;
@@ -26,10 +28,12 @@ export interface Run {
   title: string;
   actors: { caller: string; ruleContract: string; payer: string };
   steps: RunStep[];
-  failing: { result: string; core?: string; steps: RunStep[] };
+  failing: { result: string; core?: string; steps: RunStep[]; /** the refused transaction's hash (sent to the sidecar) */ tx?: string; flow?: Flow };
+  /** The featured transaction's flow, as the explorer shows it. */
+  flow?: Flow | null;
   sources: Record<string, string>;
   /** Every transaction of a project, in order, with the module and its role (recorded runs). */
-  story?: { module: string; role: string; title: string; tx: string; block: number; gasUsed: number; status: string }[];
+  story?: { module: string; role: string; title: string; tx: string; block: number; gasUsed: number; status: string; flow?: Flow }[];
   contracts?: Record<string, string>;
   owner?: string;
 }

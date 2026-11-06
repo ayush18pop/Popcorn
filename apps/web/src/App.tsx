@@ -28,7 +28,7 @@ export default function App() {
         {page === "home" && <Home />}
         {page === "blocks" && (parts.length >= 1 ? <BlockPage key={parts[0]} id={parts[0]} /> : <Blocks />)}
         {page === "examples" && <Examples key={parts.join("/")} runKey={parts.length >= 2 ? `${parts[0]}/${parts[1]}` : undefined} />}
-        {page === "explorer" && <Explorer />}
+        {page === "explorer" && <Explorer key={parts[0] ?? ""} initial={parts[0]} />}
         {page === "skills" && <Skills />}
         {page === "mcp" && <Mcp />}
         {page === "docs" && <Docs section={parts[0]} anchor={parts[1]} />}

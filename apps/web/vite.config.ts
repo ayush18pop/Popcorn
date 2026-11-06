@@ -14,6 +14,8 @@ export default defineConfig({
       "@popcorn/simulator": path.join(repo, "packages/simulator/src/index.ts"),
       // the SDK's transport (devnet table, JSON-RPC, receipts, admission status) has no Node APIs, so the explorer reuses it
       "@popcorn/sdk/transport": path.join(repo, "packages/sdk/src/transport.ts"),
+      // the transaction inspector (any hash: stages and the build's flow) is browser-safe too
+      "@popcorn/sdk/inspect": path.join(repo, "packages/sdk/src/inspect.ts"),
     },
     // SDK sources import viem; resolve it from this app
     dedupe: ["viem"],

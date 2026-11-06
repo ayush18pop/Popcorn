@@ -5,6 +5,8 @@ import { MetalNumeral } from "@/components/MetalNumeral";
 import { Reveal } from "@/components/motion";
 import { PrimaryLink, StatusBadge } from "@/components/bits";
 import { Player } from "@/player/Player";
+import { FlowGraph, FlowVerdict } from "@/components/FlowGraph";
+import type { Run } from "@/lib/runs";
 import { GROUPS, PROJECTS, blockById, projectByKey, repoFile, shapeLabel, type Project } from "@/lib/catalog";
 import { RUNS, fmt, step } from "@/lib/runs";
 import { href } from "@/lib/route";
@@ -93,8 +95,13 @@ function ProjectPage({ p }: { p: Project }) {
 
         {run ? (
           <Reveal delay={0.12} className="mt-10">
-            <p className="label-mono mb-3">The featured transaction: {p.featured}</p>
-            <Player run={run} autoplay />
+            <RunFlows run={run} featured={p.featured} />
+            <details className="mt-6">
+              <summary className="label-mono cursor-pointer hover:text-foreground">Raw frames of the featured transaction</summary>
+              <div className="mt-4">
+                <Player run={run} />
+              </div>
+            </details>
             {run.owner && <p className="mt-3 text-[12px] text-muted-foreground">{run.owner}</p>}
           </Reveal>
         ) : (
@@ -119,7 +126,7 @@ function ProjectPage({ p }: { p: Project }) {
                         <span>block {fmt(s.block)} · {fmt(s.gasUsed)} gas · {s.status}</span>
                       </div>
                       <p className="mt-2 text-[14px] leading-relaxed text-foreground/90">{s.title}</p>
-                      <p className="mt-2 font-mono text-[11px] text-muted-foreground" title={s.tx}>{shortHash(s.tx)}</p>
+                      <a href={href("explorer", s.tx)} className="mt-2 inline-block font-mono text-[11px] text-muted-foreground hover:text-foreground" title={s.tx}>{shortHash(s.tx)} · explorer →</a>
                     </div>
                   </motion.li>
                 );
@@ -262,6 +269,52 @@ function Index() {
           </section>
         );
       })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- the flows of a recorded run */
+
+/** Every recorded frame transaction of the project as a flow, plus the refused case: pick one to see which blocks it went
+ *  through. Each one opens in the explorer by its hash. */
+function RunFlows({ run, featured }: { run: Run; featured: string }) {
+  const inc = run.steps.find((s) => s.stage === "include") as { tx?: string } | undefined;
+  const items = [
+    ...(run.story ?? []).filter((s) => s.flow).map((s) => ({ title: s.title, tx: s.tx, flow: s.flow!, refused: false })),
+    ...(run.failing.flow ? [{ title: `Refused: ${run.failing.result}${run.failing.core ? ` (${run.failing.core})` : ""}`, tx: run.failing.tx ?? "", flow: run.failing.flow, refused: true }] : []),
+  ];
+  const start = Math.max(0, items.findIndex((x) => x.tx === inc?.tx));
+  const [i, setI] = useState(start);
+  const cur = items[i];
+  if (!cur) return null;
+  return (
+    <div className="glass rounded-[28px] p-6">
+      <p className="label-mono mb-3">How it works, transaction by transaction · featured: {featured}</p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((x, j) => (
+          <button
+            key={x.tx + j}
+            onClick={() => setI(j)}
+            className={cn(
+              "max-w-[280px] truncate rounded-full border px-3 py-1.5 text-left text-[12px] transition-colors",
+              j === i ? "border-foreground/40 bg-foreground/[0.07] text-foreground" : "border-[var(--glass-border)] text-muted-foreground hover:text-foreground",
+              x.refused && "border-red-500/40",
+            )}
+            title={x.title}
+          >
+            {String(j + 1).padStart(2, "0")} · {x.flow.trigger} · {x.title}
+          </button>
+        ))}
+      </div>
+      <div className="mt-6">
+        <FlowGraph key={i} flow={cur.flow} />
+        <FlowVerdict flow={cur.flow} />
+      </div>
+      {cur.tx && (
+        <a href={href("explorer", cur.tx)} className="mt-4 inline-flex items-center gap-1.5 font-mono text-[11.5px] text-muted-foreground hover:text-foreground">
+          {cur.tx.slice(0, 18)}… · open in the explorer →
+        </a>
+      )}
     </div>
   );
 }
