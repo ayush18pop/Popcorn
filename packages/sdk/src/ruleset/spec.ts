@@ -17,6 +17,8 @@ export type Node =
   | { type: "or"; children: Node[] }
   | { type: "not"; child: Node }
   | { type: "kofn"; k: number; children: Node[] }
+  /** Exactly k children are true (Exactly One Of: k = 1). Children are evaluated exactly, so no predicate below it. */
+  | { type: "exactly"; k: number; children: Node[] }
   | { type: "cmp"; source: Source; op: Op; value: bigint }
   | { type: "range"; source: Source; lo: bigint; hi: bigint; outside?: boolean }
   /**
@@ -75,6 +77,8 @@ export const and = (...children: Node[]): Node => ({ type: "and", children });
 export const or = (...children: Node[]): Node => ({ type: "or", children });
 export const not = (child: Node): Node => ({ type: "not", child });
 export const kOfN = (k: number, ...children: Node[]): Node => ({ type: "kofn", k, children });
+export const exactlyK = (k: number, ...children: Node[]): Node => ({ type: "exactly", k, children });
+export const exactlyOne = (...children: Node[]): Node => exactlyK(1, ...children);
 export const always = (value = true): Node => ({ type: "const", value });
 
 /** A getter on another contract (STATICCALL, `selector` as "name()" or 0x-4 bytes). */

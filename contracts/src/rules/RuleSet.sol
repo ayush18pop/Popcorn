@@ -285,23 +285,25 @@ abstract contract RuleSet is RuleContract {
             return r == 2 ? 2 : 1 - r;
         }
         uint256 k;
-        if (t == T_KOFN) {
+        if (t == T_KOFN || t == T_EXACT) {
             k = u8(ev.cfg, q);
             q += 1;
         }
         if (t == T_OR && !exact && !ev.debug) return _orHint(ev, q, end, id);
-        uint256 tally = _tally(ev, t, q, end, id, exact, k);
+        // EXACT needs each child's exact answer, like NOT: a child that cannot be read is unknown, never "no"
+        uint256 tally = _tally(ev, t, q, end, id, exact || t == T_EXACT, k);
         uint256 yes = tally & MASK64;
         uint256 unk = (tally >> 64) & MASK64;
         if (t == T_AND) return (tally >> 128) > 0 ? 0 : (unk > 0 ? 2 : 1);
         if (t == T_OR) return yes > 0 ? 1 : (unk > 0 ? 2 : 0);
+        if (t == T_EXACT) return (yes > k || yes + unk < k) ? 0 : (unk == 0 ? 1 : 2);
         return yes >= k ? 1 : (yes + unk >= k ? 2 : 0); // KOFN
     }
 
     uint256 private constant MASK64 = type(uint64).max;
 
     /// @dev Evaluates children in order, stopping early unless debugging: AND at the first false, OR at the first true,
-    ///      k-of-n once k are true. Returns yes | unknown << 64 | no << 128.
+    ///      k-of-n once k are true, exactly-k once more than k are true. Returns yes | unknown << 64 | no << 128.
     function _tally(Ev memory ev, uint256 t, uint256 q, uint256 end, uint256 id, bool exact, uint256 k) private view returns (uint256 tally) {
         uint256 cid = id + 1;
         while (q < end) {
@@ -311,6 +313,7 @@ abstract contract RuleSet is RuleContract {
                 if (t == T_AND && r == 0) return tally;
                 if (t == T_OR && r == 1) return tally;
                 if (t == T_KOFN && (tally & MASK64) >= k) return tally;
+                if (t == T_EXACT && (tally & MASK64) > k) return tally; // already too many
             }
             cid += u16(ev.cfg, q + 3);
             q += u16(ev.cfg, q + 1);
@@ -474,7 +477,7 @@ abstract contract RuleSet is RuleContract {
                 if (ok && v < HALF) _sstore(bytes32(uint256(CKPT_BASE) + u8(c, p + NODE_HEADER + (t == T_CROSSING ? 129 : 101))), v + 1);
             }
             // composites: step into the first child; leaves: skip the node
-            p += t < 0x10 ? NODE_HEADER + (t == T_KOFN ? 1 : 0) : u16(c, p + 1);
+            p += t < 0x10 ? NODE_HEADER + (t == T_KOFN || t == T_EXACT ? 1 : 0) : u16(c, p + 1);
         }
     }
 }

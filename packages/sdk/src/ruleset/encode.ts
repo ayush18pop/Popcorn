@@ -25,7 +25,7 @@ export class RuleSetInvalid extends PopcornError {
 }
 
 // type ids (same as RuleSetCodec.sol)
-export const T = { and: 1, or: 2, not: 3, kofn: 4, cmp: 0x10, range: 0x11, crossing: 0x12, delta: 0x13, ratio: 0x14, codeHash: 0x15, predicate: 0x16, const: 0x17 } as const;
+export const T = { and: 1, or: 2, not: 3, kofn: 4, exactly: 5, cmp: 0x10, range: 0x11, crossing: 0x12, delta: 0x13, ratio: 0x14, codeHash: 0x15, predicate: 0x16, const: 0x17 } as const;
 const OPS: Op[] = ["gt", "ge", "lt", "le", "eq", "ne"];
 const DIRS: Dir[] = ["up", "down", "either"];
 const HEADER = 5;
@@ -37,8 +37,10 @@ const HALF = 1n << 255n;
 
 // ---------------------------------------------------------------- structure helpers
 
-export const isComposite = (n: Node): n is Extract<Node, { type: "and" | "or" | "not" | "kofn" }> => n.type === "and" || n.type === "or" || n.type === "not" || n.type === "kofn";
-export const childrenOf = (n: Node): Node[] => (n.type === "and" || n.type === "or" || n.type === "kofn" ? n.children : n.type === "not" ? [n.child] : []);
+export const isComposite = (n: Node): n is Extract<Node, { type: "and" | "or" | "not" | "kofn" | "exactly" }> =>
+  n.type === "and" || n.type === "or" || n.type === "not" || n.type === "kofn" || n.type === "exactly";
+export const childrenOf = (n: Node): Node[] =>
+  n.type === "and" || n.type === "or" || n.type === "kofn" || n.type === "exactly" ? n.children : n.type === "not" ? [n.child] : [];
 export const countNodes = (n: Node): number => 1 + childrenOf(n).reduce((a, c) => a + countNodes(c), 0);
 const isStateful = (n: Node) => n.type === "crossing" || n.type === "delta";
 
@@ -53,7 +55,7 @@ export interface NodeInfo {
   node: Node;
   /** Preorder indexes (rule-relative) of the children. */
   children: number[];
-  /** Under an odd number of NOTs or in an earlier tree of an else set: evaluated exactly (no hint, unknown propagates). */
+  /** Under a NOT or an exactly-k, or in an earlier tree of an else set: evaluated exactly (no hint, unknown propagates). */
   exact: boolean;
 }
 
@@ -73,7 +75,7 @@ export function layoutRuleSet(spec: RuleSetSpec): RuleLayout[] {
       const index = nodes.length;
       const info: NodeInfo = { id: base + index, ruleId, index, depth, node: n, children: [], exact };
       nodes.push(info);
-      for (const c of childrenOf(n)) info.children.push(walk(c, depth + 1, exact || n.type === "not"));
+      for (const c of childrenOf(n)) info.children.push(walk(c, depth + 1, exact || n.type === "not" || n.type === "exactly"));
       return index;
     };
     walk(r.when, 1, spec.mode === "else" && ruleId + 1 < spec.rules.length);
@@ -133,9 +135,9 @@ export function validateRuleSet(spec: RuleSetSpec): string[] {
       const at = `${rp} node ${n.index} (${n.node.type})`;
       if (n.depth > L.MAX_DEPTH) bad(`${at}: depth ${n.depth} over ${L.MAX_DEPTH}`);
       const x = n.node;
-      if (x.type === "and" || x.type === "or" || x.type === "kofn") {
+      if (x.type === "and" || x.type === "or" || x.type === "kofn" || x.type === "exactly") {
         if (x.children.length < 1 || x.children.length > L.MAX_CHILDREN) bad(`${at}: ${x.children.length} children (1..${L.MAX_CHILDREN})`);
-        if (x.type === "kofn" && (!Number.isInteger(x.k) || x.k < 1 || x.k > x.children.length)) bad(`${at}: k=${x.k} outside 1..${x.children.length}`);
+        if ((x.type === "kofn" || x.type === "exactly") && (!Number.isInteger(x.k) || x.k < 1 || x.k > x.children.length)) bad(`${at}: k=${x.k} outside 1..${x.children.length}`);
       } else if (x.type === "not") {
         // exactly one child by construction
       } else if (x.type === "cmp") {
@@ -175,7 +177,7 @@ export function validateRuleSet(spec: RuleSetSpec): string[] {
         const g = x.gas ?? DEFAULT_PREDICATE_GAS;
         if (!Number.isInteger(g) || g < 1 || g > 0xffffffff) bad(`${at}: gas cap ${g} outside 1..2^32-1`);
         if (x.params && size(x.params) > L.MAX_PARAMS) bad(`${at}: params over ${L.MAX_PARAMS} bytes`);
-        if (n.exact) bad(`${at}: a predicate cannot be used under NOT or in an earlier tree of an else set (its false means "the witness failed"); move it to the last rule or use independent mode`);
+        if (n.exact) bad(`${at}: a predicate cannot be used under NOT or exactly-k, or in an earlier tree of an else set (its false means "the witness failed"); move it to the last rule or use independent mode`);
       } else if (x.type === "const") {
         if (typeof x.value !== "boolean") bad(`${at}: const value must be boolean`);
       } else bad(`${at}: unknown node type`);
@@ -255,6 +257,8 @@ function encodeNode(n: Node, slots: Map<Node, number>): Hex {
       return node(T.not, "0x", [encodeNode(n.child, slots)]);
     case "kofn":
       return node(T.kofn, u(n.k, 1), n.children.map((c) => encodeNode(c, slots)));
+    case "exactly":
+      return node(T.exactly, u(n.k, 1), n.children.map((c) => encodeNode(c, slots)));
     case "cmp":
       return node(T.cmp, concatHex([encodeSource(n.source), u(OPS.indexOf(n.op), 1), word(n.value)]), []);
     case "range":
@@ -381,6 +385,8 @@ function decodeNode(r: Reader, p: number): { node: Node; size: number } {
     }
     case T.kofn:
       return { node: { type: "kofn", k: r.u(b, 1), children: kids(b + 1) }, size: sz };
+    case T.exactly:
+      return { node: { type: "exactly", k: r.u(b, 1), children: kids(b + 1) }, size: sz };
     case T.cmp:
       return leaf({ type: "cmp", source: decodeSource(r, b), op: OPS[r.u(b + 64, 1)] ?? ("?" as Op), value: r.w(b + 65) }, 97);
     case T.range:

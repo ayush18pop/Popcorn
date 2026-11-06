@@ -111,6 +111,8 @@ export function nodeLabel(n: Node): string {
       return "NOT";
     case "kofn":
       return `${n.k} of ${n.children.length}`;
+    case "exactly":
+      return n.k === 1 ? `exactly one of ${n.children.length}` : `exactly ${n.k} of ${n.children.length}`;
     case "cmp":
       return `${srcLabel(n.source)} ${n.op} ${n.value}`;
     case "range":

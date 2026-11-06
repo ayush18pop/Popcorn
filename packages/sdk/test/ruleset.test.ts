@@ -119,9 +119,10 @@ function randomSpec(seed: number): rs.RuleSetSpec {
     budget++;
     const composite = depth < 4 && budget < 20 && r() < 0.5;
     if (composite) {
-      const k = pick(["and", "or", "not", "kofn"] as const);
+      const k = pick(["and", "or", "not", "kofn", "exactly"] as const);
       const n = 1 + Math.floor(r() * 3);
       if (k === "not") return rs.not(node(depth + 1, true));
+      if (k === "exactly") return rs.exactlyK(1 + Math.floor(r() * n), ...Array.from({ length: n }, () => node(depth + 1, true)));
       const kids = Array.from({ length: n }, () => node(depth + 1, exact));
       return k === "and" ? rs.and(...kids) : k === "or" ? rs.or(...kids) : rs.kOfN(1 + Math.floor(r() * n), ...kids);
     }

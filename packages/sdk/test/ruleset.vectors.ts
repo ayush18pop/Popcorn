@@ -3,7 +3,7 @@
 // invalid ones. Regenerate the fixture with `bun packages/sdk/scripts/gen-ruleset-vectors.ts`.
 import { toFunctionSelector, type Hex } from "viem";
 import { encodeRuleSetUnchecked } from "../src/ruleset/encode.ts";
-import { always, and, callAction, codeChanged, compare, crossing, delta, erc20, ethBalance, getter, inRange, kOfN, not, or, predicate, ratio, ruleSet, stateFlag, storage, type Node, type RuleSetSpec } from "../src/ruleset/spec.ts";
+import { always, and, callAction, codeChanged, compare, crossing, delta, erc20, ethBalance, exactlyK, exactlyOne, getter, inRange, kOfN, not, or, predicate, ratio, ruleSet, stateFlag, storage, type Node, type RuleSetSpec } from "../src/ruleset/spec.ts";
 
 export const A1 = "0x00000000000000000000000000000000000a0001" as const;
 export const A2 = "0x00000000000000000000000000000000000a0002" as const;
@@ -46,6 +46,10 @@ export const VALID: { name: string; spec: RuleSetSpec }[] = [
       { when: always(true), maxFires: 1, action: callAction(A3, { gas: 60_000 }) },
     ),
   },
+  {
+    name: "exactly one of",
+    spec: ruleSet("independent", { when: exactlyOne(compare(getter(A1, SEL, { gas: 30_000 }), "gt", 5n), stateFlag(A2, SEL, true, 25_000), always(false)), maxFires: 1 }),
+  },
 ];
 
 const many = (n: number): Node[] => Array.from({ length: n }, () => always(true));
@@ -68,5 +72,7 @@ export const INVALID: { name: string; config: () => Hex }[] = [
   { name: "trailing byte", config: () => `${encodeRuleSetUnchecked(VALID[0]!.spec)}00` as Hex },
   { name: "bad version", config: () => `0x02${encodeRuleSetUnchecked(VALID[0]!.spec).slice(4)}` as Hex },
   { name: "truncated", config: () => encodeRuleSetUnchecked(VALID[1]!.spec).slice(0, -8) as Hex },
+  { name: "exactly: k above n", config: () => encodeRuleSetUnchecked(ruleSet("independent", { when: exactlyK(3, ...many(2)) })) },
+  { name: "predicate under exactly one", config: () => encodeRuleSetUnchecked(ruleSet("independent", { when: exactlyOne(predicate(A1, { maxWitnessBytes: 0 }), always(true)) })) },
   { name: "params over 1024", config: () => encodeRuleSetUnchecked(ruleSet("independent", { when: predicate(A1, { params: `0x${"cd".repeat(1025)}`, maxWitnessBytes: 0 }) })) },
 ];
