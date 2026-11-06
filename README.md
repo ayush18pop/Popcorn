@@ -17,9 +17,9 @@ new ways for a DeFi team to get things wrong. Popcorn is the safe default for ea
 A **rule contract** acts when its **condition** is true, not when a key signs. Anyone can **trigger** it, even from a wallet
 with no ETH; if the condition is false the transaction is invalid, so a failed attempt costs nothing.
 
-Everything is built from **blocks**, each with one job: **checks** (yes, no or unknown), **joins** (All Of, Any Of, None
-Of, At Least k Of n, Exactly One Of, If / Else), **actions** and **payers**. A build is always a payer, checks joined
-together, and actions: inherit the blocks in Solidity, or put the stateless ones together with the SDK's `blocks`
+Everything is built from **blocks**, each with one job: **conditions** (YES, NO or UNKNOWN), **logic operators** (AND,
+OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE), **actions** and **gas payers**. A build is always a gas payer,
+conditions combined with logic operators, and actions: inherit the blocks in Solidity, or put the stateless ones together with the SDK's `blocks`
 functions and no Solidity at all.
 
 ## What is here

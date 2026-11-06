@@ -64,8 +64,8 @@ in the rule contract's context, so keys derived from its address or storage are 
 ## Blocks without Solidity
 
 Checks, joins and stateless actions are named after their blocks and put together as data, deployed on the shared
-rule-set engine (no compiler). Blocks that keep state (Pay The Reward, Anonymous Group Vote, Hand Over To A New Key, Exit
-To An Address, Switch To Quantum-Safe Only, Repay A Loan) are Solidity only: inherit them from `contracts/src/blocks`.
+rule-set engine (no compiler). Blocks that keep state (Reward Pool, Anonymous Vote, Key Rotation, Exit
+To An Address, Post-Quantum Mode, Repay) are Solidity only: inherit them from `contracts/src/blocks`.
 
 ```ts
 import { blocks, deployRuleSet } from "@popcorn/sdk";
@@ -82,7 +82,7 @@ const { ruleContract } = await deployRuleSet(client.popcorn, spec, { fund: parse
 | Shape | Functions |
 |---|---|
 | Checks | `valueCrossesLine`, `valueOutsideBand`, `ratioCrossesLine`, `valueCrossedLineSinceLastTime`, `valueMovesTooFast`, `contractCodeChanged`, `signedInstruction`, `reportersSigned` |
-| Joins | `allOf`, `anyOf`, `noneOf`, `atLeast`, `exactlyOne`, `exactly`, and `buildIfElse` for If / Else |
+| Joins | `allOf`, `anyOf`, `noneOf`, `atLeast`, `exactlyOne`, `exactly`, and `buildIfElse` for IF / ELSE |
 | Actions | `makeACall`, `pauseTarget` (another contract's `pause()`), `nothing` |
 | Sources | `getter`, `storage` (the build's own slot: public mempool), `ethBalance`, `erc20Balance` |
 
@@ -93,7 +93,7 @@ const { ruleContract } = await deployRuleSet(client.popcorn, spec, { fund: parse
 | Build | Calls |
 |---|---|
 | Proof-of-Exploit Bounty | `bountyClaim(recipient, claimId, proof)`, `bountyWatch(reporter)` (proofs: `@popcorn/zk` `proveExploit`) |
-| Public Gas Sponsor | `deployOpenSponsor`, `stakeOpenSponsor`, `configureOpenSponsor`, `sponsored(sponsor, membership?)` |
+| Paymaster | `deployOpenSponsor`, `stakeOpenSponsor`, `configureOpenSponsor`, `sponsored(sponsor, membership?)` |
 | Private Pool | `deployPrivatePool`, `poolDeposit`, `setAssociationRoot`, `poolCommitments`, `poolWithdrawal` (proofs: `@popcorn/zk` `withdrawProof`) |
 | Stealth Vault | `stealthKeys`, `stealthMetaAddress`, `prepareStealthPayment` (ML-KEM-768), `stealthPay`, `stealthAnnouncements`, `scanStealth`, `stealthSpend` |
 | Sovereign Account | `deploySovereignAccount`, `initializeAccount`, `spendTrigger`, `voteTrigger`, `quantumTrigger`, `migrateTrigger`, `exitTrigger`, `contestRecovery`, `finalizeRecovery` |

@@ -5,25 +5,26 @@ description: Build something with Popcorn (frame-transaction blocks for EIP-8141
 
 # Building with Popcorn
 
-Popcorn is a set of blocks for EIP-8141 frame transactions: a contract approves its own transaction when its checks say
-yes, so anyone can send it, even from a key with no ETH, and a no costs nothing. Every build is the same sentence:
+Popcorn is a set of blocks for EIP-8141 frame transactions: a contract approves its own transaction when its
+conditions return YES, so anyone can send it, even from a key with no ETH, and a NO costs nothing. Every build is:
 
-    a payer + checks (joined together) -> actions
+    a gas payer + conditions (combined with logic operators) -> actions
 
-- **checks** answer yes / no / unknown (unknown never fires): Value Crosses A Line, Value Moves Too Fast, Contract Code
-  Changed, Signed Instruction, Statement Signed By k Of n Reporters, Proof That The Rules Were Broken, Prove You're In
-  The Group
-- **joins** combine checks: All Of, Any Of, None Of, At Least k Of n, Exactly One Of, If / Else
-- **actions** do one thing: Make A Call, Pause The Target, Pay The Reward, Anonymous Group Vote, Hand Over To A New Key,
-  Exit To An Address, Switch To Quantum-Safe Only, Repay A Loan
-- **payers**: Contract Pays The Gas, Payer Gets Rewarded, Public Gas Sponsor
+- **conditions** return YES / NO / UNKNOWN (UNKNOWN never fires): Compare, Percent Change, Code Hash Changed, Signature,
+  K-of-N Attestation, Exploit Proof (ZK), Membership Proof (ZK)
+- **logic operators**: AND, OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE
+- **actions** do one thing: Call, Pause, Reward Pool, Anonymous Vote, Key Rotation, Withdraw All, Post-Quantum Mode, Repay
+- **gas payers**: Self-Paying, Caller Pays, Paymaster
 
-Private Pool and Stealth Vault are ready-made builds (whole applications), not blocks. Work from the user's problem,
+Block names on the site and in `docs/catalog` are these; the Solidity contracts and SDK functions still carry their
+earlier names (e.g. Compare is `ValueCrossesLine` / `blocks.valueCrossesLine`), listed on each block's page.
+
+Privacy Pool and Stealth Addresses are complete contracts (whole applications), not blocks. Work from the user's problem,
 not from block names.
 
 ## 1. Find the blocks
 
-Use the `popcorn` MCP server (read-only; `packages/mcp`). If it is not connected, read `docs/catalog/<shape>/*.md` and
+Use the `popcorn` MCP server (read-only; `packages/mcp`). If it is not connected, read `docs/catalog/<conditions|operators|actions|payers|complete>/*.md` and
 `examples/*/*/project.md` directly.
 
 - `list_examples` first: if an example project solves the same problem, start from it (Proof-of-Exploit Bounty, private
@@ -38,15 +39,15 @@ and the ML-KEM stealth announcement.
 
 ## 2. Pick a way to put the blocks together
 
-- **No Solidity** (checks, joins, Make A Call, Pause The Target on another contract): the SDK's `blocks` functions build
+- **No Solidity** (checks, joins, Call, Pause on another contract): the SDK's `blocks` functions build
   the spec and `deployRuleSet` publishes it on the shared rule-set engine. Example: `packages/sdk/test/blocks.network.test.ts`.
   ```ts
   const { build, allOf, noneOf, valueCrossesLine, getter, pauseTarget } = blocks;
   const spec = build({ when: allOf(valueCrossesLine(getter(gauge, "value()"), "above", 100n), noneOf(valueCrossesLine(getter(pool, "paused()"), "above", 0n))), then: pauseTarget(pool) });
   const { ruleContract } = await deployRuleSet(client.popcorn, spec, { fund, stake: true });
   ```
-- **Solidity** (any block, including the ones that keep state: Pay The Reward, Anonymous Group Vote, Hand Over To A New
-  Key, Exit To An Address, Switch To Quantum-Safe Only, Repay A Loan, Pause The Target on the build itself): inherit the
+- **Solidity** (any block, including the ones that keep state: Reward Pool, Anonymous Vote, Hand Over To A New
+  Key, Withdraw All, Post-Quantum Mode, Repay, Pause on the build itself): inherit the
   blocks from `contracts/src/blocks` and wire them in `nonceKey` / `condition` / `action`. The builds in
   `contracts/src/builds` are the worked examples (ProofOfExploitBounty, SovereignAccount, AutoRepayLoan); each block has a
   test build in `contracts/test/blocks/BlockBuilds.sol`.
