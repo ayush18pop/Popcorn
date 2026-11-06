@@ -10,7 +10,7 @@ import {AnonymousGroupVote} from "src/blocks/actions/AnonymousGroupVote.sol";
 import {KeyHandover} from "src/blocks/actions/KeyHandover.sol";
 import {QuantumSafeSwitch} from "src/blocks/actions/QuantumSafeSwitch.sol";
 import {ExitToAddress} from "src/blocks/actions/ExitToAddress.sol";
-import {FlowNode, Flow, IPopcornExplain, FLOW_YES, FLOW_NO, FLOW_SKIPPED} from "src/rules/Explain.sol";
+import {Flow, IPopcornExplain, FLOW_YES, FLOW_NO, FLOW_SKIPPED} from "src/rules/Explain.sol";
 import {answer} from "src/blocks/Answer.sol";
 
 /// @title Sovereign Account (example build, the flagship)
@@ -261,75 +261,52 @@ contract SovereignAccount is SignedInstruction, MakeACall, AnonymousGroupVote, K
 
     // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
 
-    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory trigger, FlowNode[] memory n) {
+    // node 0 trigger, 1 payer, 2 the account guard, then each kind's blocks (format: IPopcornExplain)
+    string private constant HEAD = "p|self-paying|the account pays its own gas|0;c||the account is set up and has not exited|0;";
+
+    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory, string memory, bytes memory) {
         uint256 kind = popArgs.length >= 32 ? uint256(bytes32(popArgs[0:32])) : 0;
         bool active = _sload(SLOT) == 1 && !_exited();
-        if (kind == KIND_SPEND) {
-            trigger = "spend";
-            n = new FlowNode[](7);
-            n[0] = Flow.node("trigger", "", "Spend: (to, value, data) signed by the owner; anyone can send it", FLOW_YES, Flow.none());
-            bool off = !_quantumSafeOnly();
-            if (active && off) abi.decode(popArgs, (uint256, address, uint256, bytes)); // as the condition: malformed data reverts
-            n[3] = Flow.node("condition", "post-quantum-mode", "Post-Quantum Mode is off", Flow.after_(active, answer(off)), Flow.from(0));
-            Answer sig = active && off ? _ownerSigned(RULE_SPEND, popArgs, verifyData) : Answer.wrap(FLOW_NO);
-            n[4] = Flow.node("condition", "signature", "the owner key signed this exact spend", Flow.after_(active && off, sig), Flow.from(0));
-            _tail(n, active, Flow.from(2, 3, 4), active && off ? sig : Answer.wrap(FLOW_NO), 5);
-            n[6] = Flow.node("action", "call", "make the call with the value", Flow.runs(active && off && sig.isYes()), Flow.from(5));
-        } else if (kind == KIND_VOTE) {
-            trigger = "vote";
-            n = new FlowNode[](8);
-            n[0] = Flow.node("trigger", "", "Vote: a proposal and a guardian's nullifier, with a membership proof", FLOW_YES, Flow.none());
-            bool shaped = popArgs.length == 96;
-            Answer vote = active && shaped ? _voteValid(bytes32(popArgs[32:64]), uint256(bytes32(popArgs[64:96])), verifyData) : Answer.wrap(FLOW_NO);
-            n[3] = Flow.node("condition", "membership-proof", "a guardian's valid vote for this round (who is not revealed)", Flow.after_(active, shaped ? vote : Answer.wrap(FLOW_NO)), Flow.from(0));
-            _tail(n, active, Flow.from(2, 3), vote, 4);
-            bool go = active && vote.isYes();
-            n[5] = Flow.node("action", "anonymous-vote", "count the vote", Flow.runs(go), Flow.from(4));
-            bytes32 proposal = shaped ? bytes32(popArgs[32:64]) : bytes32(0);
-            bool quorum = go && _votesFor(_voteRound(), proposal) + 1 >= _voteThreshold();
-            n[6] = Flow.node("condition", "anonymous-vote", "this vote reaches the quorum", go ? Flow.result(answer(quorum)) : FLOW_SKIPPED, Flow.from(5));
-            n[7] = proposal == PROPOSAL_QUANTUM
-                ? Flow.node("action", "post-quantum-mode", "turn on Post-Quantum Mode", Flow.runs(quorum), Flow.from(6))
-                : Flow.node("action", "key-rotation", "propose this key as the new owner, after the timelock", Flow.runs(quorum), Flow.from(6));
-        } else if (kind == KIND_EXIT) {
-            trigger = "exit";
-            n = new FlowNode[](6);
-            n[0] = Flow.node("trigger", "", "Exit: no data; anyone can send it", FLOW_YES, Flow.none());
-            Answer c = answer(popArgs.length == 32 && _contested());
-            n[3] = Flow.node("condition", "key-rotation", "an owner contested a key rotation", Flow.after_(active, c), Flow.from(0));
-            _tail(n, active, Flow.from(2, 3), c, 4);
-            n[5] = Flow.node("action", "withdraw-all", "send everything to the exit address committed on day one", Flow.runs(active && c.isYes()), Flow.from(4));
-        } else if (kind == KIND_MIGRATE) {
-            trigger = "migrate";
-            n = new FlowNode[](7);
-            n[0] = Flow.node("trigger", "", "Migrate: a target address signed by the backup key", FLOW_YES, Flow.none());
-            bool on = popArgs.length == 64 && _quantumSafeOnly();
-            n[3] = Flow.node("condition", "post-quantum-mode", "Post-Quantum Mode is on", Flow.after_(active, answer(on)), Flow.from(0));
-            Answer sig = active && on ? _keySigned(backupScheme, _backupKeyHash(), RULE_MIGRATE, popArgs, verifyData) : Answer.wrap(FLOW_NO);
-            n[4] = Flow.node("condition", "signature", "the committed post-quantum backup key signed this target", Flow.after_(active && on, sig), Flow.from(0));
-            _tail(n, active, Flow.from(2, 3, 4), active && on ? sig : Answer.wrap(FLOW_NO), 5);
-            n[6] = Flow.node("action", "withdraw-all", "send everything to the signed target, once", Flow.runs(active && on && sig.isYes()), Flow.from(5));
-        } else if (kind == KIND_QUANTUM) {
-            trigger = "quantum";
-            n = new FlowNode[](7);
-            n[0] = Flow.node("trigger", "", "Post-Quantum Mode: signed by the owner", FLOW_YES, Flow.none());
-            bool off = popArgs.length == 32 && !_quantumSafeOnly();
-            n[3] = Flow.node("condition", "post-quantum-mode", "Post-Quantum Mode is still off", Flow.after_(active, answer(off)), Flow.from(0));
-            Answer sig = active && off ? _ownerSigned(RULE_QUANTUM, popArgs, verifyData) : Answer.wrap(FLOW_NO);
-            n[4] = Flow.node("condition", "signature", "the owner key signed it", Flow.after_(active && off, sig), Flow.from(0));
-            _tail(n, active, Flow.from(2, 3, 4), active && off ? sig : Answer.wrap(FLOW_NO), 5);
-            n[6] = Flow.node("action", "post-quantum-mode", "turn on Post-Quantum Mode: owner keys stop working", Flow.runs(active && off && sig.isYes()), Flow.from(5));
-        } else {
-            trigger = "unknown";
-            n = new FlowNode[](1);
-            n[0] = Flow.node("trigger", "", "trigger kind is not 1 to 5", FLOW_NO, Flow.none());
+        uint8 a = Flow.result(answer(active));
+        if (kind == KIND_SPEND || kind == KIND_MIGRATE || kind == KIND_QUANTUM) {
+            bool gate = kind == KIND_SPEND ? !_quantumSafeOnly() : kind == KIND_MIGRATE ? popArgs.length == 64 && _quantumSafeOnly() : popArgs.length == 32 && !_quantumSafeOnly();
+            if (kind == KIND_SPEND && active && gate) abi.decode(popArgs, (uint256, address, uint256, bytes)); // as the condition
+            Answer sig = !(active && gate)
+                ? NO
+                : kind == KIND_MIGRATE ? _keySigned(backupScheme, _backupKeyHash(), RULE_MIGRATE, popArgs, verifyData) : _ownerSigned(kind == KIND_SPEND ? RULE_SPEND : RULE_QUANTUM, popArgs, verifyData);
+            bytes memory r = abi.encodePacked(FLOW_YES, FLOW_YES, a, Flow.after_(active, answer(gate)), Flow.after_(active && gate, sig), active && gate ? Flow.result(sig) : FLOW_NO, Flow.runs(active && gate && sig.isYes()));
+            if (kind == KIND_SPEND) {
+                return ("spend", string.concat("t||Spend: (to, value, data) signed by the owner, anyone can send it|;", HEAD, "c|post-quantum-mode|Post-Quantum Mode is off|0;c|signature|the owner key signed this exact spend|0;o|and|AND|2,3,4;a|call|make the call with the value|5"), r);
+            }
+            if (kind == KIND_MIGRATE) {
+                return ("migrate", string.concat("t||Migrate: a target address signed by the backup key|;", HEAD, "c|post-quantum-mode|Post-Quantum Mode is on|0;c|signature|the committed post-quantum backup key signed this target|0;o|and|AND|2,3,4;a|withdraw-all|send everything to the signed target, once|5"), r);
+            }
+            return ("quantum", string.concat("t||Post-Quantum Mode: signed by the owner|;", HEAD, "c|post-quantum-mode|Post-Quantum Mode is still off|0;c|signature|the owner key signed it|0;o|and|AND|2,3,4;a|post-quantum-mode|turn on Post-Quantum Mode: owner keys stop working|5"), r);
         }
-    }
-
-    /// @dev Fills the nodes every kind shares: the payer (1), the account guard (2) and the AND at `andAt`.
-    function _tail(FlowNode[] memory n, bool active, uint8[] memory andInputs, Answer last, uint256 andAt) private pure {
-        n[1] = Flow.node("payer", "self-paying", "the account pays its own gas", FLOW_YES, Flow.from(0));
-        n[2] = Flow.node("condition", "", "the account is set up and has not exited", Flow.result(answer(active)), Flow.from(0));
-        n[andAt] = Flow.node("operator", "and", "AND", active ? Flow.result(last) : FLOW_NO, andInputs);
+        if (kind == KIND_VOTE) {
+            bool shaped = popArgs.length == 96;
+            bytes32 proposal = shaped ? bytes32(popArgs[32:64]) : bytes32(0);
+            Answer vote = active && shaped ? _voteValid(proposal, uint256(bytes32(popArgs[64:96])), verifyData) : NO;
+            bool go = active && vote.isYes();
+            bool quorum = go && _votesFor(_voteRound(), proposal) + 1 >= _voteThreshold();
+            return (
+                "vote",
+                string.concat(
+                    "t||Vote: a proposal and a guardian's nullifier, with a membership proof|;", HEAD,
+                    "c|membership-proof|a guardian's valid vote for this round (who is not revealed)|0;o|and|AND|2,3;a|anonymous-vote|count the vote|4;c|anonymous-vote|this vote reaches the quorum|5;",
+                    proposal == PROPOSAL_QUANTUM ? "a|post-quantum-mode|turn on Post-Quantum Mode|6" : "a|key-rotation|propose this key as the new owner, after the timelock|6"
+                ),
+                abi.encodePacked(FLOW_YES, FLOW_YES, a, Flow.after_(active, vote), active ? Flow.result(vote) : FLOW_NO, Flow.runs(go), go ? Flow.result(answer(quorum)) : FLOW_SKIPPED, Flow.runs(quorum))
+            );
+        }
+        if (kind == KIND_EXIT) {
+            Answer c = answer(popArgs.length == 32 && _contested());
+            return (
+                "exit",
+                string.concat("t||Exit: no data, anyone can send it|;", HEAD, "c|key-rotation|an owner contested a key rotation|0;o|and|AND|2,3;a|withdraw-all|send everything to the exit address committed on day one|4"),
+                abi.encodePacked(FLOW_YES, FLOW_YES, a, Flow.after_(active, c), active ? Flow.result(c) : FLOW_NO, Flow.runs(active && c.isYes()))
+            );
+        }
+        return ("unknown", "t||trigger kind is not 1 to 5|", abi.encodePacked(FLOW_NO));
     }
 }

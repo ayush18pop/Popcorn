@@ -120,20 +120,23 @@ const explainAbi = [
     inputs: [{ type: "bytes" }, { type: "bytes" }],
     outputs: [
       { name: "trigger", type: "string" },
-      {
-        name: "nodes",
-        type: "tuple[]",
-        components: [
-          { name: "kind", type: "string" },
-          { name: "blockId", type: "string" },
-          { name: "label", type: "string" },
-          { name: "result", type: "uint8" },
-          { name: "inputs", type: "uint8[]" },
-        ],
-      },
+      { name: "flow", type: "string" },
+      { name: "results", type: "bytes" },
     ],
   },
 ] as const satisfies Abi;
+
+const KINDS: Record<string, FlowNodeView["kind"]> = { t: "trigger", p: "payer", c: "condition", o: "operator", a: "action" };
+
+/** A build's compact flow ("kind|blockId|label|inputs" nodes separated by ';', contracts/src/rules/Explain.sol) and its
+ *  one-byte-per-node results, as nodes. */
+export function parseFlow(flow: string, results: Hex): FlowNodeView[] {
+  const res = results.length > 2 ? (results.slice(2).match(/../g) as string[]).map((x) => parseInt(x, 16)) : [];
+  return flow.split(";").map((part, index) => {
+    const [k = "", blockId = "", label = "", inputs = ""] = part.split("|");
+    return { index, kind: KINDS[k] ?? (k as FlowNodeView["kind"]), blockId, label, result: RESULT[res[index] ?? 2] ?? "unknown", inputs: inputs ? inputs.split(",").map(Number) : [] };
+  });
+}
 
 const RESULT: NodeResult[] = ["no", "yes", "unknown", "skipped"];
 
@@ -146,13 +149,8 @@ export async function explainTrigger(build: Address, triggerData: Hex, verifyDat
     const data = encodeFunctionData({ abi: explainAbi, functionName: "popcornExplain", args: [triggerData, verifyData] });
     const ret = await client.call({ to: getAddress(build), data });
     if (ret.data && ret.data !== "0x") {
-      const [trigger, nodes] = decodeFunctionResult({ abi: explainAbi, functionName: "popcornExplain", data: ret.data }) as readonly [string, readonly { kind: string; blockId: string; label: string; result: number; inputs: readonly number[] }[]];
-      return {
-        source: "explain",
-        trigger,
-        evaluated: "current-state",
-        nodes: nodes.map((n, index) => ({ index, kind: n.kind as FlowNodeView["kind"], blockId: n.blockId, label: n.label, result: RESULT[n.result] ?? "unknown", inputs: [...n.inputs] })),
-      };
+      const [trigger, flow, results] = decodeFunctionResult({ abi: explainAbi, functionName: "popcornExplain", data: ret.data });
+      return { source: "explain", trigger, evaluated: "current-state", nodes: parseFlow(flow, results) };
     }
   } catch {
     // no explain view, or it reverted on this data: try a rule set, then fall back

@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {CallerPays} from "src/payers/CallerPays.sol";
 import {ValueCrossesLine} from "src/blocks/checks/ValueCrossesLine.sol";
 import {RepayLoan} from "src/blocks/actions/RepayLoan.sol";
-import {FlowNode, Flow, IPopcornExplain, FLOW_YES, FLOW_NO} from "src/rules/Explain.sol";
+import {Flow, IPopcornExplain, FLOW_YES} from "src/rules/Explain.sol";
 import {answer} from "src/blocks/Answer.sol";
 
 interface IShieldPool {
@@ -179,19 +179,15 @@ contract AutoRepayLoan is ValueCrossesLine, RepayLoan, CallerPays, IPopcornExpla
 
     // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
 
-    function popcornExplain(bytes calldata popArgs, bytes calldata) external view returns (string memory trigger, FlowNode[] memory n) {
-        trigger = "rescue";
-        n = new FlowNode[](8);
+    function popcornExplain(bytes calldata popArgs, bytes calldata) external view returns (string memory, string memory, bytes memory) {
         bool empty = popArgs.length == 0;
-        n[0] = Flow.node("trigger", "", "Rescue: no data; any keeper can send it and pay the gas", Flow.result(answer(empty)), Flow.none());
-        n[1] = Flow.node("payer", "caller-pays", "the keeper pays the gas and earns a reward", FLOW_YES, Flow.from(0));
         (bool ok,, uint256 amount, uint256 reward) = empty ? _rescue() : (false, 0, 0, 0);
-        n[2] = Flow.node("condition", "compare", "the loan has debt and its health factor is below the threshold", Flow.after_(empty, answer(ok)), Flow.from(0));
         bool covered = ok && _reserve() >= amount + reward;
-        n[3] = Flow.node("condition", "compare", "the reserve covers the repayment and the reward", Flow.after_(empty && ok, answer(covered)), Flow.from(0));
-        n[4] = Flow.node("operator", "and", "AND", Flow.result(answer(empty && covered)), Flow.from(2, 3));
-        n[5] = Flow.node("action", "", "advance the rescue epoch (first, so the next rescue has a fresh key)", Flow.runs(empty && covered), Flow.from(4));
-        n[6] = Flow.node("action", "repay", "repay a share of the debt from the reserve", Flow.runs(empty && covered), Flow.from(5));
-        n[7] = Flow.node("action", "caller-pays", "pay the keeper its reward", Flow.runs(empty && covered), Flow.from(6));
+        uint8 go = Flow.runs(empty && covered);
+        return (
+            "rescue",
+            "t||Rescue: no data, any keeper can send it and pay the gas|;p|caller-pays|the keeper pays the gas and earns a reward|0;c|compare|the loan has debt and its health factor is below the threshold|0;c|compare|the reserve covers the repayment and the reward|0;o|and|AND|2,3;a||advance the rescue epoch (first, so the next rescue has a fresh key)|4;a|repay|repay a share of the debt from the reserve|5;a|caller-pays|pay the keeper its reward|6",
+            abi.encodePacked(Flow.result(answer(empty)), FLOW_YES, Flow.after_(empty, answer(ok)), Flow.after_(empty && ok, answer(covered)), Flow.result(answer(empty && covered)), go, go, go)
+        );
     }
 }

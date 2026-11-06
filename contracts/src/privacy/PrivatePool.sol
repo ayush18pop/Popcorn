@@ -5,7 +5,7 @@ import {IVerifier} from "src/interfaces/IVerifier.sol";
 import {IPoseidon2} from "src/privacy/IPoseidon.sol";
 import {PoseidonTree} from "src/privacy/PoseidonTree.sol";
 import {Payouts} from "src/privacy/Payouts.sol";
-import {FlowNode, Flow, IPopcornExplain, FLOW_YES, FLOW_NO, FLOW_SKIPPED} from "src/rules/Explain.sol";
+import {Flow, IPopcornExplain, FLOW_YES, FLOW_NO, FLOW_SKIPPED} from "src/rules/Explain.sol";
 import {Answer, YES, NO, UNKNOWN, answer} from "src/blocks/Answer.sol";
 
 /// @title PrivatePool
@@ -163,21 +163,16 @@ contract PrivatePool is PoseidonTree, Payouts, IPopcornExplain {
 
     // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
 
-    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory trigger, FlowNode[] memory n) {
-        trigger = "withdraw";
-        n = new FlowNode[](8);
+    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory, string memory, bytes memory) {
         bool shaped = popArgs.length == 160 && uint256(bytes32(popArgs[96:128])) >> 160 == 0;
-        n[0] = Flow.node("trigger", "", "Withdraw: nullifier, roots, recipient and fee, with a withdraw proof", Flow.result(answer(shaped)), Flow.none());
-        n[1] = Flow.node("payer", "self-paying", "the pool pays the gas, out of the note", FLOW_YES, Flow.from(0));
         uint8[4] memory r = _explainChecks(shaped, popArgs, verifyData);
-        n[2] = Flow.node("condition", "compare", "a recipient is set and the fee is within [minimum fee, denomination]", r[0], Flow.from(0));
-        n[3] = Flow.node("condition", "", "the deposit root is one this pool has had", r[1], Flow.from(0));
-        n[4] = Flow.node("condition", "membership-proof", "the association set is an accepted one", r[2], Flow.from(0));
-        n[5] = Flow.node("condition", "", "the withdraw proof verifies (ZK): a deposit in the set, not yet spent, for this recipient and fee", r[3], Flow.from(0));
-        Answer proof = Answer.wrap(r[3] == FLOW_YES ? FLOW_YES : (r[3] == 2 ? 2 : FLOW_NO));
-        bool accepted = r[2] == FLOW_YES;
-        n[6] = Flow.node("operator", "and", "AND", Flow.result(accepted ? proof : NO), Flow.from(2, 3, 4, 5));
-        n[7] = Flow.node("action", "", "send denomination minus fee to the recipient", Flow.runs(accepted && proof.isYes()), Flow.from(6));
+        bool all = r[3] == FLOW_YES;
+        uint8 and_ = r[2] == FLOW_YES ? r[3] : FLOW_NO;
+        return (
+            "withdraw",
+            "t||Withdraw: nullifier, roots, recipient and fee, with a withdraw proof|;p|self-paying|the pool pays the gas, out of the note|0;c|compare|a recipient is set and the fee is within [minimum fee, denomination]|0;c||the deposit root is one this pool has had|0;c|membership-proof|the association set is an accepted one|0;c||the withdraw proof verifies (ZK): a deposit in the set, not yet spent, for this recipient and fee|0;o|and|AND|2,3,4,5;a||send denomination minus fee to the recipient|6",
+            abi.encodePacked(Flow.result(answer(shaped)), FLOW_YES, r[0], r[1], r[2], r[3], and_, Flow.runs(all))
+        );
     }
 
     /// @dev The four checks of the condition in order, each SKIPPED once an earlier one said no.

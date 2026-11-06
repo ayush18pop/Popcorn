@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IVerifier} from "src/interfaces/IVerifier.sol";
 import {Payouts} from "src/privacy/Payouts.sol";
-import {FlowNode, Flow, IPopcornExplain, FLOW_YES, FLOW_NO} from "src/rules/Explain.sol";
+import {Flow, IPopcornExplain, FLOW_YES} from "src/rules/Explain.sol";
 import {Answer, YES, NO, UNKNOWN, answer} from "src/blocks/Answer.sol";
 
 /// @title StealthVault
@@ -116,22 +116,18 @@ contract StealthVault is Payouts, IPopcornExplain {
 
     // ------------------------------------------------------------------ explain (the explorer's flow, same order as condition)
 
-    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory trigger, FlowNode[] memory n) {
-        trigger = "spend";
-        n = new FlowNode[](7);
+    function popcornExplain(bytes calldata popArgs, bytes calldata verifyData) external view returns (string memory, string memory, bytes memory) {
         bool shaped = popArgs.length == 96 && uint256(bytes32(popArgs[32:64])) >> 160 == 0;
-        n[0] = Flow.node("trigger", "", "Spend: commitment, recipient and fee, with a spend proof", Flow.result(answer(shaped)), Flow.none());
-        n[1] = Flow.node("payer", "self-paying", "the vault pays the gas, out of the payment", FLOW_YES, Flow.from(0));
         uint256 c = shaped ? uint256(bytes32(popArgs[0:32])) : 0;
         uint256 bal = _sload(_balanceSlot(c));
-        n[2] = Flow.node("condition", "", "the payment exists and has not been spent", Flow.after_(shaped, answer(bal > 0)), Flow.from(0));
         address to = shaped ? address(uint160(uint256(bytes32(popArgs[32:64])))) : address(0);
         uint256 fee = shaped ? uint256(bytes32(popArgs[64:96])) : 0;
         bool fees = bal > 0 && to != address(0) && fee >= minFee && fee <= bal;
-        n[3] = Flow.node("condition", "compare", "a recipient is set and the fee is within [minimum fee, payment]", Flow.after_(shaped && bal > 0, answer(fees)), Flow.from(0));
         Answer proof = fees ? _proofOk(c, to, fee, verifyData) : NO;
-        n[4] = Flow.node("condition", "", "the spend proof verifies (ZK): the sender owns this payment", Flow.after_(fees, proof), Flow.from(0));
-        n[5] = Flow.node("operator", "and", "AND", Flow.result(fees ? proof : NO), Flow.from(2, 3, 4));
-        n[6] = Flow.node("action", "", "send the payment minus the fee to the recipient", Flow.runs(fees && proof.isYes()), Flow.from(5));
+        return (
+            "spend",
+            "t||Spend: commitment, recipient and fee, with a spend proof|;p|self-paying|the vault pays the gas, out of the payment|0;c||the payment exists and has not been spent|0;c|compare|a recipient is set and the fee is within [minimum fee, payment]|0;c||the spend proof verifies (ZK): the sender owns this payment|0;o|and|AND|2,3,4;a||send the payment minus the fee to the recipient|5",
+            abi.encodePacked(Flow.result(answer(shaped)), FLOW_YES, Flow.after_(shaped, answer(bal > 0)), Flow.after_(shaped && bal > 0, answer(fees)), Flow.after_(fees, proof), Flow.result(fees ? proof : NO), Flow.runs(fees && proof.isYes()))
+        );
     }
 }

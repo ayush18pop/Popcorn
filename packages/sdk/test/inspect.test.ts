@@ -2,7 +2,7 @@
 // and deriving node results from an inclusion (only what the flow's logic proves).
 import { encodeAbiParameters, type Address, type Hex } from "viem";
 import { describe, expect, it } from "vitest";
-import { coreMeaning, deriveFromInclusion, parseRefusal, triggerOf, type Flow, type FlowNodeView } from "../src/inspect.ts";
+import { coreMeaning, deriveFromInclusion, parseFlow, parseRefusal, triggerOf, type Flow, type FlowNodeView } from "../src/inspect.ts";
 
 const B = "0x00000000000000000000000000000000000b0001" as Address;
 const P = "0x00000000000000000000000000000000000b0002" as Address;
@@ -25,6 +25,20 @@ describe("triggerOf", () => {
     expect(t.payer).toBe(P);
     expect(t.triggerData).toBe("0x");
     expect(t.verifyData).toBe("0x");
+  });
+});
+
+describe("parseFlow", () => {
+  it("reads a build's compact flow and its results (the format of contracts/src/rules/Explain.sol)", () => {
+    const nodes = parseFlow("t||Claim: a proof|;p|self-paying|the vault pays|0;c|exploit-proof|the proof holds|0;o|and|AND|1,2;a|pause|pause the vault|3", "0x0101000300");
+    expect(nodes.map((x) => [x.kind, x.blockId, x.result, x.inputs])).toEqual([
+      ["trigger", "", "yes", []],
+      ["payer", "self-paying", "yes", [0]],
+      ["condition", "exploit-proof", "no", [0]],
+      ["operator", "and", "skipped", [1, 2]],
+      ["action", "pause", "no", [3]],
+    ]);
+    expect(nodes[2]!.label).toBe("the proof holds");
   });
 });
 

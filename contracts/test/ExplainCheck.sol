@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {CoreHarness} from "test/CoreHarness.sol";
-import {IPopcornExplain, FlowNode, FLOW_YES} from "src/rules/Explain.sol";
+import {IPopcornExplain, FlowNode, Flow, FLOW_YES} from "src/rules/Explain.sol";
 
 /// Every condition the build suites ask also asks the build's explain view, and requires the two to agree: the flow's
 /// first action runs exactly when the condition is true. The flow must also be well formed (results 0..3, every input an
@@ -15,7 +15,9 @@ library ExplainCheck {
             require(!c, "explain reverted where the condition holds");
             return c;
         }
-        (, FlowNode[] memory n) = abi.decode(ret, (string, FlowNode[]));
+        (, string memory spec, bytes memory results) = abi.decode(ret, (string, string, bytes));
+        FlowNode[] memory n = Flow.parse(spec, results);
+        require(n.length == results.length, "one result per node");
         require(n.length > 0, "empty flow");
         bool seenAction;
         bool runs;

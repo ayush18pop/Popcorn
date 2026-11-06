@@ -106,7 +106,7 @@ export async function recordRefusal(o: { client: Client; ruleContract: Address; 
   const r = await o.client.canTrigger(o.ruleContract, o.trigger);
   if (r.ready) throw new Error("expected a refusal, but the trigger is valid");
   const t = triggerOf(o.ruleContract, r.tx.frames.map((f) => ({ mode: f.mode, flags: f.flags, target: f.target, data: f.data })));
-  const flow: Flow = await explainTrigger(o.ruleContract, t.triggerData ?? "0x", t.verifyData ?? "0x", { devnet: o.devnet ?? "local" });
+  let flow: Flow = await explainTrigger(o.ruleContract, t.triggerData ?? "0x", t.verifyData ?? "0x", { devnet: o.devnet ?? "local" });
   let tx: Hex | null = null;
   if (o.submit !== false) {
     try {
@@ -115,6 +115,9 @@ export async function recordRefusal(o: { client: Client; ruleContract: Address; 
       // refused, as expected: the sidecar keeps the refusal under the transaction's hash
     }
     tx = r.hash;
+    // the same view the explorer gives for this hash: it knows which frame refused (the build, Core or the payer)
+    const seen = await inspectTransaction(tx, { devnet: o.devnet ?? "local" }).catch(() => null);
+    if (seen?.foundOn === "sidecar" && seen.flow) flow = seen.flow;
   }
   const used = Number(r.simulation.frames?.find((f) => !f.succeeded)?.gasUsed ?? r.simulation.frames?.[0]?.gasUsed ?? 0n);
   return {

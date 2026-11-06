@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {CallerPays} from "src/payers/CallerPays.sol";
-import {FlowNode, Flow, IPopcornExplain, FLOW_YES} from "src/rules/Explain.sol";
+import {Flow, IPopcornExplain, FLOW_YES} from "src/rules/Explain.sol";
 import {answer} from "src/blocks/Answer.sol";
 
 /// @title PaidCounter (the SDK README's caller-pays example)
@@ -50,14 +50,13 @@ contract PaidCounter is CallerPays, IPopcornExplain {
         _payReward(address(0), pay);
     }
 
-    function popcornExplain(bytes calldata, bytes calldata) external view returns (string memory trigger, FlowNode[] memory n) {
-        trigger = "count";
-        n = new FlowNode[](4);
-        n[0] = Flow.node("trigger", "", "Count: no data; anyone can send it with a payer", FLOW_YES, Flow.none());
-        n[1] = Flow.node("payer", "caller-pays", "the payer named in the transaction pays the gas", FLOW_YES, Flow.from(0));
+    function popcornExplain(bytes calldata, bytes calldata) external view returns (string memory, string memory, bytes memory) {
         bool armed = _sload(ARMED) == 1;
-        n[2] = Flow.node("condition", "", "the counter is armed (its owner called arm)", Flow.result(answer(armed)), Flow.from(0));
-        n[3] = Flow.node("action", "", "count + 1, disarm, reward the payer", Flow.runs(armed), Flow.from(2));
+        return (
+            "count",
+            "t||Count: no data, anyone can send it with a payer|;p|caller-pays|the payer named in the transaction pays the gas|0;c||the counter is armed (its owner called arm)|0;a||count + 1, disarm, reward the payer|2",
+            abi.encodePacked(FLOW_YES, FLOW_YES, Flow.result(answer(armed)), Flow.runs(armed))
+        );
     }
 }
 
