@@ -638,3 +638,22 @@ owner; and makes every rule public and simulated before signing. Its working nam
 
 **Why.** It is the one example that exercises almost every module, so it shows the library as a whole, and it is built
 last, from modules that each ship and are tested on their own.
+
+## 72. Keep the existing modules, sorted into the five use-case groups
+
+**Context.** Decision 68 grouped modules by use case. The catalog still had 37 entries in eight DeFi corners, some of
+them tooling or small building pieces rather than something a developer would choose.
+
+**Choice.** Every existing module stays and moves into one of the five groups: move money privately, pay for gas,
+protect a position or protocol, sign and recover, prove and publish. Only entries that are not modules leave the list:
+the tooling (Core, SDK, simulator, local devnet, rule sets, CLI, watch bot, storage maps) moves to the SDK and docs
+pages, and the threshold condition stays in the SDK as a block (decision 69). The five post-quantum signers (Falcon,
+WOTS+, FORS, XMSS-style, SPHINCS+-style) become one post-quantum signer module with the scheme as an option, the ECDSA
+signer folds into signed intent, and the reward pool folds into the proof-of-exploit bounty. Their code and tests are
+unchanged.
+
+CROPS stays the reason the library exists and shows as module properties and a line on the landing page, never as
+navigation or as the headline.
+
+**Why.** A developer arrives with a problem, not a property. Five near-identical signer pages, tooling in the module list
+and a vague reward pool made the library look like a pile instead of a set of answers.
