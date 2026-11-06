@@ -742,3 +742,15 @@ validator, explainer and gas model learn it, and the shared vectors cover it.
 
 **Why.** "Exactly one" is only meaningful if every other child is a definite no; a signature or proof whose no only
 means "the witness failed" cannot give that.
+
+## 79. Guarded Vault becomes a target and a build; pause and pay are separate blocks
+
+**Choice.** The Demo Vault is the target (accounting with the planted bug and a pause switch). The Proof-of-Exploit
+Bounty build adds Proof That The Rules Were Broken, Value Crosses A Line, Pause The Target, Pay The Reward, None Of and
+Contract Pays The Gas. Pause and pay are two blocks, joined in one trigger: pause first, then pay best effort, so the
+pause sticks even if the payment fails. The pause state moves to Pause The Target's own storage; the two vault words the
+exploit circuit reads stay where they were, so the circuit, its keys and the fixtures are unchanged. Reopening is the
+owner's, allowed only when None Of (below the floor) holds. The trigger formats are unchanged.
+
+**Why.** Pausing and paying are each reusable on their own (an anonymous security council pauses without paying; a
+reward needs no pause), and keeping the circuit's inputs fixed avoids a new trusted setup.
