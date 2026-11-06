@@ -12,14 +12,14 @@ import { cn } from "@/lib/utils";
 // one is for and which catalog pages it reads. It does not claim any of them can be installed yet.
 
 const SKILLS: { id: string; corner: CornerId; does: string; tools: string[] }[] = [
-  { id: "popcorn-pause", corner: "pause", does: "Turns “pause my protocol if …” into a pause rule for your contracts.", tools: ["list_modules", "plan_rule", "check_rule"] },
-  { id: "popcorn-protect", corner: "repay", does: "Protects a lending position before liquidation: repay or top up.", tools: ["get_module", "plan_rule", "check_rule"] },
-  { id: "popcorn-exit", corner: "exit", does: "Gets funds out of a venue when its market or accounting breaks.", tools: ["get_module", "plan_rule", "check_rule"] },
-  { id: "popcorn-payout", corner: "payout", does: "Sets up bounties and rewards that only the payer or a proof can claim.", tools: ["get_module", "plan_rule"] },
-  { id: "popcorn-liquidate", corner: "liquidate", does: "Designs liquidations with one winner per event.", tools: ["get_module", "plan_rule"] },
+  { id: "popcorn-pause", corner: "protect", does: "Turns “pause my protocol if …” into a pause rule for your contracts.", tools: ["list_modules", "plan_rule", "check_rule"] },
+  { id: "popcorn-protect", corner: "protect", does: "Protects a lending position before liquidation: repay or top up.", tools: ["get_module", "plan_rule", "check_rule"] },
+  { id: "popcorn-exit", corner: "protect", does: "Gets funds out of a venue when its market or accounting breaks.", tools: ["get_module", "plan_rule", "check_rule"] },
+  { id: "popcorn-payout", corner: "prove", does: "Sets up bounties and rewards that only the payer or a proof can claim.", tools: ["get_module", "plan_rule"] },
+  { id: "popcorn-liquidate", corner: "protect", does: "Designs liquidations with one winner per event.", tools: ["get_module", "plan_rule"] },
   { id: "popcorn-gas", corner: "gas", does: "Chooses rule-pays or caller-pays and sizes the fee caps.", tools: ["get_module", "check_rule"] },
   { id: "popcorn-sign", corner: "sign", does: "Picks a signer, including post-quantum ones, and wires the intent.", tools: ["get_module", "plan_rule"] },
-  { id: "popcorn-debug", corner: "build", does: "Explains why a trigger was refused, rule by rule, and the fix.", tools: ["explain_rule", "rule_status", "decode_frame_tx", "admission_report"] },
+  { id: "popcorn-debug", corner: "prove", does: "Explains why a trigger was refused, rule by rule, and the fix.", tools: ["explain_rule", "rule_status", "decode_frame_tx", "admission_report"] },
 ];
 
 const CONVO = [

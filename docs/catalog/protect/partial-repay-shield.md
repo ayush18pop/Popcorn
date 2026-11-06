@@ -6,7 +6,7 @@ status: built
 runsOn: [alternative-staked]
 usedIn: [defi]
 gas: null
-example: examples/protect/partial-repay-shield/run.json
+example: null
 related: [caller-pays, health-exit]
 code: ["contracts/src/templates/PartialRepayShield.sol", "packages/sdk/examples/02-caller-pays.ts"]
 ---

@@ -1,0 +1,214 @@
+{
+  "recorded": true,
+  "module": "open-gas-network",
+  "network": {
+    "name": "local",
+    "chainId": 1338
+  },
+  "title": "Free transactions for members, with no server to switch off",
+  "actors": {
+    "caller": "a key with no ETH",
+    "ruleContract": "member's app account",
+    "payer": "the open sponsor"
+  },
+  "contracts": {
+    "sponsor": "0xfd186d28c03A2847eaA9365847547466166D706b",
+    "verifier": "0x3E12E03EC8cCf981c1F272DeC356c21874CF15d3",
+    "app": "0x41feC055cc1036219a38a5d7F87A23Ac42665Cbf"
+  },
+  "steps": [
+    {
+      "stage": "build",
+      "frames": [
+        {
+          "mode": "VERIFY",
+          "flags": 2,
+          "target": "member's app account",
+          "gasLimit": 37385,
+          "data": "0x",
+          "explain": "the app account approves its own action"
+        },
+        {
+          "mode": "VERIFY",
+          "flags": 1,
+          "target": "open sponsor",
+          "gasLimit": 340000,
+          "data": "0x11aaacbc…(288 bytes)",
+          "explain": "the sponsor checks the membership proof and its budget, then approves payment"
+        },
+        {
+          "mode": "SENDER",
+          "flags": 0,
+          "target": "member's app account",
+          "gasLimit": 200000,
+          "data": "0xd9292504…(68 bytes)",
+          "explain": "the app's action"
+        },
+        {
+          "mode": "DEFAULT",
+          "flags": 0,
+          "target": "open sponsor",
+          "gasLimit": 60000,
+          "data": "0x266cf109",
+          "explain": "the sponsor records the spend and admits the account"
+        }
+      ],
+      "world": {
+        "sponsor balance": "10 ETH",
+        "account admitted": "0"
+      }
+    },
+    {
+      "stage": "validate",
+      "reads": [
+        {
+          "label": "validation (frame 0)",
+          "value": "READY",
+          "gas": 12914
+        }
+      ],
+      "result": "READY",
+      "gasUsed": 12914
+    },
+    {
+      "stage": "admit",
+      "report": {
+        "mempool": "alternative mempool (ERC-8421 sidecar)",
+        "outcome": "accepted",
+        "entity": {
+          "name": "member's app account",
+          "staked": false,
+          "budget": 250000,
+          "used": 37385
+        },
+        "checks": [
+          {
+            "rule": "CORE",
+            "verdict": "pass",
+            "detail": "Core's checks passed and the rule's condition returned true"
+          },
+          {
+            "rule": "CANONICAL",
+            "verdict": "warn",
+            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 377385 > 250000 (MAX_VERIFY_GAS)"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "include",
+      "tx": "0xecb5d47c2bb5f6fdf79076d8a322cfb01e0cae504b4bcdb1add19d9e845cdc0f",
+      "block": 890,
+      "status": "success",
+      "payer": "open sponsor",
+      "gasUsed": 839489
+    },
+    {
+      "stage": "act",
+      "before": {
+        "sponsor balance": "10 ETH",
+        "account admitted": "0"
+      },
+      "after": {
+        "sponsor balance": "9.998321021994123577 ETH",
+        "account admitted": "1"
+      },
+      "events": [
+        "member's app account: 0x507c3688"
+      ]
+    }
+  ],
+  "failing": {
+    "result": "PAYER_REFUSED",
+    "core": "0x6d",
+    "steps": [
+      {
+        "stage": "build",
+        "frames": [
+          {
+            "mode": "VERIFY",
+            "flags": 2,
+            "target": "a second account, same member",
+            "gasLimit": 100000,
+            "data": "0x"
+          },
+          {
+            "mode": "VERIFY",
+            "flags": 1,
+            "target": "open sponsor",
+            "gasLimit": 340000,
+            "data": "0x23e0f940…(288 bytes)"
+          },
+          {
+            "mode": "SENDER",
+            "flags": 0,
+            "target": "a second account, same member",
+            "gasLimit": 200000,
+            "data": "0xd9292504…(68 bytes)"
+          },
+          {
+            "mode": "DEFAULT",
+            "flags": 0,
+            "target": "open sponsor",
+            "gasLimit": 60000,
+            "data": "0x266cf109"
+          }
+        ],
+        "world": {
+          "sponsor balance": "9.998321021994123577 ETH"
+        }
+      },
+      {
+        "stage": "validate",
+        "reads": [
+          {
+            "label": "frame 1",
+            "value": "payer refused: this membership nullifier was already used (0x6d)",
+            "gas": 0
+          }
+        ],
+        "result": "PAYER_REFUSED",
+        "gasUsed": 0
+      },
+      {
+        "stage": "admit",
+        "report": {
+          "mempool": "alternative mempool (ERC-8421 sidecar)",
+          "outcome": "rejected",
+          "checks": [
+            {
+              "rule": "0x6d",
+              "verdict": "fail",
+              "detail": "payer refused: this membership nullifier was already used (0x6d)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "story": [
+    {
+      "module": "open-sponsor",
+      "role": "policy",
+      "title": "The community funds a sponsor and publishes its member set's root; no server signs anything",
+      "tx": "0xc2908e3b685b43862ce917337d153cf1df306959df86b5cbde2e3410d7ca0529",
+      "block": 885,
+      "gasUsed": 238461,
+      "status": "success"
+    },
+    {
+      "module": "membership-proof",
+      "role": "admit",
+      "title": "A member proves they belong, without saying who, and the account is sponsored from then on",
+      "tx": "0xecb5d47c2bb5f6fdf79076d8a322cfb01e0cae504b4bcdb1add19d9e845cdc0f",
+      "block": 890,
+      "gasUsed": 839489,
+      "status": "success"
+    }
+  ],
+  "sources": {
+    "simulation": "ethrex_simulateFrameTransaction",
+    "admission": "ERC-8421 sidecar (eth_sendFrameTransaction)",
+    "receipt": "eth_getTransactionReceipt"
+  }
+}

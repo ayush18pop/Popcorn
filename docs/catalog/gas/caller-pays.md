@@ -5,7 +5,7 @@ trigger: payment
 status: built
 runsOn: [public, alternative]
 gas: null
-example: examples/gas/partial-repay-shield/run.json
+example: null
 related: [rule-pays, partial-repay-shield]
 code: ["contracts/src/payers/CallerPays.sol", "packages/sdk/examples/02-caller-pays.ts"]
 ---

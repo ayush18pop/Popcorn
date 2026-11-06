@@ -5,7 +5,7 @@ trigger: people
 status: built
 runsOn: [public, alternative]
 gas: null
-example: null
+example: examples/sign/sovereign-account/run.json
 related: [signed-intent, hybrid-owner-key, multisig-signer]
 postQuantum: true
 schemes: [wots, fors, xmss, sphincs, falcon]

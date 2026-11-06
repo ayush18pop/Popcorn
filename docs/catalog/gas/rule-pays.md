@@ -5,7 +5,7 @@ trigger: payment
 status: built
 runsOn: [public, alternative]
 gas: null
-example: examples/gas/rule-pays-counter/run.json
+example: examples/protect/walkaway-exit/run.json
 related: [caller-pays, core]
 code: ["contracts/src/payers/RulePays.sol", "packages/sdk/examples/01-rule-pays.ts"]
 ---

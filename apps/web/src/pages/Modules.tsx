@@ -73,7 +73,7 @@ export default function Modules({ corner }: { corner?: string }) {
           <p className="mt-5 max-w-[600px] text-[16px] leading-relaxed text-muted-foreground">
             {active
               ? `${active.does}. Fires on: ${active.triggers.map((t) => TRIGGER_TEXT[t]).join("; ")}.`
-              : `${MODULES.length} modules in eight corners. ${built} are built, in the repository with passing tests; the rest are planned. Every page starts from what the module does for your protocol.`}
+              : `${MODULES.length} modules in five use cases. ${built} are built, in the repository with passing tests; the rest are planned. Every page starts from what the module does for you.`}
           </p>
         </Reveal>
 

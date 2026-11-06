@@ -52,14 +52,14 @@ const status = await anyone.watch(hash);`,
 const stats = [
   { v: 0, s: "", label: "ETH needed to trigger", sub: "in rule-pays mode" },
   { v: 101, s: "", label: "bytes of settings", sub: "immutable, appended to Core" },
-  { v: 238, s: "", label: "contract tests", sub: "forge test" },
-  { v: 303, s: "", label: "offline SDK tests", sub: "against an independent reference" },
+  { v: 252, s: "", label: "contract tests", sub: "forge test" },
+  { v: 5, s: "", label: "projects recorded on a devnet", sub: "every transaction real" },
 ];
 
 const featured = [
-  { key: "pause/guarded-vault", n: "01", t: "Guarded Vault", d: "A vault pauses itself mid-drain. The alarm comes from a wallet with 0 ETH; the vault pays.", tag: "pause · invariant · public" },
-  { key: "repay/partial-repay-shield", n: "02", t: "Partial Repay Shield", d: "A loan repays a quarter of its debt when health falls below 1.1. Whoever triggers it earns 0.5%.", tag: "repay · caller-pays · staked" },
-  { key: "payout/proof-of-exploit-bounty", n: "03", t: "Proof-of-Exploit Bounty", d: "A whitehat proves the bug in zero knowledge and is paid to a fresh address. The vault pauses.", tag: "pay out · proof · staked" },
+  { key: "private/private-payroll", n: "01", t: "Private Payroll", d: "Salaries to ML-KEM stealth addresses, savings in a private pool. No relayer, no gas top-up, no link between addresses.", tag: "private · recorded on devnet" },
+  { key: "gas/open-gas-network", n: "02", t: "Open Gas Network", d: "Members get free transactions from a sponsor whose policy is public code. Nobody can switch it off or learn who they are.", tag: "gas · recorded on devnet" },
+  { key: "sign/quantum-ready-treasury", n: "03", t: "Quantum-Ready Treasury", d: "Hidden guardians flip a quantum switch; only a post-quantum key nobody has seen can move the money.", tag: "post-quantum · recorded on devnet" },
 ];
 
 function Card({ className, inner, children, delay = 0 }: { className?: string; inner?: string; children: React.ReactNode; delay?: number }) {
@@ -96,7 +96,7 @@ function Quickstart({ className }: { className?: string }) {
 }
 
 export default function Home() {
-  const hero = RUNS["pause/guarded-vault"];
+  const hero = RUNS["sign/sovereign-account"] ?? RUNS["private/private-payroll"];
   return (
     <div className="relative overflow-x-clip">
       {/* backdrop: slow grey mesh, faded out below the fold */}
@@ -129,7 +129,7 @@ export default function Home() {
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PrimaryLink href={href("modules")}>Browse modules</PrimaryLink>
-              <GhostLink href={href("examples", "pause", "guarded-vault")}>Watch an example play</GhostLink>
+              <GhostLink href={href("examples", "sign", "sovereign-account")}>Watch the flagship play</GhostLink>
             </div>
           </Reveal>
           <Reveal delay={0.4} className="mt-8 w-full max-w-[640px]">
@@ -197,7 +197,7 @@ export default function Home() {
       {/* featured examples */}
       <section className="px-4 pt-36 sm:px-6">
         <div className="mx-auto max-w-[1120px]">
-          <SectionHead label="Three examples" title="Watch each one run, frame by frame." sub="Every example plays in five stages: build, validate, admit, include, act. Then flip it to the failing case." />
+          <SectionHead label="Examples" title="Whole projects, recorded on a devnet." sub="Each one solves a real problem with several modules. Every transaction happened, sent by a key with no ETH. Flip any of them to the refused case." />
           <div className="mt-12 grid gap-4 md:grid-cols-3">
             {featured.map((d, i) => (
               <Reveal key={d.key} delay={i * 0.08}>
@@ -233,8 +233,8 @@ export default function Home() {
       {/* the catalog at a glance */}
       <section className="px-4 pt-36 sm:px-6">
         <div className="mx-auto max-w-[1120px]">
-          <SectionHead label="Eight corners" title="Everything a protocol team reaches for." sub="Built modules are in the repository with passing tests. Planned ones are next, in this order." />
-          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <SectionHead label="Five use cases" title="Start from what you need to do." sub="Censorship resistance, privacy, security and post-quantum are built into every module. You pick the job." />
+          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {CORNERS.map((c, i) => {
               const mods = MODULES.filter((m) => m.corner === c.id);
               const built = mods.filter((m) => m.status === "built").length;

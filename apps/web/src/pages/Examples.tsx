@@ -1,72 +1,150 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Copy } from "lucide-react";
 import { MetalNumeral } from "@/components/MetalNumeral";
-import { BountyScene, ShieldScene, VaultScene } from "@/components/scenes";
 import { Reveal } from "@/components/motion";
-import { PrimaryLink } from "@/components/bits";
+import { PrimaryLink, StatusBadge } from "@/components/bits";
 import { Player } from "@/player/Player";
-import { MODULES, moduleById } from "@/lib/catalog";
-import { RUNS, step } from "@/lib/runs";
+import { GROUPS, PROJECTS, moduleById, projectByKey, type Project } from "@/lib/catalog";
+import { RUNS, fmt, step } from "@/lib/runs";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
-const SCENES: Record<string, ReactNode> = {
-  "pause/guarded-vault": <VaultScene />,
-  "repay/partial-repay-shield": <ShieldScene />,
-  "payout/proof-of-exploit-bounty": <BountyScene />,
-};
-
-const keys = Object.keys(RUNS).sort((a, b) => Number(!SCENES[a]) - Number(!SCENES[b]));
-const moduleFor = (key: string) => MODULES.find((m) => m.example === key && m.id === RUNS[key].module) ?? MODULES.find((m) => m.example === key);
+// Examples are whole projects assembled from several modules, each with a role (decision 70). Each one plays a run
+// recorded on the local devnet by packages/sdk/scripts/record-examples.ts, and lists every transaction it made.
 
 export default function Examples({ runKey }: { runKey?: string }) {
-  return runKey && RUNS[runKey] ? <PlayerPage runKey={runKey} /> : <Index />;
+  const p = runKey ? projectByKey(runKey) : undefined;
+  return p ? <ProjectPage p={p} /> : <Index />;
 }
 
-/* ------------------------------------------------------------- one example */
+const groupName = (id: string) => GROUPS.find((g) => g.id === id)?.name ?? id;
+const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-6)}`;
 
-function PlayerPage({ runKey }: { runKey: string }) {
-  const run = RUNS[runKey];
-  const m = moduleFor(runKey);
-  const admit = step(run.steps, "admit");
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        void navigator.clipboard?.writeText(text);
+        setDone(true);
+        setTimeout(() => setDone(false), 1400);
+      }}
+      className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12.5px] text-muted-foreground hover:text-foreground"
+    >
+      {done ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {label}
+    </button>
+  );
+}
+
+function ModuleRoles({ p, dense = false }: { p: Project; dense?: boolean }) {
+  return (
+    <ol className={cn("space-y-2", dense && "space-y-1.5")}>
+      {p.modules.map((r, i) => {
+        const m = moduleById(r.id);
+        return (
+          <li key={r.id + i} className="grid grid-cols-[22px_1fr] gap-3 text-[13px]">
+            <span className="font-mono text-[11px] text-faint">{String(i + 1).padStart(2, "0")}</span>
+            <span>
+              <a href={m ? href("modules", m.group, m.id) : "#"} className="font-medium text-foreground underline-offset-4 hover:underline">
+                {m?.name ?? r.id}
+              </a>
+              {!dense && <span className="text-muted-foreground"> · {r.role}</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* ------------------------------------------------------------- one project */
+
+function ProjectPage({ p }: { p: Project }) {
+  const run = RUNS[p.key];
+  const include = run ? step(run.steps, "include") : undefined;
+  const prompt = `Using the Popcorn skill and MCP server, build a "${p.name}" like examples/${p.key}: ${p.problem} Use these modules: ${p.modules.map((m) => m.id).join(", ")}. Deploy it to my local devnet, run its story, and show me each transaction.`;
   return (
     <div className="relative overflow-x-clip px-4 pb-24 pt-32 sm:px-6">
       <div className="mx-auto max-w-[1320px]">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <Reveal>
-            <a href={href("examples")} className="label-mono hover:text-foreground">← Examples</a>
-            <h1 className="text-chrome mt-4 text-[36px] font-semibold leading-[1.04] tracking-[-0.04em] md:text-[52px]">{run.title}</h1>
-            <p className="mt-3 max-w-[680px] text-[14px] leading-relaxed text-muted-foreground">
-              {m?.name} · {run.actors.caller} triggers, {run.actors.payer} pays · admitted by the {admit?.report.mempool} mempool.
-            </p>
-          </Reveal>
-          {m && (
-            <Reveal delay={0.1}>
-              <a href={href("modules", m.corner, m.id)} className="glass inline-flex h-11 items-center gap-2 rounded-full px-5 text-[13px] text-muted-foreground hover:text-foreground">
-                Module page <ArrowRight className="size-4" />
-              </a>
-            </Reveal>
-          )}
-        </div>
-
-        <Reveal delay={0.15} className="mt-10">
-          <Player run={run} autoplay />
+        <Reveal>
+          <a href={href("examples")} className="label-mono hover:text-foreground">← Examples</a>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="label-mono">{p.flagship ? "Flagship" : groupName(p.group)}</span>
+            <StatusBadge status={p.status} />
+          </div>
+          <h1 className="text-chrome mt-3 max-w-[900px] text-[36px] font-semibold leading-[1.04] tracking-[-0.04em] md:text-[56px]">{p.name}</h1>
+          <p className="mt-4 max-w-[760px] text-[16px] leading-relaxed text-muted-foreground">{p.problem}</p>
+          <p className="mt-3 max-w-[760px] text-[15px] leading-relaxed text-foreground/85">{p.summary}</p>
         </Reveal>
 
-        {!run.recorded && (
-          <p className="mt-4 max-w-[860px] rounded-2xl border border-dashed border-foreground/20 px-4 py-3 text-[12px] leading-relaxed text-muted-foreground">
-            <span className="text-foreground">Sample run.</span> {run.note}
-          </p>
+        {run ? (
+          <Reveal delay={0.12} className="mt-10">
+            <p className="label-mono mb-3">The featured transaction: {p.featured}</p>
+            <Player run={run} autoplay />
+            {run.owner && <p className="mt-3 text-[12px] text-muted-foreground">{run.owner}</p>}
+          </Reveal>
+        ) : (
+          <p className="mt-10 rounded-2xl border border-dashed border-foreground/20 px-4 py-3 text-[13px] text-muted-foreground">Not recorded yet.</p>
         )}
 
-        <div className="mt-14">
+        <div className="mt-16 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+          {/* the story: every transaction the project made, in order */}
+          <Reveal>
+            <p className="label-mono mb-4">What happened, transaction by transaction</p>
+            <ol className="relative space-y-3 border-l border-[var(--glass-border)] pl-6">
+              {(run?.story ?? []).map((s, i) => {
+                const m = moduleById(s.module);
+                return (
+                  <motion.li key={s.tx + i} initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} className="relative">
+                    <span className="absolute -left-[31px] top-4 size-2.5 rounded-full border border-foreground/40 bg-background" />
+                    <div className="glass rounded-2xl p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-faint">
+                        <span>
+                          {String(i + 1).padStart(2, "0")} · {m?.name ?? s.module} · {s.role}
+                        </span>
+                        <span>block {fmt(s.block)} · {fmt(s.gasUsed)} gas · {s.status}</span>
+                      </div>
+                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/90">{s.title}</p>
+                      <p className="mt-2 font-mono text-[11px] text-muted-foreground" title={s.tx}>{shortHash(s.tx)}</p>
+                    </div>
+                  </motion.li>
+                );
+              })}
+            </ol>
+            {run && <p className="mt-4 text-[12px] text-faint">Recorded on the {run.network.name} devnet (chain {run.network.chainId}). Transaction hashes are the receipts the recorder read back.</p>}
+          </Reveal>
+
+          <div className="space-y-6">
+            <Reveal delay={0.08}>
+              <div className="glass rounded-[24px] p-6">
+                <p className="label-mono mb-4">Modules and their roles</p>
+                <ModuleRoles p={p} />
+              </div>
+            </Reveal>
+            <Reveal delay={0.14}>
+              <div className="glass rounded-[24px] p-6">
+                <p className="label-mono mb-3">Build your own</p>
+                <p className="text-[13px] leading-relaxed text-muted-foreground">Start from this project with Claude, the MCP server or the SDK. The SDK calls below are the ones the recorder ran.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <CopyButton text={prompt} label="Copy prompt" />
+                  <a href={href("mcp")} className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12.5px] text-muted-foreground hover:text-foreground">Install the MCP server <ArrowUpRight className="size-3.5" /></a>
+                  <a href={href("skills")} className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12.5px] text-muted-foreground hover:text-foreground">Claude skill <ArrowUpRight className="size-3.5" /></a>
+                </div>
+                <pre className="mt-4 overflow-x-auto rounded-2xl border border-[var(--glass-border)] p-4 font-mono text-[11.5px] leading-relaxed text-foreground/85">{`bun packages/sdk/scripts/record-examples.ts ${p.id}`}</pre>
+                {include && <p className="mt-3 font-mono text-[11px] text-faint">featured tx {shortHash(include.tx)} · {fmt(include.gasUsed)} gas</p>}
+              </div>
+            </Reveal>
+          </div>
+        </div>
+
+        <div className="mt-16">
           <p className="label-mono mb-4">Other examples</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {keys.filter((k) => k !== runKey).map((k) => (
-              <a key={k} href={href("examples", ...k.split("/"))} className="glass group rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
-                <p className="font-mono text-[11px] text-faint">{k}</p>
-                <p className="mt-2 text-[14px] font-medium">{RUNS[k].title}</p>
+            {PROJECTS.filter((o) => o.key !== p.key).map((o) => (
+              <a key={o.key} href={href("examples", ...o.key.split("/"))} className="glass group rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
+                <p className="font-mono text-[11px] text-faint">{o.flagship ? "flagship" : groupName(o.group)}</p>
+                <p className="mt-2 text-[14px] font-medium">{o.name}</p>
                 <ArrowRight className="mt-4 size-4 text-faint transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
               </a>
             ))}
@@ -82,7 +160,7 @@ function PlayerPage({ runKey }: { runKey: string }) {
 function Index() {
   const [active, setActive] = useState(0);
   useEffect(() => {
-    const els = keys.map((k) => document.getElementById(`ch-${k.replace("/", "-")}`)).filter(Boolean) as HTMLElement[];
+    const els = PROJECTS.map((p) => document.getElementById(`ch-${p.key.replace("/", "-")}`)).filter(Boolean) as HTMLElement[];
     const io = new IntersectionObserver((entries) => entries.forEach((e) => e.isIntersecting && setActive(els.indexOf(e.target as HTMLElement))), { rootMargin: "-45% 0px -45% 0px" });
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
@@ -91,8 +169,8 @@ function Index() {
   return (
     <div className="relative overflow-x-clip">
       <nav className="fixed left-8 top-1/2 z-30 hidden -translate-y-1/2 flex-col gap-4 xl:flex">
-        {keys.map((k, i) => (
-          <button key={k} onClick={() => document.getElementById(`ch-${k.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth" })} className="group flex items-center gap-3" aria-label={RUNS[k].title}>
+        {PROJECTS.map((p, i) => (
+          <button key={p.key} onClick={() => document.getElementById(`ch-${p.key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth" })} className="group flex items-center gap-3" aria-label={p.name}>
             <span className={cn("h-px transition-all duration-500", i === active ? "w-10 bg-foreground" : "w-5 bg-foreground/25 group-hover:w-8")} />
             <span className={cn("font-pixel text-[13px] transition-colors", i === active ? "text-foreground" : "text-faint")}>{String(i + 1).padStart(2, "0")}</span>
           </button>
@@ -103,39 +181,38 @@ function Index() {
         <div className="mx-auto max-w-[1120px]">
           <Reveal>
             <p className="label-mono mb-4">Examples</p>
-            <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[72px]">
-              See it work
+            <h1 className="text-chrome max-w-[880px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[72px]">
+              Whole projects,
               <br />
-              before you read a spec.
+              recorded on a devnet.
             </h1>
-            <p className="mt-6 max-w-[580px] text-[17px] leading-relaxed text-muted-foreground">
-              Each example replays one run in five stages, the transaction and the world side by side, then the paired run where the condition was false.
+            <p className="mt-6 max-w-[620px] text-[17px] leading-relaxed text-muted-foreground">
+              Each example solves one real problem with several modules, each doing one job. Every transaction below happened on the local devnet, sent by a key with no ETH.
             </p>
           </Reveal>
         </div>
       </section>
 
-      {keys.map((k, i) => {
-        const run = RUNS[k];
-        const m = moduleFor(k);
-        const mod = m ? moduleById(m.id) : undefined;
+      {PROJECTS.map((p, i) => {
+        const run = RUNS[p.key];
+        const include = run ? step(run.steps, "include") : undefined;
         const facts: [string, string][] = [
-          ["Caller", run.actors.caller],
-          ["Who pays", run.actors.payer],
-          ["Mempool", step(run.steps, "admit")?.report.mempool ?? "—"],
-          ["When false", `${run.failing.result}${run.failing.core ? ` · Core ${run.failing.core}` : ""}, costs nothing`],
+          ["Problem", p.problem],
+          ["Transactions", run?.story ? `${run.story.length} on chain, every one from a key with no ETH or a funded user` : "not recorded yet"],
+          ["Featured", include ? `${p.featured} · ${fmt(include.gasUsed)} gas` : p.featured],
+          ["Refused case", run ? `${run.failing.result}${run.failing.core ? ` (${run.failing.core})` : ""}, costs nothing` : "—"],
         ];
         return (
-          <section key={k} id={`ch-${k.replace("/", "-")}`} className="flex min-h-screen items-center px-4 py-24 sm:px-6">
+          <section key={p.key} id={`ch-${p.key.replace("/", "-")}`} className="flex min-h-screen items-center px-4 py-24 sm:px-6">
             <div className={cn("mx-auto grid w-full max-w-[1120px] items-center gap-14", i % 2 === 1 ? "md:grid-cols-[1.08fr_0.92fr]" : "md:grid-cols-[0.92fr_1.08fr]")}>
               <div className={cn(i % 2 === 1 && "md:order-2")}>
                 <Reveal>
                   <MetalNumeral text={String(i + 1).padStart(2, "0")} height={130} />
                 </Reveal>
                 <Reveal delay={0.08}>
-                  <p className="label-mono mt-6">{mod ? `${mod.corner} · ${mod.trigger}` : k}</p>
-                  <h2 className="text-chrome mt-3 text-[36px] font-semibold leading-[1.02] tracking-[-0.035em] md:text-[44px]">{mod?.name ?? run.title}</h2>
-                  <p className="mt-4 max-w-[460px] text-[16px] leading-relaxed text-muted-foreground">{mod?.summary.replace(/`/g, "")}</p>
+                  <p className="label-mono mt-6">{p.flagship ? "Flagship" : groupName(p.group)}</p>
+                  <h2 className="text-chrome mt-3 text-[36px] font-semibold leading-[1.02] tracking-[-0.035em] md:text-[44px]">{p.name}</h2>
+                  <p className="mt-4 max-w-[460px] text-[16px] leading-relaxed text-muted-foreground">{p.summary}</p>
                 </Reveal>
                 <Reveal delay={0.16}>
                   <dl className="mt-8 divide-y divide-[var(--glass-border)] border-y border-[var(--glass-border)]">
@@ -146,18 +223,17 @@ function Index() {
                       </div>
                     ))}
                   </dl>
-                  <div className="mt-8 flex flex-wrap items-center gap-3">
-                    <PrimaryLink href={href("examples", ...k.split("/"))} className="h-11 px-5 text-[13px]">Play it</PrimaryLink>
-                    {mod && (
-                      <motion.a whileHover={{ x: 2 }} href={href("modules", mod.corner, mod.id)} className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
-                        Module page <ArrowUpRight className="size-3.5" />
-                      </motion.a>
-                    )}
+                  <div className="mt-6">
+                    <p className="label-mono mb-3">Built from</p>
+                    <ModuleRoles p={p} dense />
+                  </div>
+                  <div className="mt-8">
+                    <PrimaryLink href={href("examples", ...p.key.split("/"))} className="h-11 px-5 text-[13px]">Open the project</PrimaryLink>
                   </div>
                 </Reveal>
               </div>
               <div className={cn(i % 2 === 1 && "md:order-1")}>
-                {SCENES[k] ?? (
+                {run && (
                   <Reveal>
                     <Player run={run} compact autoplay loop />
                   </Reveal>

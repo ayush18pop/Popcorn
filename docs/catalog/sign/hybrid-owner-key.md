@@ -5,7 +5,7 @@ trigger: people
 status: built
 runsOn: [public, alternative]
 gas: null
-example: null
+example: examples/sign/sovereign-account/run.json
 related: [signed-intent, multisig-signer]
 postQuantum: true
 code: ["contracts/src/signers/HybridEcdsaWotsSigner.sol", "packages/sdk/examples/08-signed-intent.ts"]

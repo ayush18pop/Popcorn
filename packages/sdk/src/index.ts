@@ -234,3 +234,4 @@ export {
 export * from "./sponsor.ts";
 export * from "./privacy.ts";
 export * from "./account.ts";
+export * from "./record.ts";

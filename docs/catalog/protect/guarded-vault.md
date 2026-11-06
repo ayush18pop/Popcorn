@@ -6,7 +6,7 @@ status: built
 runsOn: [public, alternative]
 usedIn: [defi]
 gas: null
-example: examples/protect/guarded-vault/run.json
+example: null
 related: [proof-of-exploit-bounty, outflow-spike-pause, rule-pays]
 code: ["contracts/src/templates/GuardedVault.sol", "contracts/docs/guarded-vault.md"]
 ---

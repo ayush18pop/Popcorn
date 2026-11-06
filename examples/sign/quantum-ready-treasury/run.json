@@ -1,0 +1,212 @@
+{
+  "recorded": true,
+  "module": "quantum-ready-treasury",
+  "network": {
+    "name": "local",
+    "chainId": 1338
+  },
+  "title": "A treasury that survives the day ECDSA breaks",
+  "actors": {
+    "caller": "a key with no ETH",
+    "ruleContract": "treasury",
+    "payer": "the treasury"
+  },
+  "contracts": {
+    "treasury": "0xe8b23752e1B0279685aDab3F9aC12bf42BEb70a3"
+  },
+  "steps": [
+    {
+      "stage": "build",
+      "frames": [
+        {
+          "mode": "VERIFY",
+          "flags": 3,
+          "target": "treasury",
+          "gasLimit": 2051662,
+          "data": "0x00000000…(2784 bytes)",
+          "explain": "the treasury checks the WOTS+ signature against the backup key it committed to, then approves"
+        },
+        {
+          "mode": "SENDER",
+          "flags": 0,
+          "target": "treasury",
+          "gasLimit": 2200000,
+          "data": "0xd9292504…(132 bytes)",
+          "explain": "moves every wei to the post-quantum target"
+        }
+      ],
+      "world": {
+        "treasury balance": "3.106936027988235898 ETH",
+        "post-quantum target": "0 ETH"
+      }
+    },
+    {
+      "stage": "validate",
+      "reads": [
+        {
+          "label": "validation (frame 0)",
+          "value": "READY",
+          "gas": 125851
+        }
+      ],
+      "result": "READY",
+      "gasUsed": 125851
+    },
+    {
+      "stage": "admit",
+      "report": {
+        "mempool": "alternative mempool (ERC-8421 sidecar)",
+        "outcome": "accepted",
+        "entity": {
+          "name": "treasury",
+          "staked": true,
+          "budget": 2500000,
+          "used": 2051662
+        },
+        "checks": [
+          {
+            "rule": "CORE",
+            "verdict": "pass",
+            "detail": "Core's checks passed and the rule's condition returned true"
+          },
+          {
+            "rule": "CANONICAL",
+            "verdict": "warn",
+            "detail": "the node's own mempool would refuse it: prefix gas budget exceeded: 2051662 > 250000 (MAX_VERIFY_GAS)"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "include",
+      "tx": "0x7cf6b31a3b0fb61cc6239bf905a4e947f9427c3017e84fb0e81c55e6b9472675",
+      "block": 947,
+      "status": "success",
+      "payer": "treasury",
+      "gasUsed": 492304
+    },
+    {
+      "stage": "act",
+      "before": {
+        "treasury balance": "3.106936027988235898 ETH",
+        "post-quantum target": "0 ETH"
+      },
+      "after": {
+        "treasury balance": "0.008806120065088968 ETH",
+        "post-quantum target": "3.097145299919700802 ETH"
+      },
+      "events": [
+        "treasury: 0x8b80bd19",
+        "0xfffffffffffffffffffffffffffffffffffffffe: 0xddf252ad",
+        "treasury: 0x737c6922"
+      ]
+    }
+  ],
+  "failing": {
+    "result": "CONDITION_FALSE",
+    "core": "0x22",
+    "steps": [
+      {
+        "stage": "build",
+        "frames": [
+          {
+            "mode": "VERIFY",
+            "flags": 3,
+            "target": "treasury",
+            "gasLimit": 2049230,
+            "data": "0x00000000…(256 bytes)"
+          },
+          {
+            "mode": "SENDER",
+            "flags": 0,
+            "target": "treasury",
+            "gasLimit": 2200000,
+            "data": "0xd9292504…(228 bytes)"
+          }
+        ],
+        "world": {
+          "treasury balance": "3.106936027988235898 ETH",
+          "quantum switch": "on"
+        }
+      },
+      {
+        "stage": "validate",
+        "reads": [
+          {
+            "label": "frame 0",
+            "value": "the word is exactly 1",
+            "gas": 0
+          }
+        ],
+        "result": "CONDITION_FALSE",
+        "gasUsed": 0
+      },
+      {
+        "stage": "admit",
+        "report": {
+          "mempool": "alternative mempool (ERC-8421 sidecar)",
+          "outcome": "rejected",
+          "checks": [
+            {
+              "rule": "0x22",
+              "verdict": "fail",
+              "detail": "the word is exactly 1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "story": [
+    {
+      "module": "hybrid-owner-key",
+      "role": "set up",
+      "title": "The treasury commits its owner key, a hidden post-quantum backup key and its guardians",
+      "tx": "0x2bd927bd54d6b688b158e04afb061b6f9d23643f1c3694fd52ba71d41f51f886",
+      "block": 933,
+      "gasUsed": 684480,
+      "status": "success"
+    },
+    {
+      "module": "signed-intent",
+      "role": "spend",
+      "title": "A normal payment signed by the owner",
+      "tx": "0x25b403b2d7710f6599e2888b056588bb6ecdfde77e05d90fabb528610f68478c",
+      "block": 938,
+      "gasUsed": 380087,
+      "status": "success"
+    },
+    {
+      "module": "hidden-guardians",
+      "role": "vote",
+      "title": "A guardian votes to flip the quantum switch, without revealing who",
+      "tx": "0x1cb4ff5cda95eeb20aff3ccfc6471d1e7b7c9cae2b3878fb782406a6fdbecb41",
+      "block": 942,
+      "gasUsed": 391173,
+      "status": "success"
+    },
+    {
+      "module": "quantum-switch",
+      "role": "switch",
+      "title": "The second vote reaches the quorum: from now on ECDSA alone moves nothing",
+      "tx": "0xa8baa5fbc65bbe18fa13c4a709076e90ac8fc95992f1a0dc11f7a1e4912506e2",
+      "block": 945,
+      "gasUsed": 514450,
+      "status": "success"
+    },
+    {
+      "module": "post-quantum-signer",
+      "role": "migrate",
+      "title": "The committed WOTS+ backup key moves everything to a post-quantum account",
+      "tx": "0x7cf6b31a3b0fb61cc6239bf905a4e947f9427c3017e84fb0e81c55e6b9472675",
+      "block": 947,
+      "gasUsed": 492304,
+      "status": "success"
+    }
+  ],
+  "sources": {
+    "simulation": "ethrex_simulateFrameTransaction",
+    "admission": "ERC-8421 sidecar (eth_sendFrameTransaction)",
+    "receipt": "eth_getTransactionReceipt"
+  }
+}
