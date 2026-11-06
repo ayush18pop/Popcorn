@@ -20,7 +20,7 @@ describe("popcorn MCP server", () => {
   test("lists its tools, none of which sign or send", async () => {
     const c = await client();
     const names = (await c.listTools()).tools.map((t) => t.name).sort();
-    expect(names).toEqual(["build_trigger", "can_trigger", "explain_code", "get_block", "get_example", "how_to_build", "list_blocks", "list_examples", "rule_contract_info"]);
+    expect(names).toEqual(["build_trigger", "can_trigger", "explain_code", "get_block", "get_example", "how_to_build", "inspect_transaction", "list_blocks", "list_examples", "rule_contract_info"]);
   });
   test("catalog: blocks by shape and tier, and one page", async () => {
     const c = await client();

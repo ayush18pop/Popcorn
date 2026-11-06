@@ -7,7 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { parse as parseYaml } from "yaml";
 import { getAddress, type Address, type Hex } from "viem";
-import { CORE_ERRORS, OPEN_SPONSOR_ERRORS, createPopcornContext, popcornActions, prepareTrigger, readRuleContract } from "@popcorn/sdk";
+import { CORE_ERRORS, OPEN_SPONSOR_ERRORS, createPopcornContext, inspectTransaction, popcornActions, prepareTrigger, readRuleContract } from "@popcorn/sdk";
 
 export const ROOT = new URL("../../../", import.meta.url).pathname;
 const GROUPS: Record<string, string> = {
@@ -171,6 +171,16 @@ export function createServer(): McpServer {
         send: "eth_sendRawTransaction(raw) to the devnet's alternative mempool (ERC-8421 sidecar) or node",
       });
     },
+  );
+
+  server.registerTool(
+    "inspect_transaction",
+    {
+      description:
+        "Any frame transaction by hash, included or refused: each stage (mempool admission, Core, payer, the build's condition, inclusion) and the build's flow block by block (trigger, payer, conditions, logic operators, actions) with each node's result: yes, no, unknown, not reached. A refused transaction is found in the sidecar's record; its nodes are evaluated on the current state. Sends nothing.",
+      inputSchema: { network, hash: hex.describe("the transaction hash") },
+    },
+    async ({ network: n, hash }) => json(await inspectTransaction(hash as Hex, { devnet: n })),
   );
 
   server.registerTool(
