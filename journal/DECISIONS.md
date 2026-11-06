@@ -591,3 +591,15 @@ with the rule that blocked it.
 
 **Why.** A page full of "does not work on X" reads as a library with holes. The facts stay available where they help:
 when something is refused.
+
+## 68. Group modules by use case, not by CROPS
+
+**Context.** Decision 65 grouped the library by the four CROPS properties. In practice the grouping felt forced: a
+module such as a private pool serves several properties at once, and a developer looks for what they want to do, not
+for a letter.
+
+**Choice.** Modules are grouped by use case: move money privately, pay for gas, protect a position or protocol, sign
+and recover, prove and publish. CROPS stays as the library's purpose and as language on the landing page, but it is not
+a navigation structure. This supersedes decision 65's grouping.
+
+**Why.** Navigation should match how a developer thinks about the problem they have.
