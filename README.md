@@ -29,6 +29,7 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 | [`docs/catalog/`](docs/catalog) | One file per module: what it does, when it fires, mempool, gas, code, limits |
 | [`examples/`](examples) | Runs the site's player replays, one `run.json` per example |
 | [`journal/`](journal) | The decisions behind the design |
+| [`docs/HANDOFF.md`](docs/HANDOFF.md) | Project context for a new contributor or agent |
 
 ## Built so far
 
