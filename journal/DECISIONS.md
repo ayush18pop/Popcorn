@@ -473,3 +473,86 @@ principles.
 
 **Why.** A builder tested only against itself can be consistently wrong. A second implementation written from the
 specification catches drift between the documentation, Core and the SDK.
+
+## 56. The developer site is a static app in apps/web, outside the Bun workspace for now
+
+**Choice.** A Vite, React and Tailwind app in `apps/web`, with its own npm lockfile. It imports `@popcorn/simulator` and
+the SDK's transport module straight from their sources.
+
+**Why.** A static bundle needs no backend and can be hosted anywhere. Keeping it out of the workspace leaves `bun.lock`
+and the package builds untouched while the site settles; joining the workspace later is a lockfile change, not a rewrite.
+
+## 57. The module catalog lives in docs/catalog, one file per module
+
+**Choice.** `docs/catalog/<corner>/<module>.md`: front matter for the facts the site filters and badges on (corner,
+trigger, status, mempool, gas, example, related, code), and Markdown sections for the page (what it does, when it fires,
+what it does then, mempool, code, limits). The site parses these files and restates nothing.
+
+**Why.** One source for the site, the planned Claude skills and the MCP server's `list_modules` / `get_module`. A module
+page cannot disagree with the catalog because it is the catalog.
+
+## 58. Gas is "not measured yet" until a run measures it
+
+**Choice.** A module's `gas` is null unless a recorded run measured it (tagged `measured` with the network) or a
+contract documents an estimate (tagged `estimated`). The site shows null as "not measured yet" and never fills a bar
+from a guess.
+
+**Why.** The whole point of the gas section is to decide which mempool a module fits. A made-up number there is worse
+than no number.
+
+## 59. Sample runs in the recorder's format until the recorder exists
+
+**Context.** The player replays `examples/<corner>/<module>/run.json`, which the recorder script will write from a
+devnet. The recorder is not built yet.
+
+**Choice.** Four sample runs (guarded vault, partial repay shield, proof-of-exploit bounty, rule-pays counter) in exactly
+the recorder's format, with `recorded: false` and a note saying which values come from the contracts and which are
+placeholders. The player labels them "sample run" on screen. The recorder replaces each file in place.
+
+**Why.** The player, the module pages and the format can be built and reviewed now, and nothing about the switch to
+recorded data changes the site.
+
+## 60. The site reuses only the browser-safe parts of the SDK
+
+**Context.** The SDK's main entry reads files (one-time key records) and its Core artifacts are generated at build
+time, so it does not load in a browser as is.
+
+**Choice.** The site imports the simulator's rule table and the SDK's transport (devnet table, JSON-RPC, receipts,
+admission status) by path. The explorer decodes the 101 argument bytes itself from `contracts/core/LAYOUT.md`, and
+compares the Core build only when `contracts/core/build.sh` ran before the site was built; otherwise it says it did not.
+Live `canTrigger` waits for a browser entry in the SDK and points to the CLI meanwhile.
+
+**Why.** Reuse what already runs in a browser rather than reimplement it, and be explicit about the one check the
+browser cannot make yet.
+
+## 61. The player's world view is a diagram
+
+**Options.** A diagram or a lightweight 3D scene.
+
+**Choice.** A diagram: the caller, the rule contract, the mempool and the budget bar, then before and after values.
+
+**Why.** It reads at phone width, works with reduced motion, and every element maps to a field of the run file.
+
+## 62. Featured examples: guarded vault, partial repay shield, proof-of-exploit bounty
+
+**Choice.** The home page features one module each from Pause, Repay and Pay Out.
+
+**Why.** They are built, they cover rule-pays and caller-pays, the public and the alternative mempool, and a condition,
+a market read and a proof.
+
+## 63. Skills and MCP pages show the design and say it is planned
+
+**Choice.** The pages describe each skill and tool, mark them `planned`, and run nothing that does not exist. The MCP
+tool inspector runs `list_modules` and `get_module` against the catalog the site ships, and says the other tools need
+the server.
+
+**Why.** The pages help settle the design now without implying anyone can install the skills or the server today.
+
+## 64. One visual language: monochrome, glass, motion that explains
+
+**Choice.** Black, grey and white only, dark first with a checked light theme; glass surfaces, Geist and Geist Mono,
+pixel numerals for figures. Motion is used where it carries meaning: frames appearing, a check passing, a budget
+filling, a value changing. Every animation respects `prefers-reduced-motion`.
+
+**Why.** A security library should look precise rather than playful, and the animation is how the site shows the
+mechanism without asking the reader to learn frame transactions first.

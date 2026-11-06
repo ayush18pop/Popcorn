@@ -25,6 +25,9 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 | [`packages/sdk`](packages/sdk) | `@popcorn/sdk`: a viem extension (`deployRule`, `canTrigger`, `trigger`, `simulate`, `watch`) and every signer |
 | [`packages/simulator`](packages/simulator) | `@popcorn/simulator`: which mempool will accept a transaction, which rule blocks it, and the fix |
 | [`devnet/`](devnet) | A local devnet with per-entity validation budgets, started by one command |
+| [`apps/web`](apps/web) | The developer site: module catalog, example player, explorer, docs |
+| [`docs/catalog/`](docs/catalog) | One file per module: what it does, when it fires, mempool, gas, code, limits |
+| [`examples/`](examples) | Runs the site's player replays, one `run.json` per example |
 | [`journal/`](journal) | The decisions behind the design |
 
 ## Built so far
@@ -35,7 +38,7 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 | Conditions | threshold on another contract's value, proof of a statement (Groth16), rule sets (AND / OR / NOT / k-of-n over compare, range, crossing, delta, ratio, balance, code hash, flag, with an action per rule) | public for the rule contract's own storage; alternative mempool (staked) for reads of other contracts |
 | Signers | ECDSA, P256 / WebAuthn passkeys, WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon-512, hybrids, M-of-N multisig, k-of-n attested facts | WOTS+ and ECDSA fit the public 100,000 gas; the larger post-quantum schemes need the local devnet or a larger budget |
 | Templates | a vault that pauses itself when its invariant breaks and pays a whitehat for a zero-knowledge proof of its bug; a loan shield that repays when health falls | |
-| Tooling | simulator, SDK, local devnet | |
+| Tooling | simulator, SDK, local devnet, developer site | |
 
 Planned, in this order: an action library (pause, repay, exit, reward pool), pause modules for common invariants, position
 protection and exits, fair liquidation with keyed-nonce tickets, safe gas sponsorship, ERC-8286 wallet validators, a CLI,
@@ -54,6 +57,8 @@ bun run --cwd packages/sdk test                       # 303 offline tests
 
 devnet/up.sh                                          # local devnet, about 10 minutes the first time
 POPCORN_DEVNET=local bun packages/sdk/examples/01-rule-pays.ts
+
+(cd apps/web && npm ci && npm run dev)               # the developer site on localhost:5173
 ```
 
 The example deploys a rule contract, shows its condition false (`CONDITION_FALSE`), arms it, and triggers it from a client
