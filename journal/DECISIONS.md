@@ -614,3 +614,17 @@ sentence with a plain-language trail of steps.
 
 **Why.** Block names are internal detail. A developer choosing what to build does not need them, and showing them made the
 product look more complicated than it is.
+
+## 70. Examples are whole projects built from several modules
+
+**Context.** In an early version of the site, examples and modules had the same names and the same content, which made
+the distinction meaningless.
+
+**Options.** (a) Keep modules big and examples small, as before. (b) Make modules the small parts and examples whole
+projects assembled from several of them.
+
+**Choice.** (b). A module does one job for one use case. An example is a complete project, such as a private payroll or a
+safe lending market, that names the modules it uses, gives each one a role, and tells the story of how they work
+together. An example's status is derived from its modules.
+
+**Why.** The relationship should be visible: parts on one side, assembled products on the other.
