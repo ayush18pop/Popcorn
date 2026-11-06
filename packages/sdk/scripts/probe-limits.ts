@@ -2,8 +2,9 @@
 // Each probe is an unsigned frame transaction from a random address with no code: the endpoint checks the validation
 // budget first, so "exceeds MAX_VERIFY_GAS" means the limit is below the probe, while any other rejection (for example
 // "the frame's default code reported failure") means the budget check passed.
-//   bun packages/sdk/scripts/probe-limits.ts [rpc-url] [sidecar-url]
-import { FrameFlags, FrameMode, toSidecarWire, type FrameTx } from "../src/index.ts";
+//   bun packages/sdk/scripts/probe-limits.ts <sidecar rpc url>        a sidecar (URL ends in /rpc): eth_sendFrameTransaction
+//   bun packages/sdk/scripts/probe-limits.ts <node url>               a node's own mempool: eth_sendRawTransaction
+import { FrameFlags, FrameMode, serializeFrameTx, toSidecarWire, type FrameTx } from "../src/index.ts";
 
 const rpc = process.argv[2] ?? "https://altmempool.forshtat.com/rpc";
 const call = async (url: string, method: string, params: unknown[]) => {
@@ -11,6 +12,7 @@ const call = async (url: string, method: string, params: unknown[]) => {
   return (await r.json()) as { result?: unknown; error?: { message: string; code: number } };
 };
 const sender = ("0x" + [...crypto.getRandomValues(new Uint8Array(20))].map((b) => b.toString(16).padStart(2, "0")).join("")) as `0x${string}`;
+const viaSidecar = /\/rpc$/.test(rpc);
 const chainId = BigInt(((await call(rpc.replace(/\/rpc$/, ""), "eth_chainId", [])).result as string) ?? "0x539");
 
 console.log("endpoint", rpc, "chain", chainId);
@@ -29,7 +31,7 @@ for (const gas of [90_000n, 100_001n, 250_001n, 1_000_001n, 2_500_001n, 10_000_0
     blobHashes: [],
     recentRootReferences: [],
   };
-  const r = await call(rpc, "eth_sendFrameTransaction", [toSidecarWire(tx)]);
+  const r = viaSidecar ? await call(rpc, "eth_sendFrameTransaction", [toSidecarWire(tx)]) : await call(rpc, "eth_sendRawTransaction", [serializeFrameTx(tx)]);
   const msg = r.error?.message ?? JSON.stringify(r.result);
   const budget = /exceeds|MAX_VERIFY_GAS|budget/i.test(msg) ? "LIMIT HIT" : "budget ok";
   console.log(String(gas).padStart(10), budget.padEnd(10), msg.slice(0, 150));

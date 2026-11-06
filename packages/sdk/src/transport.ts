@@ -62,10 +62,10 @@ export const devnets = {
     sidecarUrl: "https://altmempool.forshtat.com/rpc",
     explorerUrl: "https://explorer.altmempool.wtf",
     budgets: {
-      ethrex: 100_000, // prefix 100,001 -> "exceeds MAX_VERIFY_GAS" (contracts/core/SPEC.md, "Budgets enforced by the public endpoints")
-      sidecar: { unstaked: 100_000, staked: 100_000 }, // the public sidecars enforce one flat MAX_VERIFY_GAS of 100,000, staked or not
-      gateway: { unstaked: 100_000, staked: 100_000 },
-      note: "the public ethrex and both public sidecars (altmempool.forshtat.com/rpc, altmempoolgateway.forshtat.com/rpc) enforce a flat 100,000, measured by sending prefixes of 100,001 to 2,500,001 gas; the landing page's 250k / 2.5M per-entity budgets are not what they run. Use the local devnet (devnet/up.sh) for larger budgets.",
+      ethrex: 100_000, // the node's own (canonical) mempool: prefix 100,001 -> "exceeds MAX_VERIFY_GAS"
+      sidecar: { unstaked: 10_000_000, staked: 10_000_000 }, // no limit observed: probes up to 10,000,000 pass the budget check
+      gateway: { unstaked: null, staked: null }, // not measured
+      note: "the public node's own mempool (eth_sendRawTransaction) enforces 100,000; the public sidecar (altmempool.forshtat.com/rpc) enforces no validation limit (probed up to 10,000,000 gas); the gateway's limit has not been measured. Run packages/sdk/scripts/probe-limits.ts to re-measure.",
     },
   },
   // devnet2 / devnet3: add entries here with the same shape when their URLs are published.

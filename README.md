@@ -32,12 +32,12 @@ with no ETH; if the condition is false the transaction is invalid, so a failed a
 
 ## Built so far
 
-| Area | What | Mempool |
+| Area | What | Runs on |
 |---|---|---|
-| Core | hardened VERIFY: frame-layout check, fee caps, once per event, re-entry lock, rule-pays and caller-pays, hybrid ECDSA + WOTS+ owner | public |
-| Conditions | threshold on another contract's value, proof of a statement (Groth16), rule sets (AND / OR / NOT / k-of-n over compare, range, crossing, delta, ratio, balance, code hash, flag, with an action per rule) | public for the rule contract's own storage; alternative mempool (staked) for reads of other contracts |
-| Signers | ECDSA, P256 / WebAuthn passkeys, WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon-512, hybrids, M-of-N multisig, k-of-n attested facts | WOTS+ and ECDSA fit the public 100,000 gas; the larger post-quantum schemes need the local devnet or a larger budget |
-| Templates | a vault that pauses itself when its invariant breaks and pays a whitehat for a zero-knowledge proof of its bug; a loan shield that repays when health falls | |
+| Core | hardened VERIFY: frame-layout check, fee caps, once per event, re-entry lock, rule-pays and caller-pays, hybrid ECDSA + WOTS+ owner | public mempool, alternative mempool |
+| Conditions | threshold on another contract's value, proof of a statement (Groth16), rule sets (AND / OR / NOT / k-of-n over compare, range, crossing, delta, ratio, balance, code hash, flag, with an action per rule) | public mempool for the rule contract's own storage; alternative mempool, staked, for reads of other contracts |
+| Signers | ECDSA, P256 / WebAuthn passkeys, WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon-512, hybrids, M-of-N multisig, k-of-n attested facts | alternative mempool (all schemes); public mempool for ECDSA and WOTS+ |
+| Templates | a vault that pauses itself when its invariant breaks and pays a whitehat for a zero-knowledge proof of its bug; a loan shield that repays when health falls | alternative mempool |
 | Tooling | simulator, SDK, local devnet, developer site | |
 
 Planned, in this order: an action library (pause, repay, exit, reward pool), pause modules for common invariants, position
@@ -69,11 +69,12 @@ with no account and no ETH. See [`packages/sdk/README.md`](packages/sdk/README.m
 | | Public devnet | Local devnet |
 |---|---|---|
 | Chain id | 1337 | 1338 |
-| Validation limit | 100,000 gas flat, staked or not | 250,000 unstaked / 2,500,000 staked per entity |
+| Alternative-mempool sidecar | `https://altmempool.forshtat.com/rpc`, no validation limit | `http://127.0.0.1:14338/rpc`, 250,000 unstaked / 2,500,000 staked per entity |
+| Canonical mempool (the node's own) | 100,000 gas | 250,000 gas |
 
-The public devnet's `RuleFactory` is at `0x1EdD695a30f001B270e7A0F3A2781628A69E8380`, the same address as on the local
-devnet. Modules whose validation fits 100,000 gas run on both; the rest run on the local devnet. See
-[`devnet/README.md`](devnet/README.md) for exactly what differs and why.
+Every module runs on the public devnet through its alternative-mempool sidecar; the local devnet is a reproducible copy
+for development and offline work. The `RuleFactory` is at `0x1EdD695a30f001B270e7A0F3A2781628A69E8380` on both. See
+[`devnet/README.md`](devnet/README.md) for exactly what differs.
 
 ## Limits
 
@@ -81,8 +82,7 @@ devnet. Modules whose validation fits 100,000 gas run on both; the rest run on t
 - Someone still has to notice the condition and trigger the rule contract. Popcorn removes the need to hire, fund or
   trust them: any wallet can, and the reward pays them.
 - Validation has no clock, so there are no deadline or inactivity conditions.
-- A condition that reads another contract's storage needs stake on the alternative mempool; the public EIP-8141 mempool
-  refuses it.
+- A condition that reads another contract's storage runs on the alternative mempool with a staked rule contract.
 - Groth16 proofs are zero-knowledge but not post-quantum. The hash-based signers and keyless triggers are.
 - Reviewed by us, not externally audited.
 

@@ -2,14 +2,13 @@
 
 A local copy of the EIP-8141 alternative-mempool devnet: the same ethrex and Lighthouse images, genesis generator and
 fork schedule as the public devnet, plus a sidecar (the ERC-8421 mempool node) with **per-entity validation budgets**.
-It exists because some modules cannot run on the public devnet's current limits: ZK proof checks and post-quantum
-signatures above 100,000 gas, and validation that reads other contracts from a staked rule contract.
+Use it to develop offline, to reproduce a run from scratch, and to try different validation budgets.
 
 | | Public devnet | Local devnet |
 |---|---|---|
 | Chain id | 1337 | 1338 (so nothing signed for one chain is valid on the other) |
-| ethrex validation limit | 100,000 | 250,000 |
-| Sidecar validation limit | 100,000 flat, staked or not | 250,000 unstaked / 2,500,000 staked, per entity |
+| Canonical mempool (the node's own) validation limit | 100,000 | 250,000 |
+| Alternative-mempool sidecar validation limit | none | 250,000 unstaked / 2,500,000 staked, per entity |
 | ethrex RPC | `https://altmempool.forshtat.com` | `http://127.0.0.1:18545` |
 | Sidecar / gateway | `https://altmempool.forshtat.com/rpc` | `http://127.0.0.1:14338/rpc` |
 | Explorer | `https://explorer.altmempool.wtf` | `http://127.0.0.1:14339` |
@@ -18,11 +17,11 @@ signatures above 100,000 gas, and validation that reads other contracts from a s
 
 Only gas limits, plus one stability fix:
 
-1. **ethrex `--mempool.max-verify-gas=250000`** (public: 100,000). A proof check or post-quantum signature costs more
-   than 100,000 gas of validation.
-2. **A sidecar patch**, `patches/per-entity-budgets.patch`, applied to the workshop sidecar at commit `2e22ff0`. The
-   upstream sidecar enforces one flat `MAX_VERIFY_GAS` of 100,000 for the whole validation prefix. The patch implements
-   ERC-8421's BUDGET-010 instead: each entity (sender, payer, factory) gets its own budget, 250,000 unstaked or
+1. **ethrex `--mempool.max-verify-gas=250000`** (the public node: 100,000), so the node's own mempool also admits a proof
+   check or a larger post-quantum signature.
+2. **A sidecar patch**, `patches/per-entity-budgets.patch`, applied to the workshop sidecar at commit `2e22ff0`. That
+   sidecar enforces one flat `MAX_VERIFY_GAS` of 100,000 for the whole validation prefix (the public sidecar has since
+   been configured without a limit). The patch implements ERC-8421's BUDGET-010 instead: each entity (sender, payer, factory) gets its own budget, 250,000 unstaked or
    2,500,000 staked, using the values on the alternative-mempool documentation's landing page. Nothing else in the
    sidecar changes: its rules, reputation and relay path are the upstream ones.
 3. **A fixed address for the validator container** in `docker-compose.yml`, so it can no longer take the address

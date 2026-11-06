@@ -296,7 +296,7 @@ describe("devnet budgets (DevnetConfig.budgets)", () => {
     const { devnets, publicPrefixBudget, getDevnet } = await import("../src/index.ts");
     expect(devnets.local.budgets).toMatchObject({ ethrex: 250_000, sidecar: { unstaked: 250_000, staked: 2_500_000 }, gateway: { unstaked: 250_000, staked: 2_500_000 } });
     expect(devnets.devnet1.budgets.ethrex).toBe(100_000);
-    expect(devnets.devnet1.budgets.gateway).toEqual({ unstaked: 100_000, staked: 100_000 });
+    expect(devnets.devnet1.budgets.gateway).toEqual({ unstaked: null, staked: null });
     expect(publicPrefixBudget("local")).toBe(250_000);
     expect(publicPrefixBudget("devnet1")).toBe(100_000);
     expect(publicPrefixBudget({ ...getDevnet("local"), budgets: undefined as never })).toBe(100_000); // hand-written config without budgets
@@ -304,7 +304,7 @@ describe("devnet budgets (DevnetConfig.budgets)", () => {
   it("planRuleSet warns against the devnet's budgets and skips unknown ones", () => {
     const spec = rs.ruleSet("independent", { when: rs.compare(rs.getter(A1, SEL, { gas: 90_000 }), "gt", 1n) });
     const caps = { conditionGas: 120_000 };
-    expect(planRuleSet(spec, { devnet: "devnet1", caps }).warnings.join()).toMatch(/over the 100000 unstaked budget \(and over the 100000 staked budget\)/);
+    expect(planRuleSet(spec, { devnet: "devnet1", caps }).warnings.join()).toMatch(/over the public 100000 budget \(alternative mempool only\)/);
     expect(planRuleSet(spec, { devnet: "local", caps }).warnings.join()).not.toMatch(/budget/); // 250k locally
     expect(planRuleSet(spec, { devnet: "local", caps: { conditionGas: 240_000 } }).warnings.join()).toMatch(/over the 250000 unstaked budget/);
     expect(planRuleSet(spec, { budgets: { public: null, unstaked: null }, caps: { conditionGas: 240_000 } }).warnings.join()).not.toMatch(/budget/);

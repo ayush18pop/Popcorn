@@ -9,7 +9,7 @@ keys/
 *.key.json
 bun.lockb
 .env.local
-test/results/
+**/test/results/
 
 # site build
 apps/web/dist/

@@ -241,11 +241,11 @@ max_cost    = total_gas_limit * max_fee_per_gas            # TXPARAM 0x06, what 
 | Endpoint | Budget | Evidence |
 |---|---|---|
 | public ethrex `eth_sendRawTransaction` (`https://altmempool.forshtat.com`) | flat **100,000** for the whole prefix incl. signature cost | prefix 100,001 → `Invalid params: Frame transaction prefix gas budget (frames + sig cost) exceeds MAX_VERIFY_GAS` (-32000) |
-| upstream sidecar (`https://altmempool.forshtat.com/rpc`) | flat **100,000** | prefix 100,001 → `validation prefix execution gas sum 100001 + signature-verification cost 0 = 100001 exceeds MAX_VERIFY_GAS 100000` (-32602); same at 250,001 |
-| public gateway sidecar (`https://altmempoolgateway.forshtat.com/rpc`) | flat **100,000** | same message as the upstream sidecar |
+| public sidecar (`https://altmempool.forshtat.com/rpc`) | **no limit** | probes from 90,000 to 10,000,000 gas all pass the budget check (`packages/sdk/scripts/probe-limits.ts`) |
+| public gateway sidecar (`https://altmempoolgateway.forshtat.com/rpc`) | not measured | |
 | a sidecar with per-entity budgets (ERC-8421 BUDGET-010, as on the local devnet) | **250,000** unstaked / **2,500,000** staked, per entity | `exceeds unstaked / staked budget` |
 
-On the public devnet anything with a prefix over 100k cannot be included through public paths. The 250k / 2.5M
+A prefix over 100,000 gas is admitted by the public sidecar and not by the node's own (canonical) mempool. The 250k / 2.5M
 per-entity budgets (the values on altmempool.wtf) hold on a sidecar configured with them, such as the local devnet.
 
 ### Recognised prefix shapes (sidecar `validationPrefix.ts:182-255`; ethrex reports `prefixShape`)

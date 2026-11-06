@@ -73,8 +73,8 @@ leaf needs; `deployRuleSet` deploys the result. See `examples/07-rule-set.ts`.
 
 | Name | Chain | Notes |
 |---|---|---|
-| `local` | 1338 | `devnet/up.sh`. Validation limits of 250,000 unstaked / 2,500,000 staked per entity |
-| `devnet1` | 1337 | The public devnet. Its ethrex and both sidecars enforce a flat 100,000 gas of validation |
+| `local` | 1338 | `devnet/up.sh`. A reproducible copy with 250,000 unstaked / 2,500,000 staked validation per entity |
+| `devnet1` | 1337 | The public devnet. Its alternative-mempool sidecar accepts any validation budget; the node's own mempool allows 100,000 |
 
 `popcorn({ devnet: "local" })`, or pass `{ factory, core }` for a network without an entry in `deployments.ts`.
 
@@ -98,8 +98,7 @@ The offline tests check the encoder and trigger builder against an independent r
 
 ## Limits
 
-- A rule contract that reads another contract's storage needs stake on an alternative mempool, and the public
-  EIP-8141 mempool refuses it regardless.
+- A rule contract that reads another contract's storage runs on an alternative mempool with a staked rule contract.
 - Validation has no clock, so there are no deadline or inactivity conditions.
 - Groth16 proofs are zero-knowledge but not post-quantum; the hash-based signers are.
 - Reviewed by us, not externally audited.

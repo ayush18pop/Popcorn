@@ -171,7 +171,7 @@ export function planRuleSet(spec: RuleSetSpec, o: PlanOptions = {}): RuleSetPlan
     const stakedFits = budgets.staked === null || floorAt <= budgets.staked;
     warnings.push(`the VERIFY floor at these caps is ${floorAt}: over the ${budgets.unstaked} unstaked budget (${stakedFits ? "staked only" : `and over the ${budgets.staked} staked budget`})`);
   }
-  else if (budgets.public !== null && floorAt > budgets.public) warnings.push(`the VERIFY floor at these caps is ${floorAt}: over the public ${budgets.public} budget (local/organiser mempools only)`);
+  else if (budgets.public !== null && floorAt > budgets.public) warnings.push(`the VERIFY floor at these caps is ${floorAt}: over the public ${budgets.public} budget (alternative mempool only)`);
   if (maxVerifyDataLength > RULESET_LIMITS.MAX_CONFIG) warnings.push("witness cap over 16 KB");
   return { config, configBytes, gas, caps: { conditionGas, maxVerifyDataLength, maxTriggerDataLength, maxGasPerFrame, maxStateGasPerFrame }, classes: ruleClasses(spec), verifyFloorAtCaps: floorAt, warnings };
 }
