@@ -233,6 +233,7 @@ export {
 } from "./ruleset/index.ts";
 // ---------------------------------------------------------------- blocks without Solidity: checks, joins and call actions as data
 export * as blocks from "./blocks.ts";
+export * from "./inspect.ts";
 export * from "./builds.ts";
 export * from "./sponsor.ts";
 export * from "./privacy.ts";

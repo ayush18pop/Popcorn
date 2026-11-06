@@ -425,6 +425,9 @@ export interface CanTriggerResult extends Readiness {
   verifyGasLimit: bigint;
   simulation: SimulationResult;
   tx: FrameTx;
+  /** The exact signed transaction and its hash (what trigger() would send). */
+  raw: Hex;
+  hash: Hex;
 }
 
 /**
@@ -433,7 +436,7 @@ export interface CanTriggerResult extends Readiness {
  */
 export async function canTrigger(ctx: PopcornContext, ruleContract: Address, o: TriggerOptions = {}): Promise<CanTriggerResult> {
   const p = await prepareTrigger(ctx, ruleContract, o, false);
-  return { ...p.readiness, nonceKey: p.nonceKey, verifyGasLimit: p.verifyGasLimit, simulation: p.simulation, tx: p.tx };
+  return { ...p.readiness, nonceKey: p.nonceKey, verifyGasLimit: p.verifyGasLimit, simulation: p.simulation, tx: p.tx, raw: p.raw, hash: p.hash };
 }
 
 // ---------------------------------------------------------------- trigger

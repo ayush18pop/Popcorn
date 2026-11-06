@@ -1,0 +1,26 @@
+// The Open Sponsor's refusal codes (contracts/sponsor/OpenSponsor.yul). Kept apart from sponsor.ts so a browser can load
+// them without the deploy helpers.
+export const OPEN_SPONSOR_ERRORS: Record<number, string> = {
+  0x60: "not the payer frame (frame 1, VERIFY)",
+  0x61: "payer frame flags are not 1 (payment only)",
+  0x62: "not exactly four frames: the accounting tail is missing",
+  0x63: "the tail is not a DEFAULT frame",
+  0x64: "the tail does not target the sponsor",
+  0x65: "the tail's flags are not 0",
+  0x66: "the tail carries value",
+  0x67: "the tail's data is not record()",
+  0x68: "the tail's execution limit is below 60,000",
+  0x69: "the tail's state limit is below 489,600",
+  0x6a: "this sender is not sponsored",
+  0x6b: "max fee per gas is above the sponsor's cap",
+  0x6c: "the sender's budget for this period is spent",
+  0x6d: "this membership nullifier was already used",
+  0x6e: "the membership proof was rejected",
+  0x6f: "unexpected payer frame data (only a membership proof may be there)",
+  0x70: "record() outside the accounting tail",
+  0x71: "record(): this sponsor did not pay for the transaction",
+  0x72: "not the owner",
+  0x73: "unknown function",
+  0x74: "withdraw failed",
+  0x75: "a staking registry call failed",
+};
