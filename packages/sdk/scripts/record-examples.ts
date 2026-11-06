@@ -31,6 +31,17 @@ const out = (p: string) => `${ROOT}examples/${p}/run.json`;
 // trigger + watch with the SDK's bounded resend of a dropped-but-still-valid trigger
 const sent = async (c: ReturnType<typeof triggerer>, k: Address, t: Parameters<typeof c.trigger>[1]) => (await c.triggerAndWait(k, t)).hash;
 
+const forge = (name: string) => {
+  const j = JSON.parse(readFileSync(`${ROOT}contracts/out/${name}.sol/${name}.json`, "utf8"));
+  return { abi: j.abi as Abi, bytecode: j.bytecode.object as Hex };
+};
+const write = async (address: Address, abi: Abi, functionName: string, args: unknown[], gas = 1_500_000n) => {
+  const h = await wallet.writeContract({ address, abi, functionName, args, gas } as never);
+  const r = await pub.waitForTransactionReceipt({ hash: h });
+  if (r.status !== "success") throw new Error(`${functionName} reverted: ${h}`);
+  return h;
+};
+
 async function proofOfExploit() {
   const token = forge("DemoToken");
   const vaultArt = forge("GuardedVault");
@@ -142,7 +153,7 @@ async function openGasNetwork() {
   const verifier = (await deployCode(dc, mv, 8_000_000n)).address;
   const members = await Promise.all([newIdentity(), newIdentity(), newIdentity()]);
   const tree = await MerkleTree.create(20, members.map((m) => m.commitment));
-  const [g] = await configureOpenSponsor(dc, sponsor, { gate: { verifier, root: await tree.root() } });
+  const [g] = (await configureOpenSponsor(dc, sponsor, { gate: { verifier, root: await tree.root() } })) as [Hex];
   story.push(await storyEntry(pub, g, "open-sponsor", "policy", "The community funds a sponsor and publishes its member set's root; no server signs anything"));
   const paid = JSON.parse(readFileSync(`${ROOT}contracts/out/PaidCounter.sol/PaidCounter.json`, "utf8"));
   const app = await wallet.deployRule({ logic: { abi: paid.abi, bytecode: paid.bytecode.object, args: [0n] }, mode: "callerPays", fund: 0n, allowUnderfunded: true });
