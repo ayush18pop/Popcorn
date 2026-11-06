@@ -1,4 +1,4 @@
-// Popcorn's MCP server: read-only. It reads the catalog, the example projects and their recorded runs, explains refusal
+// Popcorn's MCP server: read-only. It reads the block catalog, the example projects and their recorded runs, explains refusal
 // codes, and talks to a devnet only to simulate or to build an unsigned transaction. It holds no key and sends nothing:
 // a rule-pays trigger it builds is complete without a signature, and anyone (the user's own wallet or script) sends it.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
@@ -42,7 +42,7 @@ function readDocs(dir: string, file?: string): Doc[] {
   return out;
 }
 
-const modules = () => readDocs(join(ROOT, "docs/catalog"));
+const blocks = () => readDocs(join(ROOT, "docs/catalog"));
 const projects = () => readDocs(join(ROOT, "examples"), "project.md");
 const runOf = (group: string, id: string) => {
   const p = join(ROOT, "examples", group, id, "run.json");
@@ -77,40 +77,44 @@ export function createServer(): McpServer {
   const server = new McpServer({ name: "popcorn", version: "0.1.0" });
 
   server.registerTool(
-    "list_modules",
-    { description: "List Popcorn modules (one job each), optionally for one use-case group: private, gas, protect, sign, prove.", inputSchema: { group: z.enum(["private", "gas", "protect", "sign", "prove"]).optional() } },
-    async ({ group }) =>
+    "list_blocks",
+    {
+      description:
+        "List Popcorn's blocks (checks, joins, actions, payers; each does one job) and the ready-made builds, optionally for one shape or tier. A build is a payer, checks joined together, and actions.",
+      inputSchema: { shape: z.enum(["check", "join", "action", "payer", "ready-made"]).optional(), tier: z.number().int().min(1).max(3).optional() },
+    },
+    async ({ shape, tier }) =>
       json(
-        modules()
-          .filter((m) => !group || m.group === group)
-          .map((m) => ({ id: m.id, name: m.fm.name, group: GROUPS[m.group], status: m.fm.status, runsOn: m.fm.runsOn, postQuantum: Boolean(m.fm.postQuantum), whatItDoes: section(m.body, "What it does") })),
+        blocks()
+          .filter((m) => (!shape || m.fm.shape === shape) && (!tier || m.fm.tier === tier))
+          .map((m) => ({ id: m.id, name: m.fm.name, shape: m.fm.shape, tier: m.fm.tier ?? null, status: m.fm.status, runsOn: m.fm.runsOn, inputs: (m.fm.inputs as { name: string }[] | undefined)?.map((x) => x.name) ?? [], whatItDoes: section(m.body, "What it does") })),
       ),
   );
 
   server.registerTool(
-    "get_module",
-    { description: "One module's full page: what it does, when it fires, what it does then, where it runs, code, limits and source files.", inputSchema: { id: z.string() } },
+    "get_block",
+    { description: "One block's full page: what it does, its inputs, what each trigger brings, its answer or result, presets, Solidity and SDK code, where it runs, limits and source files.", inputSchema: { id: z.string() } },
     async ({ id }) => {
-      const m = modules().find((x) => x.id === id);
-      return m ? json({ id: m.id, group: GROUPS[m.group], ...m.fm, page: m.body }) : text(`no module "${id}"; call list_modules`);
+      const m = blocks().find((x) => x.id === id);
+      return m ? json({ id: m.id, ...m.fm, page: m.body }) : text(`no block "${id}"; call list_blocks`);
     },
   );
 
   server.registerTool(
     "list_examples",
-    { description: "List the example projects: the problem each solves, the modules it is built from with their roles, and whether it was recorded on a devnet.", inputSchema: {} },
+    { description: "List the example projects: the problem each solves, the blocks it is built from with their roles, and whether it was recorded on a devnet.", inputSchema: {} },
     async () =>
       json(
         projects().map((p) => {
           const run = runOf(p.group, p.id);
-          return { id: p.id, group: GROUPS[p.group], name: p.fm.name, flagship: Boolean(p.fm.flagship), problem: p.fm.problem, modules: p.fm.modules, recorded: Boolean(run?.recorded), transactions: Array.isArray(run?.story) ? run.story.length : 0 };
+          return { id: p.id, group: GROUPS[p.group], name: p.fm.name, flagship: Boolean(p.fm.flagship), problem: p.fm.problem, blocks: p.fm.modules, recorded: Boolean(run?.recorded), transactions: Array.isArray(run?.story) ? run.story.length : 0 };
         }),
       ),
   );
 
   server.registerTool(
     "get_example",
-    { description: "One example project: its modules and roles, every recorded transaction (module, role, hash, block, gas), the featured transaction's five stages and its refused case, and the command that re-records it.", inputSchema: { id: z.string() } },
+    { description: "One example project: its blocks and roles, every recorded transaction (block, role, hash, block, gas), the featured transaction's five stages and its refused case, and the command that re-records it.", inputSchema: { id: z.string() } },
     async ({ id }) => {
       const p = projects().find((x) => x.id === id);
       if (!p) return text(`no example "${id}"; call list_examples`);
@@ -171,13 +175,13 @@ export function createServer(): McpServer {
 
   server.registerTool(
     "how_to_build",
-    { description: "The steps and SDK calls to build a project like one of the examples yourself, module by module.", inputSchema: { id: z.string().describe("an example id from list_examples") } },
+    { description: "The steps and code to build a project like one of the examples yourself, block by block, with each block's role.", inputSchema: { id: z.string().describe("an example id from list_examples") } },
     async ({ id }) => {
       const p = projects().find((x) => x.id === id);
       if (!p) return text(`no example "${id}"; call list_examples`);
       const mods = (p.fm.modules as { id: string; role: string }[]).map((r) => {
-        const m = modules().find((x) => x.id === r.id);
-        return { module: r.id, role: r.role, code: m ? section(m.body, "Code") : "", sources: m?.fm.code };
+        const m = blocks().find((x) => x.id === r.id);
+        return { block: r.id, shape: m?.fm.shape, role: r.role, code: m ? section(m.body, "Code") : "", sources: m?.fm.code };
       });
       return json({ example: p.fm.name, problem: p.fm.problem, steps: mods, fullScript: "packages/sdk/scripts/record-examples.ts", run: `bun packages/sdk/scripts/record-examples.ts ${id}` });
     },
