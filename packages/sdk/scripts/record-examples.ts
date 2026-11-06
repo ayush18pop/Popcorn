@@ -9,7 +9,7 @@ import { MerkleTree, findExploit, membershipProof, newIdentity, newNote, poseido
 import {
   ACCOUNT_RULE, CONTEST_PREIMAGE, PROPOSAL_QUANTUM, accountBinding, contestRecovery, deployOpenSponsor, deployPrivatePool, deploySovereignAccount, deployStealthVault,
   devnetChain, ecdsaParams, exitTrigger, finalizeRecovery, guardianScope, guardianSignal, initializeAccount, memoryUsageStore, migrateData, migrateTrigger,
-  openSponsorAbi, poolDeposit, poolWithdrawal, popcorn, prepareStealthPayment, recordRefusal, recordTrigger, rotationProposal, scanStealth, setAssociationRoot,
+  configureOpenSponsor, openSponsorAbi, poolDeposit, poolWithdrawal, popcorn, prepareStealthPayment, recordRefusal, recordTrigger, rotationProposal, scanStealth, setAssociationRoot,
   signEcdsaIntent, sovereignAccountAbi, spendData, spendTrigger, sponsored, stakeOpenSponsor, stealthAnnouncements, stealthKeys, stealthMetaAddress, stealthPay,
   stealthSpend, storyEntry, voteTrigger, wotsIntentKey, wotsIntentSigner, wotsKeygen, wotsParams, writeRun, deployCode, type RecordedStory,
 } from "../src/index.ts";
@@ -28,28 +28,8 @@ const CHAIN = 1338n;
 const NETWORK = { name: "local", chainId: 1338 };
 const SOURCES = { simulation: "ethrex_simulateFrameTransaction", admission: "ERC-8421 sidecar (eth_sendFrameTransaction)", receipt: "eth_getTransactionReceipt" };
 const out = (p: string) => `${ROOT}examples/${p}/run.json`;
-// A local relay sometimes gives up on a valid transaction ("relayed 4 times without being included"); resend it, at
-// most twice, only while the simulation still says it is valid. Anything else is an error.
-const sent = async (c: ReturnType<typeof triggerer>, k: Address, t: Parameters<typeof c.trigger>[1]) => {
-  for (let attempt = 0; ; attempt++) {
-    const h = await c.trigger(k, t);
-    const s = await c.watch(h);
-    if (s.state === "included") return h;
-    if (attempt >= 2 || !(await c.canTrigger(k, t)).ready) throw new Error(`${h} ${s.state}`);
-    console.log(`  ${h} ${s.state}; still valid, resending`);
-  }
-};
-
-const forge = (name: string) => {
-  const j = JSON.parse(readFileSync(`${ROOT}contracts/out/${name}.sol/${name}.json`, "utf8"));
-  return { abi: j.abi as Abi, bytecode: j.bytecode.object as Hex };
-};
-const write = async (address: Address, abi: Abi, functionName: string, args: unknown[], gas = 1_500_000n) => {
-  const h = await wallet.writeContract({ address, abi, functionName, args, gas } as never);
-  const r = await pub.waitForTransactionReceipt({ hash: h });
-  if (r.status !== "success") throw new Error(`${functionName} reverted: ${h}`);
-  return h;
-};
+// trigger + watch with the SDK's bounded resend of a dropped-but-still-valid trigger
+const sent = async (c: ReturnType<typeof triggerer>, k: Address, t: Parameters<typeof c.trigger>[1]) => (await c.triggerAndWait(k, t)).hash;
 
 async function proofOfExploit() {
   const token = forge("DemoToken");
@@ -78,9 +58,6 @@ async function proofOfExploit() {
   const whitehat = fresh();
   const p = await proveExploit(state, w, BigInt(whitehat), 1n);
   const args = (to: Address) => encodeAbiParameters([{ type: "address" }, { type: "uint64" }], [to, 1n]);
-  // the bounty's key is keccak256(abi.encode("bounty", vault, pauseEpoch)) (ExploitInputs.bountyNonceKey); pass it explicitly
-  const epoch = (await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "pauseEpoch" })) as bigint;
-  const nonceKey = BigInt(keccak256(encodeAbiParameters([{ type: "string" }, { type: "address" }, { type: "uint64" }], ["bounty", V, epoch])));
   const t = triggerer();
   const labels = { [V.toLowerCase()]: "guarded vault", sender: "guarded vault" };
   const bal = async (a: Address) => `${formatUnits((await pub.readContract({ address: dusd, abi: token.abi, functionName: "balanceOf", args: [a] })) as bigint, 18)} dUSD`;
@@ -90,10 +67,10 @@ async function proofOfExploit() {
     "bounty pool": `${formatUnits((await pub.readContract({ address: V, abi: vaultArt.abi, functionName: "rewardPool" })) as bigint, 18)} dUSD`,
   });
   // a mempool watcher copies the proof and puts its own address in: the proof is bound to the whitehat's
-  const refusal = await recordRefusal({ client: t as never, ruleContract: V, labels, trigger: { triggerData: args(fresh()), verifyData: p.proof, nonceKey }, world });
+  const refusal = await recordRefusal({ client: t as never, ruleContract: V, labels, trigger: { triggerData: args(fresh()), verifyData: p.proof }, world });
   const featured = await recordTrigger({
     client: t as never, pub: pub as never, devnet: "local", ruleContract: V, labels,
-    trigger: { triggerData: args(whitehat), verifyData: p.proof, nonceKey },
+    trigger: { triggerData: args(whitehat), verifyData: p.proof },
     explain: ["the vault checks the Groth16 proof against its own live state, its address and the recipient in the trigger, then approves execution and payment", "pays the bounty to the recipient bound in the proof, pauses the vault and opens a new epoch"],
     world,
   });
@@ -165,8 +142,7 @@ async function openGasNetwork() {
   const verifier = (await deployCode(dc, mv, 8_000_000n)).address;
   const members = await Promise.all([newIdentity(), newIdentity(), newIdentity()]);
   const tree = await MerkleTree.create(20, members.map((m) => m.commitment));
-  const g = await wallet.writeContract({ address: sponsor, abi: openSponsorAbi, functionName: "setGate", args: [verifier, await tree.root()], gas: 600_000n });
-  if ((await pub.waitForTransactionReceipt({ hash: g })).status !== "success") throw new Error(`setGate reverted: ${g}`);
+  const [g] = await configureOpenSponsor(dc, sponsor, { gate: { verifier, root: await tree.root() } });
   story.push(await storyEntry(pub, g, "open-sponsor", "policy", "The community funds a sponsor and publishes its member set's root; no server signs anything"));
   const paid = JSON.parse(readFileSync(`${ROOT}contracts/out/PaidCounter.sol/PaidCounter.json`, "utf8"));
   const app = await wallet.deployRule({ logic: { abi: paid.abi, bytecode: paid.bytecode.object, args: [0n] }, mode: "callerPays", fund: 0n, allowUnderfunded: true });

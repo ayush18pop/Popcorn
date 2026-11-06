@@ -242,9 +242,10 @@ describe("trigger() through the viem extension (stubbed devnet)", () => {
   const KEY = 0x1234_5678n;
   const VERIFY_USED = 30_000n;
 
-  function stubDevnet(o: { revert?: number; balance?: bigint } = {}) {
+  function stubDevnet(o: { revert?: number; balance?: bigint; noView?: boolean } = {}) {
     const sent: Hex[] = [];
     const methods: string[] = [];
+    const calls: { to?: string; data?: string }[] = [];
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body));
       const one = (q: { method: string; params: unknown[]; id: number }) => {
@@ -258,7 +259,13 @@ describe("trigger() through the viem extension (stubbed devnet)", () => {
           case "eth_maxPriorityFeePerGas": return ok("0x3b9aca00");
           case "eth_getTransactionCount": return ok("0x0");
           case "debug_traceCall": return ok({});
-          case "eth_call": return ok(toHex(KEY, { size: 32 }));
+          case "eth_call": {
+            const c = (q.params as { to?: string; data?: string }[])[0]!;
+            calls.push(c);
+            // popcornNonceKey on the rule contract (a logic built before the view has none: revert)
+            if (c.to && o.noView) return { jsonrpc: "2.0", id: q.id, error: { code: 3, message: "execution reverted", data: "0x" } };
+            return ok(toHex(KEY, { size: 32 }));
+          }
           case "ethrex_simulateFrameTransaction":
             return ok(o.revert !== undefined
               ? { executionStatus: null, executionError: "VERIFY frame 0 failed: RevertOpcode", canonicalMempoolValid: false, revertData: toHex(o.revert, { size: 32 }), failedFrameIndex: 0 }
@@ -274,13 +281,13 @@ describe("trigger() through the viem extension (stubbed devnet)", () => {
       const out = Array.isArray(body) ? body.map(one) : one(body);
       return new Response(JSON.stringify(out), { status: 200, headers: { "content-type": "application/json" } });
     });
-    return { sent, methods };
+    return { sent, methods, calls };
   }
 
   const client = () => createPublicClient({ chain: devnetChain(), transport: http() }).extend(popcorn({ via: "rpc" }));
 
   it("sends exactly the reference trigger: derived key, VERIFY = max(floor, used + 10%), fees min(cap, 2×base + tip)", async () => {
-    const { sent, methods } = stubDevnet();
+    const { sent, methods, calls } = stubDevnet();
     const triggerData = toHex("p4 unit");
     const hash = await client().trigger(RULE_CONTRACT, { triggerData });
     expect(sent).toHaveLength(1);
@@ -290,9 +297,18 @@ describe("trigger() through the viem extension (stubbed devnet)", () => {
     const tip = 1_000_000_000n; // min(cap 2 gwei, suggested 1 gwei)
     const ref = await buildTrigger(refRule(encodeRuleContractArgs(a), KEY), { triggerData, verifyGas: want, maxFeePerGas: 7n * 2n + tip, maxPriorityFeePerGas: tip });
     expect(sent[0]).toBe(serializeFrameTx(ref.tx));
-    // nonce key from the shadow (trace + eth_call), never a normal call to the rule contract
-    expect(methods).toContain("debug_traceCall");
+    // nonce key from the rule contract's own popcornNonceKey view (its real address and storage); no shadow run
+    expect(calls.some((c) => c.to?.toLowerCase() === RULE_CONTRACT.toLowerCase() && c.data?.startsWith("0x8325c482"))).toBe(true);
+    expect(methods).not.toContain("debug_traceCall");
     expect(methods.filter((m) => m === "ethrex_simulateFrameTransaction").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("falls back to the shadow run when the logic predates popcornNonceKey", async () => {
+    const { sent, methods } = stubDevnet({ noView: true });
+    const triggerData = toHex("p4 unit");
+    await client().trigger(RULE_CONTRACT, { triggerData });
+    expect(sent).toHaveLength(1);
+    expect(methods).toContain("debug_traceCall");
   });
 
   it("RuleContractNotReady(0x22 CONDITION_FALSE) and nothing sent when the simulation says the condition is false", async () => {

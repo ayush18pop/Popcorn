@@ -108,6 +108,16 @@ abstract contract RuleContract is RuleStake {
         }
     }
 
+    /// @notice The nonce key a trigger with these popArgs would consume now, computed in the rule contract's own context
+    ///         (its address and storage), exactly as __nonceKey computes it in VERIFY. An ordinary forwarded view, so
+    ///         the SDK can read the key with eth_call instead of re-running the logic in a shadow contract, whose
+    ///         address would differ (keys derived from address(this) came out wrong that way). msg.sender here is the
+    ///         eth_call's sender, not 0xaa. Reverts with ZeroNonceKey like __nonceKey.
+    function popcornNonceKey(bytes calldata popArgs) external view forwarded returns (uint256 key) {
+        key = _isStakePop(popArgs) ? _stakeNonceKey() : nonceKey(popArgs);
+        if (key == 0) revert ZeroNonceKey();
+    }
+
     // ------------------------------------------------------------------ developer hooks (override one form of each)
 
     /// @notice The one-shot key this trigger consumes; each key triggers at most once (Core requires nonce_seq == 0). Must be

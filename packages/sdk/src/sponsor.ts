@@ -125,3 +125,38 @@ export async function stakeOpenSponsor(
   if (r.status !== "success") throw new Error(`stake failed: ${hash}`);
   return hash;
 }
+
+export interface OpenSponsorSettings {
+  limits?: [sender: Address, limit: bigint][];
+  defaultLimit?: bigint;
+  maxFee?: bigint;
+  period?: bigint;
+  open?: boolean;
+  allowLogics?: [logic: Address, allowed: boolean][];
+  gate?: { verifier: Address; root: bigint };
+}
+
+/**
+ * Applies owner settings one call each, with gas for fresh storage slots (97,920 state gas each on these chains), and
+ * checks every receipt: a setting that did not land throws instead of leaving the policy silently unchanged.
+ */
+export async function configureOpenSponsor(clients: DeployClients, sponsor: Address, s: OpenSponsorSettings): Promise<Hex[]> {
+  const calls: Hex[] = [];
+  const enc = (functionName: string, args: unknown[]) => encodeFunctionData({ abi: openSponsorAbi, functionName: functionName as never, args: args as never });
+  for (const [sender, limit] of s.limits ?? []) calls.push(enc("setLimit", [getAddress(sender), limit]));
+  if (s.defaultLimit !== undefined) calls.push(enc("setDefaultLimit", [s.defaultLimit]));
+  if (s.maxFee !== undefined) calls.push(enc("setMaxFee", [s.maxFee]));
+  if (s.period !== undefined) calls.push(enc("setPeriod", [s.period]));
+  if (s.open !== undefined) calls.push(enc("setOpen", [s.open]));
+  for (const [logic, on] of s.allowLogics ?? []) calls.push(enc("allowLogic", [getAddress(logic), on]));
+  if (s.gate) calls.push(enc("setGate", [getAddress(s.gate.verifier), s.gate.root]));
+  const send = clients.wallet.sendTransaction as unknown as (a: Record<string, unknown>) => Promise<Hex>;
+  const hashes: Hex[] = [];
+  for (const data of calls) {
+    const hash = await send({ to: sponsor, data, gas: 1_000_000n, account: clients.wallet.account, chain: clients.wallet.chain });
+    const r = await clients.pub.waitForTransactionReceipt({ hash });
+    if (r.status !== "success") throw new Error(`sponsor setting ${data.slice(0, 10)} reverted (${hash}): only the owner may change settings`);
+    hashes.push(hash);
+  }
+  return hashes;
+}

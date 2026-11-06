@@ -42,18 +42,34 @@ A false condition makes the transaction invalid, so a failed attempt is never in
 
 | Action | What it does |
 |---|---|
-| `deployRule({ logic, fund, mode, stake, caps })` | Deploys the logic if needed, creates the rule contract through `RuleFactory` with safe default caps, funds it and optionally stakes it |
+| `deployRule({ logic, fund, mode, stake, caps })` | Deploys the logic if needed, creates the rule contract through `RuleFactory` with safe default caps, funds it and optionally stakes it (throws `StakeNotCounted` if the registry does not count the stake) |
 | `canTrigger(rule, opts?)` | Simulates the exact transaction and returns `READY` or the Core code that blocks it (`CONDITION_FALSE`, `VERIFY_GAS_BELOW_FLOOR`, …) |
 | `trigger(rule, opts?)` | Builds, signs (if a payer is needed) and sends the transaction; returns its hash. Refuses when `canTrigger` is not `READY` |
 | `triggerDetailed(rule, opts?)` | `trigger` plus the route it took and the prepared transaction |
 | `simulate(rule, opts?)` | Both mempools' verdict, the rule that blocks and the fix. Sends nothing unless `{ sidecar: true }` |
 | `watch(hash, opts?)` | Follows a transaction through the mempools to inclusion |
+| `triggerAndWait(rule, opts?, { resends })` | `trigger` then `watch`; a dropped trigger that still simulates as valid is sent again, at most twice by default |
 | `stakeRule(rule, opts?)` | Stakes a rule contract in the devnet's staking registry (needed to read other contracts on an alternative mempool) |
 | `ownerAction(rule, call, signer, opts?)` | Runs an owner-only call, approved by an ECDSA and a WOTS+ (post-quantum) signature |
 | `readOwnerState`, `readRuleContract` | Read the owner slots and the decoded arguments of a rule contract |
 
 Caller-pays rule contracts (`mode: "callerPays"`) take a `{ payer }`: the payer's account approves and pays, and the
-reward goes to whoever actually paid. See `examples/02-caller-pays.ts`.
+reward goes to whoever actually paid. See `examples/02-caller-pays.ts`. A payer contract may also take `{ payerData }` (its
+frame's data) and `{ tail }` (the frame after the action); a refusal in the payer's frame is reported as `PAYER_REFUSED`
+with the payer's own code.
+
+The nonce key a trigger consumes is read from the rule contract's own `popcornNonceKey(bytes)` view, which runs the logic
+in the rule contract's context, so keys derived from its address or storage are exact (decision 75).
+
+## Modules
+
+| Module | Calls |
+|---|---|
+| Open Sponsor | `deployOpenSponsor`, `stakeOpenSponsor`, `configureOpenSponsor`, `sponsored(sponsor, membership?)` |
+| Private Pool | `deployPrivatePool`, `poolDeposit`, `setAssociationRoot`, `poolCommitments`, `poolWithdrawal` (proofs: `@popcorn/zk` `withdrawProof`) |
+| Stealth Address | `stealthKeys`, `stealthMetaAddress`, `prepareStealthPayment` (ML-KEM-768), `stealthPay`, `stealthAnnouncements`, `scanStealth`, `stealthSpend` |
+| Sovereign Account | `deploySovereignAccount`, `initializeAccount`, `spendTrigger`, `voteTrigger`, `quantumTrigger`, `migrateTrigger`, `exitTrigger`, `contestRecovery`, `finalizeRecovery` |
+| Recorder | `recordTrigger`, `recordRefusal`, `storyEntry`, `writeRun` (used by `scripts/record-examples.ts`) |
 
 ## Signers
 

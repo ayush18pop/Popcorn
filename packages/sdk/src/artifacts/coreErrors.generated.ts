@@ -7,7 +7,7 @@ export interface CoreErrorInfo {
   /** VERIFY codes make the transaction invalid (nobody pays); SENDER codes revert the action; FORWARD codes revert an
    *  ordinary call to the rule contract. */
   section: "VERIFY" | "SENDER" | "FORWARD" | "OWNER";
-  /** The "Check" column of core/LAYOUT.md. */
+  /** The "Check" column of contracts/core/LAYOUT.md. */
   check: string;
 }
 

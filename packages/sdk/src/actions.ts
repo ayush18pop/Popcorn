@@ -7,6 +7,7 @@
 // Truth source: every readiness verdict comes from ethrex_simulateFrameTransaction of the EXACT trigger that trigger() would
 // send (same nonce key, limits, fees, data). The nonce key comes from the shadow run in nonceKey.ts.
 import { OPEN_SPONSOR_ERRORS } from "./sponsor.ts";
+import { StakeNotCounted } from "./errors.ts";
 import {
   BaseError,
   ContractFunctionRevertedError,
@@ -488,6 +489,22 @@ export async function trigger(ctx: PopcornContext, ruleContract: Address, o: Tri
   return (await triggerDetailed(ctx, ruleContract, o)).hash;
 }
 
+/**
+ * trigger() then watch() until included. A relay can give up on a valid transaction ("relayed N times without being
+ * included"); when it is dropped and the same trigger still simulates as valid, it is sent again, at most `resends`
+ * times (default 2). Anything else (refused, or dropped and no longer valid) throws with the reason.
+ */
+export async function triggerAndWait(ctx: PopcornContext, ruleContract: Address, o: TriggerSendOptions = {}, w: { resends?: number; watch?: WatchOptions } = {}): Promise<{ hash: Hex; status: FinalWatchStatus; attempts: number }> {
+  const max = w.resends ?? 2;
+  for (let attempt = 0; ; attempt++) {
+    const hash = await trigger(ctx, ruleContract, o);
+    const status = await watch(ctx, hash, w.watch);
+    if (status.state === "included") return { hash, status, attempts: attempt + 1 };
+    const again = attempt < max ? await canTrigger(ctx, ruleContract, o) : null;
+    if (!again?.ready) throw new PopcornError(`trigger ${hash} was ${status.state}${"reason" in status ? ` (${status.reason})` : ""}${again ? `; it no longer simulates as valid: ${again.name} ${again.reason}` : ""}`);
+  }
+}
+
 // ---------------------------------------------------------------- simulate
 
 /** The verdict data is defined once, in @popcorn/simulator (SimulateResultLike); this narrows it to the SDK's types. */
@@ -837,6 +854,10 @@ export async function deployRule(ctx: PopcornContext, o: DeployRuleOptions): Pro
   const pcap = BigInt(publicPrefixBudget(ctx.devnet));
   if (pg > pcap) warnings.push(pcap === PUBLIC_PREFIX_BUDGET ? `prefixGasAtCaps ${pg} > ${pcap}: triggers at the data caps cannot use public ethrex / the upstream sidecar (local / patched sidecars: 250k unstaked, 2.5M staked)` : `prefixGasAtCaps ${pg} > ${pcap}: triggers at the data caps cannot use ${ctx.devnet.name}'s ethrex mempool (its --mempool.max-verify-gas)`);
   const out: DeployRuleResult = { ruleContract, logic, args, argsHex, salt, txHash, logicTxHash, fund, minOperatingBalance, receipt, warnings };
-  if (o.stake) out.stake = await stakeRule(ctx, ruleContract, stakePayer ? { payer: stakePayer as HashSigner } : {});
+  if (o.stake) {
+    out.stake = await stakeRule(ctx, ruleContract, stakePayer ? { payer: stakePayer as HashSigner } : {});
+    // never report a deployment as staked when the registry says otherwise: an unstaked proof module cannot even trigger
+    if (!out.stake.staked) throw new StakeNotCounted(ruleContract, out.stake.stakeAfter, out.stake.amount, out.stake.txHash);
+  }
   return out;
 }
