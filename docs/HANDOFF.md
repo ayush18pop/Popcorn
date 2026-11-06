@@ -2,7 +2,7 @@
 
 Context for the next person or agent: what Popcorn is, the decisions taken and why, what is built, how to run and test
 it, and what to do next. The numbered decisions in [`journal/DECISIONS.md`](../journal/DECISIONS.md) are the formal
-record (1 to 84); this file is the story that connects them. **Next work is UI, ease of explanation, and demos you can
+record (1 to 86); this file is the story that connects them. **Next work is UI, ease of explanation, and demos you can
 show and test.** Read "Next work" and "How to run" first if that is your job.
 
 ## What Popcorn is
@@ -14,7 +14,7 @@ YES, so anyone can send it, even from a wallet with no ETH, and a NO costs nothi
 
 Every build is the same sentence: **a gas payer + conditions (combined with logic operators) → actions.**
 
-## The blocks (decisions 76 to 83)
+## The blocks (decisions 77 to 84, and 76 and 86 for the signers)
 
 Each block does one job, keeps its state in its own namespaced storage, and is tested alone (`contracts/test/blocks`).
 The catalog (`docs/catalog/<kind>/<id>.md`) is the single source for the site, the MCP server and the skill.
@@ -25,13 +25,14 @@ The catalog (`docs/catalog/<kind>/<id>.md`) is the single source for the site, t
 | Logic operators | AND `and`, OR `or`, NOT / NOR `not`, K-of-N `k-of-n`, EXACTLY ONE `exactly-one`, IF / ELSE `if-else` |
 | Actions | Call `call`, Pause `pause`, Reward Pool `reward-pool`, Anonymous Vote `anonymous-vote`, Key Rotation `key-rotation`, Withdraw All `withdraw-all`, Post-Quantum Mode `post-quantum-mode`, Repay `repay` |
 | Gas payers | Self-Paying `self-paying`, Caller Pays `caller-pays`, Paymaster `paymaster` |
+| Signers (the Signature condition's key types, post-quantum ones named) | WOTS+ `wots`, XMSS `xmss`, FORS `fors`, SPHINCS+ `sphincs`, Falcon-512 `falcon` |
 | Complete contracts (whole applications, not blocks) | Privacy Pool `privacy-pool`, Stealth Addresses `stealth-addresses` |
 
 Tiers on the site: **Core** (nothing works without these), **Common** (the headline examples), **Specialized**.
 Block pages read: Overview · Configuration (with Trigger payload, Returns / Effect) · Use cases (Ready to use / Common
 configurations / Other use cases, not built) · In the examples · Usage (Solidity | SDK) · Mempool · Gotchas.
 
-**Names in code are still the earlier ones** (only the site, catalog, MCP and skill were renamed, decision 83):
+**Names in code are still the earlier ones** (only the site, catalog, MCP and skill were renamed, decision 84):
 
 | Site name | Solidity (`contracts/src/blocks`) | SDK (`blocks.*`) |
 |---|---|---|
@@ -71,7 +72,7 @@ Each example: `examples/<group>/<id>/project.md` (problem, blocks with roles, ta
 the local devnet by `packages/sdk/scripts/record-examples.ts`: every transaction, its flow, the featured transaction's
 stages and frames, and a refused case with a real refused hash).
 
-## Flows: every transaction explained block by block (decision 84)
+## Flows: every transaction explained block by block (decision 85)
 
 This is the newest and most visible feature, and the base for the next UI work.
 
@@ -161,9 +162,9 @@ re-record them: `bun packages/sdk/scripts/record-examples.ts quantum-ready-treas
 2. **Headline: censorship resistance, privacy, security and post-quantum.** DeFi is an extra.
 3. **Scope rule.** Build only what needs no devnet change, or only gas-limit changes (the patched sidecar budget is a
    gas-limit change). Core (Yul) is not changed; `RuleFactory` pins its creation hash.
-4. **Blocks are Lego** (decisions 76 to 83). Simple, direct developer names (no metaphors). Examples are whole projects
+4. **Blocks are Lego** (decisions 77 to 84). Simple, direct developer names (no metaphors). Examples are whole projects
    that name each block once with one role; a target such as the Demo Vault is labelled "demo, not a block".
-5. **Explain every transaction** (decision 84), for any hash, from chain data only: green / red / grey per block.
+5. **Explain every transaction** (decision 85), for any hash, from chain data only: green / red / grey per block.
 6. **Wording.** Positive "Mempool" chips only; a refusal appears only for a transaction that was refused (decision 67).
    **Zero-knowledge is not post-quantum**; never imply it.
 7. **Developer path with no dead ends:** landing, blocks, examples, explorer, SDK, MCP, Claude skills.

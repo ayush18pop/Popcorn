@@ -702,7 +702,19 @@ only for logic built before the view existed.
 **Why.** It removes a class of wrong keys instead of special-casing one, and it needs nothing from the node beyond
 eth_call.
 
-## 76. Blocks, not modules: checks, joins, actions and payers
+## 76. The post-quantum signers are named modules again
+
+**Context.** Decision 72 merged WOTS+, XMSS, FORS, SPHINCS+ and Falcon into one post-quantum signer page. A reader skimming
+the Modules page then saw no post-quantum scheme by name, only one generic card.
+
+**Choice.** Each scheme is its own module again, first in "Sign and recover", each card marked post-quantum, with the
+validation gas measured on the local devnet (WOTS+ 93,765, XMSS 94,076 and FORS 90,176 in their inline forms, all within
+the public mempool's 100,000; SPHINCS+ 216,764 and Falcon about 1.5 million on the alternative mempool). Cards also show
+a "private" mark for the privacy modules. The rest of decision 72 stands.
+
+**Why.** Post-quantum is one of the library's headline properties; it has to be visible without opening a page.
+
+## 77. Blocks, not modules: checks, joins, actions and payers
 
 **Context.** Several "modules" were whole applications named after one of their jobs. The guarded vault held about
 eight jobs and the Sovereign Account about nine, and the Proof-of-Exploit example listed the guarded vault twice, once
@@ -719,7 +731,7 @@ presets of the check. This supersedes decision 68's use-case grouping and decisi
 **Why.** A block that does one job can be reused in any build, and an example can then name each block once with one
 role. The owner asked for Lego-like pieces that anyone can put together.
 
-## 77. Blocks compose by inheritance into one build; stateless pieces stay separate contracts
+## 78. Blocks compose by inheritance into one build; stateless pieces stay separate contracts
 
 **Options.** Deploy every block as its own contract and call it, or inherit the blocks into one build.
 
@@ -732,7 +744,7 @@ so a public-mempool trigger and a 200k proof check belong in separate builds whe
 build on the alternative mempool. Inherited blocks keep their state in the build's own storage, so they stay on the
 public mempool where their checks allow it, and cost less gas.
 
-## 78. Checks answer yes, no or unknown, and Exactly One Of joins them
+## 79. Checks answer yes, no or unknown, and Exactly One Of joins them
 
 **Choice.** A Solidity check returns an `Answer` (no, yes, unknown); `Join` combines answers with the same rules as the
 rule-set engine (decision 49), so a check written in Solidity and one built from data mean the same thing. The engine
@@ -743,7 +755,7 @@ validator, explainer and gas model learn it, and the shared vectors cover it.
 **Why.** "Exactly one" is only meaningful if every other child is a definite no; a signature or proof whose no only
 means "the witness failed" cannot give that.
 
-## 79. Guarded Vault becomes a target and a build; pause and pay are separate blocks
+## 80. Guarded Vault becomes a target and a build; pause and pay are separate blocks
 
 **Choice.** The Demo Vault is the target (accounting with the planted bug and a pause switch). The Proof-of-Exploit
 Bounty build adds Proof That The Rules Were Broken, Value Crosses A Line, Pause The Target, Pay The Reward, None Of and
@@ -755,7 +767,7 @@ owner's, allowed only when None Of (below the floor) holds. The trigger formats 
 **Why.** Pausing and paying are each reusable on their own (an anonymous security council pauses without paying; a
 reward needs no pause), and keeping the circuit's inputs fixed avoids a new trusted setup.
 
-## 80. Sovereign Account is a composition of blocks with the same interface
+## 81. Sovereign Account is a composition of blocks with the same interface
 
 **Choice.** The account is Signed Instruction and Make A Call (spends), Anonymous Group Vote (the generic form of
 hidden guardians), Hand Over To A New Key (delay and contest), Switch To Quantum-Safe Only and Exit To An Address
@@ -766,7 +778,7 @@ shield) is rebuilt the same way.
 **Why.** Keeping the interface lets the existing proofs, SDK helpers and suites check the rebuild unchanged, while every
 part becomes reusable: Walkaway Exit and the Quantum-Ready Treasury are the same blocks in other combinations.
 
-## 81. Blocks without Solidity run on the shared rule-set engine
+## 82. Blocks without Solidity run on the shared rule-set engine
 
 **Choice.** The SDK's `blocks` namespace names every check, join and stateless action after its block
 (`valueCrossesLine`, `allOf`, `exactlyOne`, `makeACall`, `pauseTarget`, ...) and puts them together with `build` and
@@ -778,7 +790,7 @@ Loan, Pause The Target on the build itself) are Solidity only.
 stateful actions to the engine would grow its reviewed surface for every user; inheritance keeps them reviewable one
 block at a time.
 
-## 82. Block names say what the block does
+## 83. Block names say what the block does
 
 **Choice.** Display names are verb phrases: Value Crosses A Line, Value Moves Too Fast, Contract Code Changed, Signed
 Instruction (Anyone Can Send), Statement Signed By k Of n Reporters, Proof That The Rules Were Broken, Prove You're In
@@ -791,9 +803,9 @@ signature schemes are options of Signed Instruction, not blocks of their own.
 
 **Why.** The owner asked for names that explain themselves; a reader should know what a block does from its name.
 
-## 83. Block names are the words developers already use
+## 84. Block names are the words developers already use
 
-**Context.** The names from decision 82 described each block as a sentence ("Value Crosses A Line", "Signed Instruction,
+**Context.** The names from decision 83 described each block as a sentence ("Value Crosses A Line", "Signed Instruction,
 Anyone Can Send"). The owner found them metaphorical rather than direct.
 
 **Choice.** Logic operators are AND, OR, NOT / NOR, K-of-N, EXACTLY ONE and IF / ELSE (not XOR: for three or more inputs
@@ -802,11 +814,11 @@ Attestation, Exploit Proof (ZK) and Membership Proof (ZK). Actions are Call, Pau
 Rotation, Withdraw All, Post-Quantum Mode and Repay. Gas payers are Self-Paying, Caller Pays and Paymaster. Privacy Pool
 and Stealth Addresses are complete contracts. The catalog groups blocks as Core, Common and Specialized, and each page
 reads Overview, Configuration, Use cases (ready to use, common configurations, other use cases), Usage, Mempool and
-Gotchas. This supersedes decision 82's display names; the Solidity and SDK identifiers keep their names for now.
+Gotchas. This supersedes decision 83's display names; the Solidity and SDK identifiers keep their names for now.
 
 **Why.** A developer should recognise a block from its name without reading its page.
 
-## 84. Every transaction is explained block by block, from chain data alone
+## 85. Every transaction is explained block by block, from chain data alone
 
 **Context.** The owner asked that any transaction, pasted into the explorer by its hash, show the build's flow: which
 block said yes, which said no, which were never reached. The chain records only Core's overall code (0x22, "condition
@@ -824,3 +836,16 @@ example's refused case to the sidecar, so its hash is a real refused transaction
 
 **Why.** A developer should see where their transaction failed without reading Core codes or source, and nothing shown
 should be invented: every colour comes from the node, the sidecar's record or the build's own view of its condition.
+
+## 86. The post-quantum signers keep their names inside the blocks catalog
+
+**Context.** Decision 76 (from a teammate's branch) named each post-quantum signer as its own module so that post-quantum
+is visible without opening a page. Decisions 77 to 84 (merged after it) replaced the module catalog with blocks and made
+the signature schemes options of the Signature condition.
+
+**Choice.** Both hold. Signature stays the one condition a build uses; its key types have their own catalog pages under
+Signers (WOTS+, XMSS, FORS, SPHINCS+, Falcon), each marked post-quantum with the validation gas measured in decision 76,
+listed on the Blocks page and linked from Signature. The Blocks page opens with that teammate's "Start here" highlights,
+pointed at the new pages.
+
+**Why.** Post-quantum stays visible by name, and a developer still composes one Signature condition, whatever its key.
