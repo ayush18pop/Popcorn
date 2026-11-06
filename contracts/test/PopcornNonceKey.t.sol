@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {CoreHarness} from "test/CoreHarness.sol";
 import {RuleContract} from "src/rules/RuleContract.sol";
 
-/// A key derived from address(this) and storage, like GuardedVault's bounty key.
+/// A key derived from address(this) and storage, like the Proof-of-Exploit Bounty build's claim key.
 contract AddressKeyRule is RuleContract {
     bytes32 private constant EPOCH = keccak256("popcorn.test.addressKey.epoch");
 

@@ -16,7 +16,7 @@ build; without it the explorer decodes the arguments and says it did not compare
 
 | On the site | Source |
 |---|---|
-| Modules and module pages | `docs/catalog/<corner>/<module>.md` |
+| Blocks and block pages | `docs/catalog/<shape>/<block>.md` (shape: checks, joins, actions, payers, ready-made) |
 | The player | `examples/<corner>/<module>/run.json` (`recorded: false` files are labelled "sample run") |
 | Rule glossary, admission check names | `packages/simulator/src/rules.ts`, imported as is |
 | Explorer endpoints and budgets | `packages/sdk/src/transport.ts`, imported as is |
@@ -26,7 +26,7 @@ build; without it the explorer decodes the arguments and says it did not compare
 
 | Path | What |
 |---|---|
-| `src/pages` | One file per route (hash routes: `#/modules/pause/guarded-vault`) |
+| `src/pages` | One file per route (hash routes: `#/blocks/pause-the-target`) |
 | `src/player` | The example player: beats, stages, transaction and world views, raw step |
 | `src/components` | Navigation, command menu (⌘K), cards, scenes, motion helpers |
 | `src/components/effects` | Canvas effects (peel, decrypt) that fall back to plain HTML where the browser lacks support |

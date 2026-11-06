@@ -107,7 +107,7 @@ export function ShieldScene() {
   );
 }
 
-/** Guarded Vault: assets per share fall below the floor; a 0-ETH reporter pauses it; the attacker's next step reverts. */
+/** Demo Vault: assets per share fall below the floor; a 0-ETH reporter pauses it; the attacker's next step reverts. */
 export function VaultScene() {
   const { ref, phase, cycle } = usePhases([2200, 1600, 3200]);
   return (

@@ -1,4 +1,4 @@
-// Sovereign Account: deploy, initialise, and build each of its triggers (contracts/src/account/SovereignAccount.sol).
+// Sovereign Account: deploy, initialise, and build each of its triggers (contracts/src/builds/SovereignAccount.sol).
 // Guardian votes carry a membership proof from @popcorn/zk (membershipProof with guardianSignal / guardianScope).
 import { encodeAbiParameters, encodeDeployData, encodeFunctionData, getAddress, keccak256, type Address, type Hex } from "viem";
 import { deployCode, type DeployClients } from "./intent.ts";
@@ -112,6 +112,6 @@ export const voteTrigger = (proposal: Hex, nullifierHash: bigint, proof: Hex) =>
 
 /** A rotation proposal is the new owner params hash. */
 export const rotationProposal = (newOwnerParams: Hex): Hex => keccak256(newOwnerParams);
-/** Membership-proof inputs for a guardian vote (HiddenGuardians.sol). */
+/** Membership-proof inputs for a guardian vote (the Anonymous Group Vote block). */
 export const guardianSignal = (proposal: Hex, round: bigint): bigint => BigInt(keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [proposal, round]))) >> 8n;
 export const guardianScope = (account: Address, round: bigint): bigint => BigInt(keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [getAddress(account), round]))) >> 8n;

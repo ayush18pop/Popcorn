@@ -23,7 +23,7 @@ const st = await stealthProof({ spendSecret: 4242n, shared: 777n, recipient: REC
 
 // guardians: 3 hidden guardians, threshold 2. Round 0: guardians 0 and 2 vote to rotate the owner to NEW_OWNER_HASH.
 // Round 1: guardians 1 and 2 vote to flip the quantum switch. signal = keccak256(abi.encode(proposal, round)) >> 8,
-// externalNullifier = keccak256(abi.encode(account, round)) >> 8 (HiddenGuardians.sol).
+// externalNullifier = keccak256(abi.encode(account, round)) >> 8 (the Anonymous Group Vote block).
 const guardians = await Promise.all([11n, 12n, 13n].map((x) => newIdentity(x)));
 const gtree = await MerkleTree.create(20, guardians.map((g) => g.commitment));
 const NEW_OWNER_HASH = keccak256(encodeAbiParameters([{ type: "string" }], ["owner-2"]));
