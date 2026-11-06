@@ -80,20 +80,20 @@ export function createServer(): McpServer {
     "list_blocks",
     {
       description:
-        "List Popcorn's blocks (checks, joins, actions, payers; each does one job) and the ready-made builds, optionally for one shape or tier. A build is a payer, checks joined together, and actions.",
+        "List Popcorn's blocks (checks, joins, actions, payers; each does one job) and the complete contracts, optionally for one shape or tier. A build is a payer, checks joined together, and actions.",
       inputSchema: { shape: z.enum(["check", "join", "action", "payer", "ready-made"]).optional(), tier: z.number().int().min(1).max(3).optional() },
     },
     async ({ shape, tier }) =>
       json(
         blocks()
           .filter((m) => (!shape || m.fm.shape === shape) && (!tier || m.fm.tier === tier))
-          .map((m) => ({ id: m.id, name: m.fm.name, shape: m.fm.shape, tier: m.fm.tier ?? null, status: m.fm.status, runsOn: m.fm.runsOn, inputs: (m.fm.inputs as { name: string }[] | undefined)?.map((x) => x.name) ?? [], whatItDoes: section(m.body, "What it does") })),
+          .map((m) => ({ id: m.id, name: m.fm.name, shape: m.fm.shape, tier: m.fm.tier ?? null, status: m.fm.status, runsOn: m.fm.runsOn, inputs: (m.fm.inputs as { name: string }[] | undefined)?.map((x) => x.name) ?? [], overview: section(m.body, "Overview") })),
       ),
   );
 
   server.registerTool(
     "get_block",
-    { description: "One block's full page: what it does, its inputs, what each trigger brings, its answer or result, presets, Solidity and SDK code, where it runs, limits and source files.", inputSchema: { id: z.string() } },
+    { description: "One block's full page: overview, configuration, trigger payload, what it returns or does, use cases (ready to use, common configurations, other ideas), Solidity and SDK usage, mempool, gotchas and source files.", inputSchema: { id: z.string() } },
     async ({ id }) => {
       const m = blocks().find((x) => x.id === id);
       return m ? json({ id: m.id, ...m.fm, page: m.body }) : text(`no block "${id}"; call list_blocks`);
@@ -181,7 +181,7 @@ export function createServer(): McpServer {
       if (!p) return text(`no example "${id}"; call list_examples`);
       const mods = (p.fm.modules as { id: string; role: string }[]).map((r) => {
         const m = blocks().find((x) => x.id === r.id);
-        return { block: r.id, shape: m?.fm.shape, role: r.role, code: m ? section(m.body, "Code") : "", sources: m?.fm.code };
+        return { block: r.id, shape: m?.fm.shape, role: r.role, code: m ? section(m.body, "Usage") : "", sources: m?.fm.code };
       });
       return json({ example: p.fm.name, problem: p.fm.problem, steps: mods, fullScript: "packages/sdk/scripts/record-examples.ts", run: `bun packages/sdk/scripts/record-examples.ts ${id}` });
     },
