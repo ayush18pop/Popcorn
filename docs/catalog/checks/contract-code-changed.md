@@ -20,7 +20,7 @@ code: ["contracts/src/blocks/checks/ContractCodeChanged.sol"]
 
 ## What it does
 
-Says yes when a contract's code is no longer the code recorded at setup: it was upgraded, re-delegated or replaced.
+Says yes when a contract's code is no longer the code recorded at setup: its code was replaced.
 
 ## Inputs
 
@@ -51,5 +51,5 @@ Reads code, not storage: the public mempool and the alternative mempool.
 
 ## Limits
 
-- A contract that was removed entirely cannot be watched this way: both mempools refuse a read of an account with no code.
+- A contract that was removed entirely, or an EIP-7702 account, cannot be watched this way: both mempools refuse a validation read of an account with no code or with a delegation, so the build never fires on it.
 - For a proxy, the code is the proxy's: watch the implementation slot with Value Crosses A Line instead.

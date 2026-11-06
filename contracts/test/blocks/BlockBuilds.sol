@@ -388,7 +388,7 @@ contract RewardBuild is PayTheReward, RulePays {
 
     function action(bytes calldata popArgs, address) internal override {
         _sstore(N, _sload(N) + 1);
-        _payReward(_address(popArgs, 0), want);
+        _payFromPool(_address(popArgs, 0), want);
     }
 }
 

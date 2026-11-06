@@ -43,7 +43,7 @@ await wallet.writeContract({ address: bounty, abi, functionName: "fundRewards", 
 
 ```solidity
 _pauseSelf();
-_payReward(_claimRecipient(claim), BOUNTY_REWARD); // after the pause: payment is best effort
+_payFromPool(_claimRecipient(claim), BOUNTY_REWARD); // after the pause: payment is best effort
 ```
 
 ## Runs on
@@ -53,3 +53,4 @@ Actions run after validation, so they do not decide where a build runs.
 ## Limits
 
 - A reward to an address in the trigger data can be copied by a mempool watcher: keep that kind small.
+- An ETH pool shares the build's balance with the gas it pays: keep the balance above the pool plus the gas reserve. A token pool has no such limit.

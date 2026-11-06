@@ -15,7 +15,12 @@ import {TokenOut} from "src/blocks/TokenOut.sol";
 ///           - an address named in the trigger data only for a small "thank you" reward, knowing it can be copied.
 ///
 ///         Never reverts the action: a payment that fails (the token or the receiver refuses) stays in the pool and is
-///         reported in an event. The pool is separate from anything else the build holds.
+///         reported in an event. A token pool is apart from everything else the build holds. An ETH pool is only a
+///         counter over the build's balance, which also pays the gas when the build pays it (Contract Pays The Gas): keep
+///         the balance above the pool plus the gas reserve, or a payout fails and is reported (RewardNotPaid).
+///
+///         The function is `_payFromPool`, not `_payReward`, so a build can hold this block and Payer Gets Rewarded
+///         (CallerPays._payReward, which pays the gas payer) together.
 abstract contract PayTheReward is RuleContract {
     /// @dev slot 0: the pool.
     bytes32 private constant POOL = keccak256("popcorn.block.payTheReward");
@@ -50,7 +55,7 @@ abstract contract PayTheReward is RuleContract {
     }
 
     /// @notice Pays min(want, pool) to `to`, best effort. Returns what was paid (0 when nothing was).
-    function _payReward(address to, uint256 want) internal returns (uint256 paid) {
+    function _payFromPool(address to, uint256 want) internal returns (uint256 paid) {
         uint256 pool = _sload(POOL);
         uint256 amount = want < pool ? want : pool;
         if (amount == 0 || to == address(0) || to == address(this)) return 0;

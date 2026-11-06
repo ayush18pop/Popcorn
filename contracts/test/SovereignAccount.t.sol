@@ -145,6 +145,16 @@ contract SovereignAccountTest {
         require(quantum, "switched by guardians");
     }
 
+    /// A spend the owner signed but whose trigger data is not (kind, to, value, data) is refused before its key is spent,
+    /// so it cannot leave the spend epoch stuck; the next well-formed spend still works.
+    function test_malformed_signed_spend_is_refused_and_spends_keep_working() public {
+        bytes memory bad = abi.encode(uint256(1), address(0xbeef));
+        require(!_h().condition(bad, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(bad)))), "malformed spend refused in validation");
+        bytes memory a = abi.encode(uint256(1), address(0xbeef), uint256(1 ether), bytes(""));
+        _h().pop(a, abi.encode(ownerParams, _sig(OWNER_PK, 1, 0, keccak256(a))));
+        require(address(0xbeef).balance == 1 ether, "the next spend works");
+    }
+
     function test_initialize_once_and_only_by_the_deployer() public {
         bool ok;
         try _acct().initialize(bytes32(0), EXIT, bytes32(0), 1, 1) { ok = true; } catch {}

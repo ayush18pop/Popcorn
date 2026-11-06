@@ -192,6 +192,8 @@ contract SovereignAccount is SignedInstruction, MakeACall, AnonymousGroupVote, K
         uint256 kind = _word(popArgs, 0);
         if (kind == KIND_SPEND) {
             if (_quantumSafeOnly()) return NO; // after the switch, owner signatures stop working
+            // the action decodes these; a malformed spend reverts here (invalid trigger) instead of there (key spent)
+            abi.decode(popArgs, (uint256, address, uint256, bytes));
             return _ownerSigned(RULE_SPEND, popArgs, verifyData);
         }
         if (kind == KIND_VOTE) {
@@ -201,6 +203,7 @@ contract SovereignAccount is SignedInstruction, MakeACall, AnonymousGroupVote, K
         if (kind == KIND_EXIT) return popArgs.length == 32 && _contested() ? YES : NO;
         if (kind == KIND_MIGRATE) {
             if (popArgs.length != 64 || !_quantumSafeOnly()) return NO;
+            _address(popArgs, 1); // reverts on a dirty address word, as the action would
             return _keySigned(backupScheme, _backupKeyHash(), RULE_MIGRATE, popArgs, verifyData);
         }
         if (kind == KIND_QUANTUM) {
