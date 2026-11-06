@@ -628,3 +628,13 @@ safe lending market, that names the modules it uses, gives each one a role, and 
 together. An example's status is derived from its modules.
 
 **Why.** The relationship should be visible: parts on one side, assembled products on the other.
+
+## 71. A flagship account ties the modules together
+
+**Choice.** The flagship is a single wallet account that: receives to ML-KEM stealth addresses; holds its balance in a
+private pool; spends with gas paid by the pool or an open sponsor; signs with ECDSA plus Falcon; keeps a quantum switch
+armed; recovers through hidden guardians; can force an exit to a pre-committed address if anyone upgrades it against the
+owner; and makes every rule public and simulated before signing. Its working name is Sovereign Account.
+
+**Why.** It is the one example that exercises almost every module, so it shows the library as a whole, and it is built
+last, from modules that each ship and are tested on their own.
