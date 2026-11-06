@@ -21,17 +21,27 @@ const outside = await MerkleTree.create(20, [notes[1].commitment]); // an associ
 // stealth: spend secret, shared secret
 const st = await stealthProof({ spendSecret: 4242n, shared: 777n, recipient: RECIPIENT, fee: FEE });
 
-// guardians: 3 hidden guardians, threshold 2, round 0, new owner 0xbeef
+// guardians: 3 hidden guardians, threshold 2. Round 0: guardians 0 and 2 vote to rotate the owner to NEW_OWNER_HASH.
+// Round 1: guardians 1 and 2 vote to flip the quantum switch. signal = keccak256(abi.encode(proposal, round)) >> 8,
+// externalNullifier = keccak256(abi.encode(account, round)) >> 8 (HiddenGuardians.sol).
 const guardians = await Promise.all([11n, 12n, 13n].map((x) => newIdentity(x)));
 const gtree = await MerkleTree.create(20, guardians.map((g) => g.commitment));
-const round = 0n;
-const signalHash = field(keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [`0x${RECIPIENT.toString(16).padStart(40, "0")}`, round])));
-const ext = field(keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [`0x${ACCOUNT.toString(16).padStart(40, "0")}`, round])));
-const votes = await Promise.all([0, 2].map((i) => membershipProof({ secret: guardians[i].secret, tree: gtree, index: i, signalHash, externalNullifier: ext })));
+const NEW_OWNER_HASH = keccak256(encodeAbiParameters([{ type: "string" }], ["owner-2"]));
+const QUANTUM = keccak256(encodeAbiParameters([{ type: "string" }], ["quantum"]));
+const accountAddr = `0x${ACCOUNT.toString(16).padStart(40, "0")}` as const;
+const sig = (proposal: `0x${string}`, round: bigint) => field(keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [proposal, round])));
+const extOf = (round: bigint) => field(keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [accountAddr, round])));
+const vote = async (i: number, proposal: `0x${string}`, round: bigint) => {
+  const p = await membershipProof({ secret: guardians[i]!.secret, tree: gtree, index: i, signalHash: sig(proposal, round), externalNullifier: extOf(round) });
+  return { guardian: i, round: s(round), proposal, nullifierHash: s(p.nullifierHash), proof: p.proof };
+};
+const rotationVotes = [await vote(0, NEW_OWNER_HASH, 0n), await vote(2, NEW_OWNER_HASH, 0n)];
+const quantumVotes = [await vote(1, QUANTUM, 1n), await vote(2, QUANTUM, 1n)];
+const staleVote = await vote(1, NEW_OWNER_HASH, 0n); // a round-0 vote, invalid once round 1 opens
 
 // sponsor gate: one member admits account 0x1003
 const sponsorExt = field(keccak256(`0x${SPONSOR.toString(16).padStart(40, "0")}`));
-const gate = await membershipProof({ secret: guardians[1].secret, tree: gtree, index: 1, signalHash: ACCOUNT, externalNullifier: sponsorExt });
+const gate = await membershipProof({ secret: guardians[1]!.secret, tree: gtree, index: 1, signalHash: ACCOUNT, externalNullifier: sponsorExt });
 
 const out = {
   addresses: { pool: s(POOL), vault: s(VAULT), account: s(ACCOUNT), sponsor: s(SPONSOR), recipient: s(RECIPIENT) },
@@ -45,13 +55,7 @@ const out = {
     proof: w.proof,
   },
   stealth: { commitment: s(st.commitment), proof: st.proof },
-  guardians: {
-    root: s(await gtree.root()),
-    round: s(round),
-    signalHash: s(signalHash),
-    externalNullifier: s(ext),
-    votes: votes.map((v) => ({ nullifierHash: s(v.nullifierHash), proof: v.proof })),
-  },
+  guardians: { root: s(await gtree.root()), newOwnerHash: NEW_OWNER_HASH, quantum: QUANTUM, rotationVotes, quantumVotes, staleVote },
   gate: { root: s(await gtree.root()), nullifierHash: s(gate.nullifierHash), externalNullifier: s(sponsorExt), proof: gate.proof },
   emptyRoot: s(await (await MerkleTree.create(20)).root()),
   poseidonCheck: s(await poseidon(1n, 2n)),
