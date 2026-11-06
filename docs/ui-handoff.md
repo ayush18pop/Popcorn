@@ -192,7 +192,15 @@ table), and a glossary of frame-transaction terms.
 
 ## Open decisions (ask the team)
 
-- Final module names and the catalog's location in the repo.
+- Final module names.
 - Hosting and domain.
-- Whether the player's "world view" is a diagram or a lightweight 3D scene; start with a diagram.
-- Which three examples feature on the home page.
+
+Settled (journal/DECISIONS.md 56 to 64): the catalog lives in `docs/catalog/`; the world view is a diagram; the home
+page features the guarded vault, the partial repay shield and the proof-of-exploit bounty.
+
+## Status
+
+- Built: the site in `apps/web` (home, catalog, module pages, the player, explorer, skills, MCP, docs), the catalog
+  (37 modules) and the run format with four sample runs.
+- Next: the recorder (`packages/sdk/scripts/record-run.ts`) to replace the sample runs, a CI check that each `run.json`
+  matches its contract, the SDK's browser entry for live `canTrigger` in the explorer, and live mode.
