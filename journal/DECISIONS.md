@@ -657,3 +657,19 @@ navigation or as the headline.
 
 **Why.** A developer arrives with a problem, not a property. Five near-identical signer pages, tooling in the module list
 and a vague reward pool made the library look like a pile instead of a set of answers.
+
+## 73. The local sidecar's budgets are settings, and proof modules run with the public devnet's
+
+**Context.** Core requires every trigger's validation frame to declare at least the rule's floor, which includes its
+whole conditionGas. A rule contract that checks a Groth16 proof therefore declares about 280,000 gas on every trigger,
+including its own stake trigger. The local sidecar caps an unstaked entity at 250,000, so such a contract could never
+send the transaction that stakes it. The public devnet's sidecar has no validation limit.
+
+**Choice.** The patched sidecar reads its per-entity budgets from `SIDECAR_UNSTAKED_BUDGET` and `SIDECAR_STAKED_BUDGET`
+(defaults unchanged: 250,000 and 2,500,000). The proof modules (private pool, stealth vault, Sovereign Account, the
+sponsor's membership gate) are tested with `SIDECAR_UNSTAKED_BUDGET=10000000`, which behaves like the public devnet. They
+still stake, because their validation calls a verifier contract and the alternative mempool's storage rules want stake
+for that.
+
+**Why.** It is a gas-limit change only, which the scope rule allows, and it makes the local devnet match the network the
+modules will run on instead of a stricter draft value.
