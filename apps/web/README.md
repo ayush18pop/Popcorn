@@ -1,7 +1,7 @@
 # Popcorn developer site
 
 The developer site: the block catalog, a page per block, the
-example player, a read-only explorer, the Claude skills and MCP pages, and the docs.
+example player, a read-only explorer, the agent skills and MCP pages, and the docs.
 
 ```sh
 npm ci
