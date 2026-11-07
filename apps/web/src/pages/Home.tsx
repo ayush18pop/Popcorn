@@ -9,12 +9,13 @@ import { Peel } from "@/components/effects/Peel";
 import { Code, GhostLink, PrimaryLink, SectionHead, StatusBadge, TAB } from "@/components/bits";
 import { HealthCard, LayoutCard, PayerCard, VerdictCard } from "@/components/cards";
 import { Player } from "@/player/Player";
-import { BLOCKS, READY_MADE, REPO, SHAPES } from "@/lib/catalog";
+import { BLOCKS, NPM_PACKAGE, NPM_URL, READY_MADE, REPO, SHAPES } from "@/lib/catalog";
 import { RUNS } from "@/lib/runs";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
 const QUICK = [
+  { id: "npm", label: "npm", cmd: `npm i ${NPM_PACKAGE} viem` },
   { id: "clone", label: "clone", cmd: "git clone https://github.com/ayush18pop/Popcorn.git && cd Popcorn && bun install" },
   { id: "build", label: "build", cmd: "bash contracts/core/build.sh && (cd contracts && forge build && forge test)" },
   { id: "devnet", label: "devnet", cmd: "devnet/up.sh && POPCORN_DEVNET=local bun packages/sdk/examples/01-rule-pays.ts" },
@@ -272,13 +273,13 @@ export default function Home() {
           <SectionHead label="Four ways in" title="Use it the way your team works." />
           <div className="mt-12 grid gap-3 md:grid-cols-4">
             {[
-              { t: "SDK", d: "A viem extension and a signer for every scheme.", s: "built" as const, h: href("docs", "sdk") },
+              { t: "SDK", d: `On npm as ${NPM_PACKAGE}. A viem extension and a signer for every scheme.`, s: "built" as const, h: NPM_URL },
               { t: "Contracts", d: "Core, conditions, signers, payers and templates in Solidity and Yul.", s: "built" as const, h: href("docs", "contracts") },
               { t: "Agent skills", d: "Describe the protection you want; your AI agent builds and runs it.", s: "built" as const, h: href("skills") },
               { t: "MCP server", d: "Read-only tools that plan and check rules. Never holds a key.", s: "planned" as const, h: href("mcp") },
             ].map((x, i) => (
               <Reveal key={x.t} delay={i * 0.06}>
-                <a href={x.h} className="glass group flex h-full flex-col rounded-[24px] p-6 transition-transform duration-300 hover:-translate-y-1">
+                <a href={x.h} {...(x.h.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})} className="glass group flex h-full flex-col rounded-[24px] p-6 transition-transform duration-300 hover:-translate-y-1">
                   <StatusBadge status={x.s} className="self-start" />
                   <h3 className="mt-6 text-[17px] font-semibold tracking-tight">{x.t}</h3>
                   <p className="mt-1.5 text-[13px] leading-snug text-muted-foreground">{x.d}</p>
@@ -300,6 +301,9 @@ export default function Home() {
               <PrimaryLink href={href("blocks")}>Browse blocks</PrimaryLink>
               <GhostLink href={REPO} external>
                 Repository
+              </GhostLink>
+              <GhostLink href={NPM_URL} external>
+                npm
               </GhostLink>
             </div>
           </div>

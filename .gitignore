@@ -14,3 +14,4 @@ bun.lockb
 # site build
 apps/web/dist/
 *.tsbuildinfo
+packages/sdk/npm/

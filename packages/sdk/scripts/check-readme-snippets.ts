@@ -8,7 +8,8 @@ const root = new URL("../../../", import.meta.url).pathname;
 const READMES = ["packages/sdk/README.md"];
 const SOURCES = ["packages/sdk/examples", "contracts/src/examples"];
 
-const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+// the README uses the published npm name; the examples import the workspace name
+const norm = (s: string) => s.replaceAll("@popcorn-eth/sdk", "@popcorn/sdk").replace(/\s+/g, " ").trim();
 const corpus = SOURCES.flatMap((d) => readdirSync(`${root}${d}`).map((f) => norm(readFileSync(`${root}${d}/${f}`, "utf8"))));
 
 let bad = 0;

@@ -4,7 +4,7 @@
 [EIP-8141](https://eips.ethereum.org/EIPS/eip-8141) frame transactions and the
 [ERC-8421](https://ethereum-magicians.org/t/erc-8421-frame-transaction-alternative-mempools/29800) alternative mempool.
 
-**Site:** https://popcorn-chi-five.vercel.app · **MCP:** https://popcorn-mcp.vercel.app/mcp
+**Site:** https://popcorn-chi-five.vercel.app · **MCP:** https://popcorn-mcp.vercel.app/mcp · **SDK:** [`@popcorn-eth/sdk` on npm](https://www.npmjs.com/package/@popcorn-eth/sdk)
 
 Frame transactions let a contract decide which transactions are valid, and pay for them. Anyone can send one, even
 from a wallet with no ETH, and if the contract's condition is false the transaction is invalid and costs nothing.
@@ -34,7 +34,13 @@ npx degit ayush18pop/Popcorn/.claude/skills skills
 
 Then describe the problem: *"Pause our vault the moment assets per share fall below 1.0, with no Solidity."*
 
-**With the SDK:**
+**With the SDK** (published on npm as [`@popcorn-eth/sdk`](https://www.npmjs.com/package/@popcorn-eth/sdk)):
+
+```sh
+npm i @popcorn-eth/sdk viem
+```
+
+Or run the demos from the repo:
 
 ```sh
 git clone https://github.com/ayush18pop/Popcorn && cd Popcorn
@@ -86,7 +92,7 @@ view is `inspectTransaction(hash)` in the SDK and `inspect_transaction` in the M
 | Path | Contents |
 |---|---|
 | [`contracts/`](contracts) | Core (Yul), the rule contract base and factory, the blocks (`src/blocks`), the builds (`src/builds`), signers, the rule-set engine, payers, privacy contracts |
-| [`packages/sdk`](packages/sdk) | `@popcorn/sdk`: a viem extension: deploy, check, trigger, simulate, watch, inspect, the `blocks` functions and every signer |
+| [`packages/sdk`](packages/sdk) | [`@popcorn-eth/sdk`](https://www.npmjs.com/package/@popcorn-eth/sdk) (on npm): a viem extension: deploy, check, trigger, simulate, watch, inspect, the `blocks` functions and every signer |
 | [`packages/simulator`](packages/simulator) | Which mempool accepts a transaction, which rule blocks it, and the fix, in plain English |
 | [`packages/zk`](packages/zk) | Membership, withdraw, stealth and exploit circuits (Groth16) with their proving helpers |
 | [`packages/mcp`](packages/mcp) | The read-only MCP server, over stdio or hosted HTTP |

@@ -1,4 +1,8 @@
-# @popcorn/sdk
+# @popcorn-eth/sdk
+
+[![npm](https://img.shields.io/npm/v/@popcorn-eth/sdk)](https://www.npmjs.com/package/@popcorn-eth/sdk)
+
+Published on npm: **[@popcorn-eth/sdk](https://www.npmjs.com/package/@popcorn-eth/sdk)**.
 
 A [viem](https://viem.sh) extension for Popcorn rule contracts on EIP-8141 frame-transaction networks. You describe a
 rule; the SDK builds the frame transaction, picks the nonce key, sizes the gas, tells you which mempool will accept it,
@@ -7,6 +11,12 @@ and follows it until it is included.
 You never write frames by hand: `deployRule` creates a rule contract, `canTrigger` says whether its condition is true
 right now, `trigger` sends the transaction that runs it (from an account with no ETH when the rule contract pays), and
 `simulate` explains in plain English why a mempool would refuse it.
+
+```sh
+npm i @popcorn-eth/sdk viem        # then: import { popcorn } from "@popcorn-eth/sdk";
+```
+
+To run the examples from the repo against a local devnet:
 
 ```sh
 bun install
@@ -68,7 +78,7 @@ rule-set engine (no compiler). Blocks that keep state (Reward Pool, Anonymous Vo
 To An Address, Post-Quantum Mode, Repay) are Solidity only: inherit them from `contracts/src/blocks`.
 
 ```ts
-import { blocks, deployRuleSet } from "@popcorn/sdk";
+import { blocks, deployRuleSet } from "@popcorn-eth/sdk";
 const { build, allOf, noneOf, valueCrossesLine, getter, pauseTarget } = blocks;
 
 const spec = build({

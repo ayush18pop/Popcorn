@@ -206,6 +206,8 @@ export const projectByKey = (key: string) => PROJECTS.find((p) => p.key === key)
 export const projectsUsing = (blockId: string) => PROJECTS.filter((p) => p.modules.some((m) => m.id === blockId));
 
 export const REPO = "https://github.com/ayush18pop/Popcorn";
+export const NPM_PACKAGE = "@popcorn-eth/sdk";
+export const NPM_URL = "https://www.npmjs.com/package/@popcorn-eth/sdk";
 export const repoFile = (path: string) => `${REPO}/blob/main/${path}`;
 
 /** Block ids before the developer renaming, so old links still open the right page. */

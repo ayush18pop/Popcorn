@@ -16,7 +16,8 @@
     "gen-artifacts": "bun scripts/gen-artifacts.ts && bun scripts/gen-ruleset-artifact.ts && bun scripts/gen-sponsor-artifact.ts && bun scripts/gen-privacy-artifacts.ts",
     "check-core-pin": "bun scripts/check-core-pin.ts",
     "deploy-factory": "bun scripts/deploy-factory.ts",
-    "simulate": "bun bin/popcorn-simulate.ts"
+    "simulate": "bun bin/popcorn-simulate.ts",
+    "build:npm": "bun scripts/build-npm.ts"
   },
   "dependencies": {
     "@popcorn/simulator": "workspace:*",
