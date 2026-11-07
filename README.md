@@ -1,103 +1,129 @@
 # Popcorn
 
-**OpenZeppelin for frame transactions.** Standard, reviewed building blocks for keeping DeFi secure on
+**OpenZeppelin for frame transactions.** Reviewed building blocks, an SDK, an MCP server and agent skills for
 [EIP-8141](https://eips.ethereum.org/EIPS/eip-8141) frame transactions and the
 [ERC-8421](https://ethereum-magicians.org/t/erc-8421-frame-transaction-alternative-mempools/29800) alternative mempool.
 
-A frame transaction lets a contract decide which transactions are valid and pay for them. That is powerful, and it opens
-new ways for a DeFi team to get things wrong. Popcorn is the safe default for each of them:
+**Site:** https://popcorn-chi-five.vercel.app · **MCP:** https://popcorn-mcp.vercel.app/mcp
 
-| New capability | Common mistake | Popcorn part |
+Frame transactions let a contract decide which transactions are valid, and pay for them. Anyone can send one, even
+from a wallet with no ETH, and if the contract's condition is false the transaction is invalid and costs nothing.
+Popcorn turns that into products you can ship:
+
+| Build | What it does | Example |
 |---|---|---|
-| A contract approves its own transactions | strangers attach extra work, inflate fees, or replay an event | **Core**: one frame layout, fee caps, once per event, a re-entry lock |
-| A contract pays gas for others | a drained paymaster | **Payers**: rule-pays and caller-pays, with a reward to whoever paid |
-| Validation reads DeFi state | valid at admission, invalid at inclusion, so the mempool throttles you | **`simulate()`**: which mempool admits it, and why |
-| Validation runs arbitrary logic | buggy hand-rolled checks | **Conditions and signers**: thresholds, rule sets, signatures (including post-quantum), proofs |
+| **Private** | Pay salaries to stealth addresses (ML-KEM-768 announcements); withdraw from a privacy pool to a fresh address with no ETH and no relayer; prove you belong to a group without saying who | [Private Payroll](examples/private/private-payroll) |
+| **Post-quantum** | Sign with WOTS+, XMSS, FORS, SPHINCS+ or Falcon-512; flip an account to post-quantum-only the day ECDSA breaks, with a backup key nobody has seen | [Quantum-Ready Treasury](examples/sign/quantum-ready-treasury) |
+| **Censorship-resistant** | A paymaster whose policy is public code, not a server that can cut you off; an exit to an address fixed on day one | [Open Gas Network](examples/gas/open-gas-network), [Walkaway Exit](examples/protect/walkaway-exit) |
+| **Self-defending** | A vault that pauses itself when its numbers break, and pays a whitehat for a zero-knowledge proof of its bug | [Proof-of-Exploit Bounty](examples/protect/proof-of-exploit) |
+| **All of it** | One account: stealth receive, private balance, hybrid ECDSA + Falcon owner, anonymous guardians, a post-quantum switch, a forced exit | [Sovereign Account](examples/sign/sovereign-account) |
 
-A **rule contract** acts when its **condition** is true, not when a key signs. Anyone can **trigger** it, even from a wallet
-with no ETH; if the condition is false the transaction is invalid, so a failed attempt costs nothing.
+Every example is assembled only from Popcorn blocks and recorded on a devnet: real transactions, each one explained.
 
-Everything is built from **blocks**, each with one job: **conditions** (YES, NO or UNKNOWN), **logic operators** (AND,
-OR, NOT / NOR, K-of-N, EXACTLY ONE, IF / ELSE), **actions** and **gas payers**. A build is always a gas payer,
-conditions combined with logic operators, and actions: inherit the blocks in Solidity, or put the stateless ones together with the SDK's `blocks`
-functions and no Solidity at all.
+## Start in one minute
 
-## What is here
+**With your AI agent** (Claude Code, Codex, Gemini CLI, OpenCode or any agent that reads skills and speaks MCP):
+
+```sh
+npx degit ayush18pop/Popcorn/.claude/skills skills
+```
+
+```json
+{ "mcpServers": { "popcorn": { "url": "https://popcorn-mcp.vercel.app/mcp" } } }
+```
+
+Then describe the problem: *"Pause our vault the moment assets per share fall below 1.0, with no Solidity."*
+
+**With the SDK:**
+
+```sh
+git clone https://github.com/ayush18pop/Popcorn && cd Popcorn
+bun install
+bash contracts/core/build.sh && (cd contracts && forge build)
+POPCORN_DEVNET=devnet1 bun packages/sdk/scripts/demo-simple-exploit.ts   # a buggy vault, attacked and stopped, on the public devnet
+```
+
+## Blocks
+
+Every build is the same sentence: **a gas payer, conditions combined with logic operators, and actions.** Each block
+does one job, keeps its state in its own storage, and is tested on its own.
+
+| Kind | Blocks |
+|---|---|
+| **Conditions** (YES, NO or UNKNOWN; UNKNOWN never fires) | Compare · Percent Change · Code Hash Changed · Signature · K-of-N Attestation · Exploit Proof (ZK) · Membership Proof (ZK) |
+| **Logic operators** | AND · OR · NOT / NOR · K-of-N · EXACTLY ONE · IF / ELSE |
+| **Actions** | Call · Pause · Reward Pool · Anonymous Vote · Key Rotation · Withdraw All · Post-Quantum Mode · Repay |
+| **Gas payers** | Self-Paying · Caller Pays (the payer earns a reward) · Paymaster |
+| **Signers** | WOTS+ · XMSS · FORS · SPHINCS+ · Falcon-512 · ECDSA · Passkey (P-256 / WebAuthn) · Multisig · Hybrid |
+| **Complete contracts** | Privacy Pool · Stealth Addresses |
+
+Put them together in Solidity by inheriting them, or with no Solidity at all:
+
+```ts
+import { blocks, deployRuleSet } from "@popcorn/sdk";
+const { build, allOf, noneOf, ratioCrossesLine, valueCrossesLine, getter, pauseTarget } = blocks;
+
+const spec = build({
+  when: allOf(
+    ratioCrossesLine(getter(vault, "totalAssets()"), getter(vault, "totalSupply()"), "below", 1n, 1n),
+    noneOf(valueCrossesLine(getter(vault, "paused()"), "above", 0n)),
+  ),
+  then: pauseTarget(vault),
+});
+const { ruleContract } = await deployRuleSet(client.popcorn, spec, { fund, stake: true });
+// anyone, from a wallet with no ETH, can now pause the vault the moment its share price breaks
+```
+
+## Every transaction explains itself
+
+Paste any frame transaction hash, included or refused, into the
+[explorer](https://popcorn-chi-five.vercel.app/#/explorer): each stage (mempool admission, Core, payer, the build's
+condition, inclusion) and the build's flow, block by block. Green said YES, red said NO, grey was never reached. The same
+view is `inspectTransaction(hash)` in the SDK and `inspect_transaction` in the MCP server.
+
+## What is in the box
 
 | Path | Contents |
 |---|---|
-| [`contracts/`](contracts) | Core (Yul), the rule contract base, factory, stake and owner, the blocks (`src/blocks`), the example builds (`src/builds`), signers, the rule-set engine, payers |
-| [`packages/sdk`](packages/sdk) | `@popcorn/sdk`: a viem extension (`deployRule`, `canTrigger`, `trigger`, `simulate`, `watch`) and every signer |
-| [`packages/simulator`](packages/simulator) | `@popcorn/simulator`: which mempool will accept a transaction, which rule blocks it, and the fix |
-| [`packages/zk`](packages/zk) | `@popcorn/zk`: the membership, withdraw and stealth circuits (Groth16), their development keys and proving helpers |
-| [`packages/mcp`](packages/mcp) | `@popcorn/mcp`: a read-only MCP server (catalog, examples, refusal codes, simulate, unsigned triggers) |
-| [`.claude/skills`](.claude/skills) | Claude skills: `popcorn-build` (problem to running project) and `popcorn-debug` (why a trigger was refused) |
-| [`devnet/`](devnet) | A local devnet with per-entity validation budgets, started by one command |
-| [`apps/web`](apps/web) | The developer site: blocks by tier and shape, example projects, explorer, docs |
-| [`docs/catalog/`](docs/catalog) | One file per block, by shape: what it does, its inputs, its answer or result, presets, code, where it runs, limits |
-| [`examples/`](examples) | Example projects: `project.md` (problem, blocks and their roles) and `run.json` recorded on the local devnet |
-| [`journal/`](journal) | The decisions behind the design |
-| [`docs/HANDOFF.md`](docs/HANDOFF.md) | Project context for a new contributor or agent |
+| [`contracts/`](contracts) | Core (Yul), the rule contract base and factory, the blocks (`src/blocks`), the builds (`src/builds`), signers, the rule-set engine, payers, privacy contracts |
+| [`packages/sdk`](packages/sdk) | `@popcorn/sdk`: a viem extension: deploy, check, trigger, simulate, watch, inspect, the `blocks` functions and every signer |
+| [`packages/simulator`](packages/simulator) | Which mempool accepts a transaction, which rule blocks it, and the fix, in plain English |
+| [`packages/zk`](packages/zk) | Membership, withdraw, stealth and exploit circuits (Groth16) with their proving helpers |
+| [`packages/mcp`](packages/mcp) | The read-only MCP server, over stdio or hosted HTTP |
+| [`.claude/skills`](.claude/skills) | Agent skills: `popcorn-build` (a problem to a running project) and `popcorn-debug` (why a transaction was refused) |
+| [`devnet/`](devnet) | A one-command local devnet with an alternative-mempool sidecar |
+| [`apps/web`](apps/web) | The developer site: blocks, examples, explorer, docs |
+| [`docs/catalog`](docs/catalog) · [`examples/`](examples) | One page per block; six example projects with their recorded runs |
+| [`journal/`](journal) | Every design decision, and the build log from the first commit |
 
-## Built so far
+## Tested
 
-| Area | What | Runs on |
-|---|---|---|
-| Core | hardened VERIFY: frame-layout check, fee caps, once per event, re-entry lock, rule-pays and caller-pays, hybrid ECDSA + WOTS+ owner | public mempool, alternative mempool |
-| Conditions | threshold on another contract's value, proof of a statement (Groth16), rule sets (AND / OR / NOT / k-of-n over compare, range, crossing, delta, ratio, balance, code hash, flag, with an action per rule) | public mempool for the rule contract's own storage; alternative mempool, staked, for reads of other contracts |
-| Signers | ECDSA, P256 / WebAuthn passkeys, WOTS+, FORS, XMSS-style, SPHINCS+-style, Falcon-512, hybrids, M-of-N multisig, k-of-n attested facts | alternative mempool (all schemes); public mempool for ECDSA and WOTS+ |
-| Blocks | checks: value crosses a line, value moves too fast, contract code changed, signed instruction, statement signed by k of n reporters, proof that the rules were broken, prove you're in the group; joins: all of, any of, none of, at least k of n, exactly one of, if / else; actions: make a call, pause the target, pay the reward, anonymous group vote, hand over to a new key, exit to an address, switch to quantum-safe only, repay a loan; payers: contract pays the gas, payer gets rewarded, public gas sponsor | public mempool where a block reads only the build's own storage; alternative mempool otherwise |
-| Builds | Proof-of-Exploit Bounty (Demo Vault + proof, pause and reward blocks), Auto-Repay Loan, Sovereign Account | alternative mempool |
-| Privacy | a private pool whose withdrawals pay their own gas, with association sets; stealth payments announced with ML-KEM-768 | alternative mempool, staked |
-| Gas | an open sponsor: a payer contract with a public policy (budgets, fee cap, allowlists, a private membership gate) | alternative mempool, staked |
-| Examples | six projects recorded on the local devnet: Proof-of-Exploit Bounty, private payroll, open gas network, quantum-ready treasury, walkaway exit, Sovereign Account | |
-| Tooling | simulator, SDK, ZK circuits, local devnet, recorder, read-only MCP server, Claude skills, developer site | |
-
-Planned: fair liquidation with keyed-nonce tickets, ERC-8286 wallet validators, a CLI, and a visual way to put blocks
-together.
-
-## Quickstart
-
-Needs [Bun](https://bun.sh), [Foundry](https://getfoundry.sh), `python3` and `curl`. For the local devnet also Docker.
+| Suite | Result |
+|---|---|
+| Contracts (`forge test`) | 286 passing, every block tested alone, invariant fuzzing, real Groth16 proofs |
+| SDK (`vitest`) | 332 passing offline, plus devnet suites |
+| Simulator | 152 passing |
+| MCP server | 4 passing |
+| Public devnet | the no-Solidity build, caller-pays and the live exploit demo run end to end |
 
 ```sh
-bun install
-scripts/install-solc.sh                              # solc 0.8.33
-bash contracts/core/build.sh                          # builds Core; prints its size
-(cd contracts && forge build && forge test)           # 285 tests
-bun run --cwd packages/sdk test                       # 313 offline tests
-
-devnet/up.sh                                          # local devnet, about 10 minutes the first time
-POPCORN_DEVNET=local bun packages/sdk/examples/01-rule-pays.ts
-
-(cd apps/web && npm ci && npm run dev)               # the developer site on localhost:5173
+(cd contracts && forge test)
+bun run --cwd packages/sdk test
+bun run --cwd packages/simulator test
 ```
-
-The example deploys a rule contract, shows its condition false (`CONDITION_FALSE`), arms it, and triggers it from a client
-with no account and no ETH. See [`packages/sdk/README.md`](packages/sdk/README.md) for the full API.
 
 ## Networks
 
 | | Public devnet | Local devnet |
 |---|---|---|
 | Chain id | 1337 | 1338 |
-| Alternative-mempool sidecar | `https://altmempool.forshtat.com/rpc`, no validation limit | `http://127.0.0.1:14338/rpc`, 250,000 unstaked / 2,500,000 staked per entity by default; `SIDECAR_UNSTAKED_BUDGET` raises it (decision 73) |
-| Canonical mempool (the node's own) | 100,000 gas | 250,000 gas |
+| Node | `https://altmempool.forshtat.com` | `http://127.0.0.1:18545` (`devnet/up.sh`) |
+| Alternative mempool | `https://altmempool.forshtat.com/rpc` | `http://127.0.0.1:14338/rpc` |
+| `RuleFactory` | `0x1EdD695a30f001B270e7A0F3A2781628A69E8380` | same address |
 
-Every build runs on the public devnet through its alternative-mempool sidecar; the local devnet is a reproducible copy
-for development and offline work. The `RuleFactory` is at `0x1EdD695a30f001B270e7A0F3A2781628A69E8380` on both. See
-[`devnet/README.md`](devnet/README.md) for exactly what differs.
+## Learn more
 
-## Limits
+- [SDK reference](packages/sdk/README.md) · [Core specification](contracts/core/SPEC.md) · [Core layout and errors](contracts/core/LAYOUT.md)
+- [Design decisions](journal/DECISIONS.md) · [Build log](journal/LOG.md) · [Contributor handoff](docs/HANDOFF.md)
 
-- A drain inside a single block or transaction cannot be stopped by a rule contract; multi-transaction drains can.
-- Someone still has to notice the condition and trigger the rule contract. Popcorn removes the need to hire, fund or
-  trust them: any wallet can, and the reward pays them.
-- Validation has no clock, so there are no deadline or inactivity conditions.
-- A condition that reads another contract's storage runs on the alternative mempool with a staked rule contract.
-- Groth16 proofs are zero-knowledge but not post-quantum. The hash-based signers and keyless triggers are.
-- Reviewed by us, not externally audited.
-
-## License
-
-MIT
+MIT licensed.
