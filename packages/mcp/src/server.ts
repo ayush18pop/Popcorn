@@ -9,7 +9,10 @@ import { parse as parseYaml } from "yaml";
 import { getAddress, type Address, type Hex } from "viem";
 import { CORE_ERRORS, OPEN_SPONSOR_ERRORS, createPopcornContext, inspectTransaction, popcornActions, prepareTrigger, readRuleContract } from "@popcorn/sdk";
 
-export const ROOT = new URL("../../../", import.meta.url).pathname;
+// The repository root (docs/catalog, examples). A deployed server sets POPCORN_ROOT to where those files were bundled.
+export const ROOT = process.env.POPCORN_ROOT ?? new URL("../../../", import.meta.url).pathname;
+// The network tools use when none is given: local for a developer's machine, devnet1 for the hosted server.
+const DEFAULT_NETWORK = process.env.POPCORN_DEFAULT_NETWORK === "devnet1" ? "devnet1" : "local";
 const GROUPS: Record<string, string> = {
   private: "Move money privately",
   gas: "Pay for gas",
@@ -52,7 +55,7 @@ const section = (body: string, name: string) => new RegExp(`## ${name}\\n\\n([\\
 const json = (v: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(v, (_, x) => (typeof x === "bigint" ? x.toString() : x), 2) }] });
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
 
-const network = z.enum(["local", "devnet1"]).default("local").describe("local = the local devnet (chain 1338), devnet1 = the public devnet (chain 1337)");
+const network = z.enum(["local", "devnet1"]).default(DEFAULT_NETWORK).describe("local = the local devnet (chain 1338), devnet1 = the public devnet (chain 1337)");
 const hex = z.string().regex(/^0x[0-9a-fA-F]*$/);
 const trig = {
   network,

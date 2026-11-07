@@ -157,6 +157,15 @@ What we learned running our tests there:
 - **Not run there yet:** the six examples (they deploy 8 to 16M-gas contracts each; the network is shared, so ask first)
   and the remaining devnet suites. Never use one key from two processes at once: nonces collide.
 
+## The hosted MCP server
+
+https://popcorn-mcp.vercel.app/mcp (Vercel project `popcorn-mcp`): the same read-only tools over Streamable HTTP,
+stateless (a fresh server per request), defaulting to the public devnet (`POPCORN_DEFAULT_NETWORK=devnet1`, set on the
+project). Connect: `claude mcp add --transport http popcorn https://popcorn-mcp.vercel.app/mcp`. Source:
+`packages/mcp/src/http.ts`; `bun packages/mcp/scripts/build-vercel.ts` bundles it with the catalog and the examples into
+`packages/mcp/vercel/.vercel/output`, then `cd packages/mcp/vercel && vercel deploy --prebuilt --prod`. Rebuild and
+redeploy after catalog or example changes: the data is bundled, not read from GitHub.
+
 ## The deployed site
 
 https://popcorn-chi-five.vercel.app (Vercel project `popcorn`, team ayush18pops-projects, linked in `apps/web/.vercel`).
