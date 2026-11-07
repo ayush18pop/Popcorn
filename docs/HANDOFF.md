@@ -167,6 +167,17 @@ examples' links say `#/explorer/local/<hash>` (they were recorded locally). `app
 
 ## Next work: UI, ease of explanation, demos
 
+**Explorer traceability:** `#/explorer` indexes all six recorded examples and the public incident (48 distinct
+transactions). Every indexed hash opens its role, documented incident/example memberships, saved condition results where
+available, adjacent recorded steps and the complete related transaction list. `#/explorer/incident/<id>/<hash>` opens
+the complete recording with that transaction selected. The public incident includes all 14 recovered and verified steps,
+including deployment, rule publication, staking and funding. Refusals without recorded chronology are listed separately;
+a refused attempt sharing an included hash is preserved on that hash's page. Searches resolve a uniquely known network.
+Ordinary transactions show sender, recipient, value and receipt without invented Core/condition stages. Shared-contract
+matches are marked as related rather than asserted incident membership. Saved evidence is distinguished from live checks.
+See `docs/tooling/live-demo.md`. The local frontend serves on port 5173; restart Vite after SDK changes if its external-source
+cache is stale. These changes still need publication before appearing on the hosted site.
+
 **First, from the owner's review of the public demo (the flow "looks random"):**
 1. **Readable labels.** No-Solidity (rule-set) nodes show raw selectors (`0x2FC63d…0x3fa4f245() gt 1000`). Resolve getters to
    names and the contract's role (`vault.totalAssets()`), and show the live values compared

@@ -19,6 +19,9 @@ import { OPEN_SPONSOR_ERRORS } from "./sponsorErrors.ts";
 import { getDevnet, getReceipt, rpcRequest, type DevnetSelector } from "./transport.ts";
 import { FrameMode } from "./types.ts";
 import { explainRule, readRuleSet } from "./ruleset/explain.ts";
+import { contractLabel, decimalRatio, isNotPaused, readableCondition, sourceLabel, type ContractRoles } from "./ruleset/labels.ts";
+import { layoutRuleSet } from "./ruleset/encode.ts";
+import type { Source } from "./ruleset/spec.ts";
 import type { Node } from "./ruleset/spec.ts";
 
 export type NodeResult = "yes" | "no" | "unknown" | "skipped" | "not-recorded";
@@ -34,11 +37,14 @@ export interface FlowNodeView {
   inputs: number[];
   /** Why the node has this result, when there is more to say (a Core code, a sponsor code, "derived from inclusion"). */
   note?: string;
+  /** Measured at Flow.observedBlock, never a historical value inferred from inclusion. */
+  observation?: string;
 }
 
 export interface Flow {
   /** "explain": the build's popcornExplain view; "ruleset": a rule set's debug view; "opaque": the build explains nothing. */
   source: "explain" | "ruleset" | "opaque";
+  observedBlock?: number;
   trigger: string;
   nodes: FlowNodeView[];
   /** "inclusion": derived from the transaction having been included; "current-state": evaluated now. */
@@ -55,6 +61,8 @@ export interface Stage {
 }
 
 export interface Inspection {
+  /** Chain facts for an ordinary transaction; it has no Popcorn validation frames. */
+  transaction?: { from: Address; to: Address | null; value: string; input: Hex; gasUsed?: string };
   hash: Hex;
   /** Where the transaction was found. */
   foundOn: "node" | "sidecar" | "nowhere";
@@ -145,7 +153,7 @@ const RESULT: NodeResult[] = ["no", "yes", "unknown", "skipped"];
 
 /** The build's flow for a trigger, evaluated on the current state: its popcornExplain view, else a rule set's debug view,
  *  else one opaque condition node. */
-export async function explainTrigger(build: Address, triggerData: Hex, verifyData: Hex, o: { devnet?: DevnetSelector; rpcUrl?: string } = {}): Promise<Flow> {
+export async function explainTrigger(build: Address, triggerData: Hex, verifyData: Hex, o: { devnet?: DevnetSelector; rpcUrl?: string; roles?: ContractRoles; observations?: boolean } = {}): Promise<Flow> {
   const url = o.rpcUrl ?? getDevnet(o.devnet ?? "local").rpcUrl;
   const client = createPublicClient({ transport: http(url) });
   try {
@@ -159,7 +167,7 @@ export async function explainTrigger(build: Address, triggerData: Hex, verifyDat
     // no explain view, or it reverted on this data: try a rule set, then fall back
   }
   try {
-    return await ruleSetFlow(client, build, triggerData, verifyData);
+    return await ruleSetFlow(client, build, triggerData, verifyData, o.roles, o.observations !== false);
   } catch {
     return opaqueFlow();
   }
@@ -184,11 +192,29 @@ const RULESET_BLOCK: Record<Node["type"], string> = {
 };
 const RULESET_RESULT: Record<string, NodeResult> = { true: "yes", false: "no", unknown: "unknown", "not evaluated": "skipped" };
 
-async function ruleSetFlow(client: ReturnType<typeof createPublicClient>, build: Address, triggerData: Hex, verifyData: Hex): Promise<Flow> {
+async function ruleSetFlow(client: ReturnType<typeof createPublicClient>, build: Address, triggerData: Hex, verifyData: Hex, roles: ContractRoles = {}, observations = true): Promise<Flow> {
   const ctx = { publicClient: client } as never;
   const { spec } = await readRuleSet(ctx, build);
   const ruleId = triggerData.length >= 66 ? Number(BigInt(`0x${triggerData.slice(2, 66)}`)) : 0;
-  const ex = await explainRule(ctx, build, { ruleId, spec, triggerData, verifyData });
+  const blockNumber = observations ? await client.getBlockNumber({ cacheTime: 0 }) : undefined;
+  const ex = await explainRule(ctx, build, { ruleId, spec, triggerData, verifyData, blockNumber });
+  const definitions = layoutRuleSet(spec)[ruleId]?.nodes ?? [];
+  const readings = new Map<number, string>();
+  if (blockNumber !== undefined) await Promise.all(definitions.map(async ({ node, index }) => {
+    const read = async (s: Source): Promise<bigint> => {
+      if (s.kind !== "getter") throw new Error("no getter observation");
+      const arg = s.arg === "self" ? build.slice(2).padStart(64, "0") : s.arg?.slice(2) ?? "";
+      const r = await client.call({ to: s.target, data: `${s.selector}${arg}` as Hex, gas: BigInt(s.gas ?? 30_000), blockNumber });
+      if (!r.data || r.data.length !== 66) throw new Error("not a uint256 getter");
+      return BigInt(r.data);
+    };
+    try {
+      if (node.type === "ratio") {
+        const [a, b] = await Promise.all([read(node.a), read(node.b)]);
+        readings.set(index, `${sourceLabel(node.a, roles)} = ${a}; ${sourceLabel(node.b, roles)} = ${b}; ratio = ${decimalRatio(a, b)}`);
+      } else if (node.type === "cmp") readings.set(index, `${sourceLabel(node.source, roles)} = ${await read(node.source)}`);
+    } catch { /* A failed optional read never invents a value or changes the condition verdict. */ }
+  }));
   const rule = spec.rules[ruleId];
   const nodes: FlowNodeView[] = [{ index: 0, kind: "trigger", blockId: "", label: `rule ${ruleId}${rule?.name ? ` (${rule.name})` : ""}`, result: ex.ruleExists ? "yes" : "no", inputs: [] }];
   nodes.push({ index: 1, kind: "payer", blockId: "self-paying", label: "the build pays the gas", result: "yes", inputs: [0] });
@@ -201,11 +227,13 @@ async function ruleSetFlow(client: ReturnType<typeof createPublicClient>, build:
   };
   const emitted = new Map<number, number>();
   const emit = (i: number): number => {
-    const kids = childrenOf(i).map(emit);
+    const definition = definitions[i]?.node;
+    const folded = definition && isNotPaused(definition);
+    const kids = folded ? [] : childrenOf(i).map(emit);
     const n = pre[i]!;
-    const composite = ["and", "or", "not", "kofn", "exactly"].includes(n.type);
+    const composite = !folded && ["and", "or", "not", "kofn", "exactly"].includes(n.type);
     const index = nodes.length;
-    nodes.push({ index, kind: composite ? "operator" : "condition", blockId: RULESET_BLOCK[n.type as Node["type"]] ?? "", label: n.label, result: RULESET_RESULT[n.result] ?? "unknown", inputs: composite ? kids : [0] });
+    nodes.push({ index, kind: composite ? "operator" : "condition", blockId: RULESET_BLOCK[n.type as Node["type"]] ?? "", label: (definition && readableCondition(definition, roles)) ?? n.label, result: RULESET_RESULT[n.result] ?? "unknown", inputs: composite ? kids : [0], observation: readings.get(folded ? i + 1 : i), note: folded ? "Equivalent to NOT (paused() > 0); UNKNOWN stays UNKNOWN." : undefined });
     emitted.set(i, index);
     return index;
   };
@@ -227,7 +255,7 @@ async function ruleSetFlow(client: ReturnType<typeof createPublicClient>, build:
     index: nodes.length,
     kind: "action",
     blockId: a.type === "call" ? (isPause ? "pause" : "call") : "",
-    label: a.type === "call" ? `${isPause ? "pause" : "call"} ${a.target}` : "record that the rule fired",
+    label: a.type === "call" ? `${isPause ? "pause" : "call"} ${contractLabel(a.target, roles)}` : "record that the rule fired",
     result: ex.wouldPass ? "yes" : "skipped",
     inputs: root >= 0 ? [root] : [0],
   });
@@ -239,13 +267,13 @@ async function ruleSetFlow(client: ReturnType<typeof createPublicClient>, build:
     // every node holds, yet the rule says no: an OR was handed the wrong child
     for (const n of nodes) if (n.kind === "operator" && n.blockId === "or") Object.assign(n, { result: "no" as NodeResult, note: "the trigger named an OR input that is not true (the hint in the verify data); its other input holds, so a trigger naming that one would pass" });
   }
-  return { source: "ruleset", trigger: `rule ${ruleId}`, evaluated: "current-state", nodes };
+  return { source: "ruleset", trigger: `rule ${ruleId}`, evaluated: "current-state", nodes, ...(blockNumber !== undefined ? { observedBlock: Number(blockNumber) } : {}) };
 }
 
 /** For an included transaction: the condition was YES when it ran. Nodes on the path to the first action are derived from
  *  the flow's logic, actions from the receipt; nodes the logic cannot settle are "not-recorded". */
 export function deriveFromInclusion(flow: Flow, actionsOk: boolean): Flow {
-  const nodes = flow.nodes.map((n) => ({ ...n, result: "not-recorded" as NodeResult, note: undefined as string | undefined }));
+  const nodes = flow.nodes.map((n) => ({ ...n, result: "not-recorded" as NodeResult, observation: undefined, note: undefined as string | undefined }));
   const set = (i: number, r: NodeResult) => {
     const n = nodes[i];
     if (!n || n.result === r) return;
@@ -274,7 +302,7 @@ export function deriveFromInclusion(flow: Flow, actionsOk: boolean): Flow {
       }
     }
   }
-  return { ...flow, nodes, evaluated: "inclusion" };
+  return { ...flow, nodes, observedBlock: undefined, evaluated: "inclusion" };
 }
 
 // ---------------------------------------------------------------- the whole transaction
@@ -301,7 +329,7 @@ export function coreMeaning(code: number): string {
   return e ? `Core 0x${code.toString(16)} ${e.name}: ${e.check}` : `code 0x${code.toString(16)}`;
 }
 
-export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector } = {}): Promise<Inspection> {
+export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector; roles?: ContractRoles } = {}): Promise<Inspection> {
   const devnet = getDevnet(o.devnet ?? "local");
   const out: Inspection = { hash, foundOn: "nowhere", status: "unknown", build: null, payer: null, triggerData: null, verifyData: null, block: null, seenAt: null, stages: [], flow: null, refusal: null };
 
@@ -329,6 +357,25 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
     return out;
   }
   out.seenAt = side?.admission?.at ?? side?.entry?.submittedTime ?? null;
+  if (onNode && frames.length === 0 && num(onNode.type) !== 6) {
+    out.transaction = {
+      from: getAddress((onNode.from ?? onNode.sender) as string),
+      to: onNode.to ? getAddress(onNode.to as string) : null,
+      value: String(BigInt((onNode.value as string) ?? "0x0")),
+      input: (onNode.input ?? onNode.data ?? "0x") as Hex,
+    };
+    out.build = null;
+    const receipt = await getReceipt(hash, { devnet: o.devnet ?? "local" }).catch(() => null);
+    if (receipt) {
+      out.status = receipt.status === "success" ? "included" : "action-reverted";
+      out.transaction.gasUsed = String(receipt.gasUsed);
+      out.stages.push({ id: "chain", title: receipt.status === "success" ? "Transaction included" : "Transaction reverted", state: receipt.status === "success" ? "pass" : "fail", detail: `Ordinary transaction at block ${receipt.blockNumber}; ${receipt.gasUsed} gas used. It has no Popcorn VERIFY or SENDER frames.` });
+    } else {
+      out.status = "pending";
+      out.stages.push({ id: "chain", title: "Awaiting receipt", state: "unknown", detail: "The node knows this ordinary transaction but has not returned a receipt." });
+    }
+    return out;
+  }
   if (!out.build) return out;
   const t = triggerOf(out.build, frames);
   Object.assign(out, t);
@@ -351,13 +398,13 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
       if (!r) out.refusal = { frame: parseRefusal(reason)?.frame ?? -1, code: null, who: "mempool", rule: failed?.rule ?? "rejected", meaning: `the alternative mempool's ${failed?.rule ?? ""} rule refused it: ${reason}` };
       if (r) {
         const target = frames[r.frame]?.target;
-        const who: "build" | "payer" | "other" = frames[r.frame]?.mode === FrameMode.VERIFY ? (!target || getAddress(target) === out.build ? "build" : "payer") : "other";
+        const who: "build" | "payer" | "other" = out.triggerData !== null && frames[r.frame]?.mode === FrameMode.VERIFY ? (!target || getAddress(target) === out.build ? "build" : "payer") : "other";
         const meaning =
           r.code === null
             ? "reverted"
             : who === "payer"
               ? (OPEN_SPONSOR_ERRORS[r.code] ?? `the payer refused with code 0x${r.code.toString(16)}`)
-              : coreMeaning(r.code);
+              : who === "build" ? coreMeaning(r.code) : `validation frame ${r.frame} refused with code 0x${r.code.toString(16)} (not decoded as a Popcorn trigger)`;
         out.refusal = { frame: r.frame, code: r.code, who, meaning };
       }
     }
@@ -368,6 +415,11 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
   // Core, payer, build, chain
   const receipt = out.foundOn === "node" ? await getReceipt(hash, { devnet: o.devnet ?? "local" }).catch(() => null) : null;
   const ref = out.refusal;
+  if (out.triggerData === null) {
+    out.status = receipt ? (receipt.status === "success" ? "included" : "action-reverted") : adm?.outcome === "rejected" ? "refused" : "pending";
+    out.stages.push({ id: "chain", title: receipt ? "Frame transaction included" : "Frame transaction", state: receipt ? (receipt.status === "success" ? "pass" : "fail") : out.status === "refused" ? "skipped" : "unknown", detail: "No recognized Popcorn pop(bytes) frame. The transaction's condition and actions have not been decoded as a Popcorn build." });
+    return out;
+  }
   if (receipt) {
     out.payer = out.payer ?? (receipt.payer && receipt.payer !== out.build ? receipt.payer : null);
     out.status = receipt.status === "success" ? "included" : "action-reverted";
@@ -413,7 +465,7 @@ export async function inspectTransaction(hash: Hex, o: { devnet?: DevnetSelector
 
   // the build's flow
   if (out.triggerData !== null) {
-    const flow = await explainTrigger(out.build, out.triggerData, out.verifyData ?? "0x", { rpcUrl: devnet.rpcUrl });
+    const flow = await explainTrigger(out.build, out.triggerData, out.verifyData ?? "0x", { rpcUrl: devnet.rpcUrl, roles: o.roles, observations: !receipt });
     if (receipt) {
       const senderIdx = frames.findIndex((f) => f.mode === FrameMode.SENDER);
       const actionFrame = receipt.frameReceipts[senderIdx];

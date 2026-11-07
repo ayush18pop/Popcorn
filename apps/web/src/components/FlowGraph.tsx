@@ -121,7 +121,7 @@ function FlowCard({ n, x, y, delay }: { n: FlowNodeView; x: number; y: number; d
   );
   const cls = cn("absolute flex flex-col rounded-2xl border px-3 py-2.5 backdrop-blur-sm transition-colors", tone(n.result), b && "hover:border-foreground/50");
   const style = { left: x, top: y, width: W, height: H };
-  const tip = [n.label, n.note].filter(Boolean).join("\n");
+  const tip = [n.label, n.observation, n.note].filter(Boolean).join("\n");
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay }} className="contents">
       {b ? (
@@ -138,7 +138,7 @@ function FlowCard({ n, x, y, delay }: { n: FlowNodeView; x: number; y: number; d
 }
 
 /** The nodes that decided the outcome: the red ones, with their notes. */
-export function FlowVerdict({ flow }: { flow: Flow }) {
+export function FlowVerdict({ flow, recorded = false }: { flow: Flow; recorded?: boolean }) {
   const red = flow.nodes.filter((n) => n.result === "no" || n.result === "unknown");
   const ran = flow.nodes.some((n) => n.kind === "action" && n.result === "yes");
   return (
@@ -155,7 +155,8 @@ export function FlowVerdict({ flow }: { flow: Flow }) {
           ? "Derived from the inclusion: the chain proves the condition held when it ran (dashed nodes are not recorded on chain)."
           : flow.source === "opaque"
             ? "This build has no explain view: only its overall answer is known."
-            : `Evaluated now by the build's ${flow.source === "ruleset" ? "rule-set debug view" : "popcornExplain view"} on the current state.`}
+            : recorded ? `Recorded evaluation${flow.observedBlock !== undefined ? ` at block ${flow.observedBlock}` : " during the demo"}. This is saved evidence, not a live state check.`
+            : `Evaluated ${flow.observedBlock !== undefined ? `at block ${flow.observedBlock}` : "now"} by the build's ${flow.source === "ruleset" ? "rule-set debug view" : "popcornExplain view"} on the current state.`}
       </p>
     </div>
   );

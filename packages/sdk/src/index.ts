@@ -239,3 +239,5 @@ export * from "./sponsor.ts";
 export * from "./privacy.ts";
 export * from "./account.ts";
 export * from "./record.ts";
+
+export type { Incident, IncidentStep } from "./incident.ts";

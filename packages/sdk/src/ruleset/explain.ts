@@ -3,8 +3,9 @@
 import { decodeFunctionResult, encodeFunctionData, getAddress, type Address, type Hex } from "viem";
 /** What the read paths need: a client that can eth_call. A full PopcornContext fits; so does { publicClient } in a browser. */
 export interface ReadContext {
-  publicClient: { call: (args: { to: Address; data: Hex }) => Promise<{ data?: Hex | undefined }> };
+  publicClient: { call: (args: { to: Address; data: Hex; blockNumber?: bigint }) => Promise<{ data?: Hex | undefined }> };
 }
+import { sourceLabel, readableCondition } from "./labels.ts";
 import { PopcornError } from "../errors.ts";
 import { decodeRuleSet, layoutRuleSet, type NodeInfo } from "./encode.ts";
 import type { Node, RuleSetSpec } from "./spec.ts";
@@ -95,16 +96,11 @@ export interface RuleExplanation {
   text: string;
 }
 
-const srcLabel = (s: import("./spec.ts").Source): string =>
-  s.kind === "storage"
-    ? `own storage ${s.slot.slice(0, 10)}…`
-    : s.kind === "getter"
-      ? `${s.target.slice(0, 8)}…${s.selector}()${s.arg === "self" ? " of the rule contract" : s.arg ? ` (${s.arg.slice(0, 10)}…)` : ""}`
-      : s.kind === "ethBalance"
-        ? `ETH balance of ${s.account === "self" ? "the ruleContract" : s.account.slice(0, 8) + "…"}`
-        : `${s.token.slice(0, 8)}… balanceOf(${s.account === "self" ? "the ruleContract" : s.account.slice(0, 8) + "…"})`;
+const srcLabel = sourceLabel;
 
 export function nodeLabel(n: Node): string {
+  const readable = readableCondition(n);
+  if (readable) return readable;
   switch (n.type) {
     case "and":
       return `AND of ${n.children.length}`;
@@ -136,6 +132,8 @@ export function nodeLabel(n: Node): string {
 }
 
 export interface ExplainOptions {
+  /** Pin debug evaluation and optional observations to the same block. */
+  blockNumber?: bigint;
   /** Which rule to explain. */
   ruleId: number;
   /** Default triggerDataFor(ruleId). */
@@ -154,7 +152,7 @@ export async function explainRule(ctx: ReadContext, ruleContract: Address, o: Ex
   const spec = o.spec ?? (await readRuleSet(ctx, ruleContract)).spec;
   const triggerData = o.triggerData ?? triggerDataFor(o.ruleId);
   const data = encodeFunctionData({ abi: ruleSetAbi, functionName: "popcornDebug", args: [BigInt(o.ruleId), triggerData, o.verifyData ?? "0x"] });
-  const ret = await ctx.publicClient.call({ to: getAddress(ruleContract), data });
+  const ret = await ctx.publicClient.call({ to: getAddress(ruleContract), data, ...(o.blockNumber !== undefined ? { blockNumber: o.blockNumber } : {}) });
   if (!ret.data) throw new PopcornError(`rule contract ${ruleContract}: popcornDebug returned nothing (not a RuleSetContract?)`);
   const d = decodeFunctionResult({ abi: ruleSetAbi, functionName: "popcornDebug", data: ret.data });
   const layout = layoutRuleSet(spec);

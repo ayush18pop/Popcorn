@@ -194,6 +194,8 @@ export interface DeployRuleSetOptions extends Omit<DeployRuleOptions, "logic" | 
 }
 
 export interface DeployRuleSetResult extends DeployRuleResult {
+  /** Shared infrastructure deployed by this call, in execution order. */
+  infrastructureTxs: Hex[];
   plan: RuleSetPlan;
   /** Shared logic only: the config's data contract (the rule contract's `verifier` arg) and the publish transaction (null if it already existed). */
   pointer: Address | null;
@@ -232,11 +234,11 @@ export async function deployRuleSet(ctx: PopcornContext, spec: RuleSetSpec, o: D
       caps: ruleContractCapsFor(plan, o.caps, { shared: false }),
       gas: { logic: 40_000_000n, ...(o.gas ?? {}) },
     });
-    return { ...r, plan, pointer: null, publishTx: null, publishGas: null };
+    return { ...r, plan, pointer: null, publishTx: null, publishGas: null, infrastructureTxs: [] };
   }
   if (o.caps?.verifier !== undefined) ruleContractCapsFor(plan, o.caps, { shared: true, pointer: "0x0000000000000000000000000000000000000000" }); // refuse before anything is deployed
   const infra = await ensureRuleSetInfrastructure(ctx, { stakeAmount });
   const pub = await publishRuleSet(ctx, infra.publisher, plan.config);
   const r = await deployRule(ctx, { ...rest, logic: infra.logic, caps: ruleContractCapsFor(plan, o.caps, { shared: true, pointer: pub.pointer }) });
-  return { ...r, plan, pointer: pub.pointer, publishTx: pub.txHash, publishGas: pub.gasUsed };
+  return { ...r, plan, pointer: pub.pointer, publishTx: pub.txHash, publishGas: pub.gasUsed, infrastructureTxs: infra.txHashes };
 }

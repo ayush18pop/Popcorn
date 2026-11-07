@@ -10,6 +10,7 @@ import Blocks from "@/pages/Blocks";
 import BlockPage from "@/pages/BlockPage";
 import Examples from "@/pages/Examples";
 import Explorer from "@/pages/Explorer";
+import Incident from "@/pages/Incident";
 import Skills from "@/pages/Skills";
 import Mcp from "@/pages/Mcp";
 import Docs from "@/pages/Docs";
@@ -28,7 +29,7 @@ export default function App() {
         {page === "home" && <Home />}
         {page === "blocks" && (parts.length >= 1 ? <BlockPage key={parts[0]} id={parts[0]} /> : <Blocks />)}
         {page === "examples" && <Examples key={parts.join("/")} runKey={parts.length >= 2 ? `${parts[0]}/${parts[1]}` : undefined} />}
-        {page === "explorer" && (
+        {page === "explorer" && (parts[0] === "incident" ? <Incident key={parts[1]} id={parts[1] ?? ""} focusedHash={parts[2]} /> :
           <Explorer
             key={parts.join("/")}
             network={parts[0] === "local" || parts[0] === "devnet1" ? parts[0] : undefined}

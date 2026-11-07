@@ -5,14 +5,14 @@ import { formatEther, getAddress, isAddress, isHash, type Address, type Hex } fr
 import { devnets, explorerTxUrl, rpcRequest, type DevnetName } from "@popcorn/sdk/transport";
 import { inspectTransaction, type Inspection, type Stage } from "@popcorn/sdk/inspect";
 import { FlowGraph, FlowVerdict } from "@/components/FlowGraph";
-import { go } from "@/lib/route";
+import { go, href } from "@/lib/route";
+import { TRACES, transactionsIn, savedInspection } from "@/lib/incidents";
+import { TransactionContext } from "@/components/TransactionContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SnippetCopyButton } from "@/components/kibo-ui/snippet";
 import { Reveal } from "@/components/motion";
 import { useScramble } from "@/lib/useScramble";
 import { cn } from "@/lib/utils";
-import { RUNS } from "@/lib/runs";
-import { PROJECTS } from "@/lib/catalog";
 
 // Read-only views of a devnet, straight from the browser. Nothing here signs or sends a transaction.
 
@@ -50,13 +50,19 @@ function decodeArgs(hex: string): Args {
 type Lookup =
   | { kind: "rule"; address: Address; core: "match" | "mismatch" | "unchecked"; args: Args; balance: bigint; stake: bigint | null; logicHasCode: boolean }
   | { kind: "other"; address: Address; codeSize: number; balance: bigint }
-  | { kind: "tx"; ins: Inspection }
+  | { kind: "tx"; ins: Inspection; recorded?: boolean }
   | { kind: "error"; message: string };
 
 async function lookup(devnet: DevnetName, q: string): Promise<Lookup> {
   const d = devnets[devnet];
   try {
-    if (isHash(q)) return { kind: "tx", ins: await inspectTransaction(q as Hex, { devnet }) };
+    if (isHash(q)) {
+      const member = transactionsIn(q, devnet)[0];
+      const roles = member ? Object.fromEntries(Object.entries(member.context.contracts).map(([name, address]) => [address, name])) : undefined;
+      const ins = await inspectTransaction(q as Hex, { devnet, roles });
+      const saved = savedInspection(q, devnet);
+      return ins.foundOn === "nowhere" && saved ? { kind: "tx", ins: saved, recorded: true } : { kind: "tx", ins };
+    }
     if (!isAddress(q)) return { kind: "error", message: "Enter a rule contract address or a transaction hash." };
     const address = getAddress(q);
     const [code, bal] = await Promise.all([rpcRequest<Hex>(d.rpcUrl, "eth_getCode", [address, "latest"]), rpcRequest<Hex>(d.rpcUrl, "eth_getBalance", [address, "latest"])]);
@@ -107,13 +113,20 @@ export default function Explorer({ initial, network }: { initial?: string; netwo
 
   const run = async (value: string) => {
     setBusy(true);
+    const saved = savedInspection(value.trim(), devnet);
+    if (saved) setRes({ kind: "tx", ins: saved, recorded: true });
     setRes(await lookup(devnet, value.trim()));
     setBusy(false);
   };
   const submit = () => {
     const v = q.trim();
-    if (isHash(v)) go("explorer", devnet, v);
-    else void run(v);
+    if (isHash(v)) {
+      const matches = transactionsIn(v);
+      const networks = [...new Set(matches.map(({ context }) => context.network))];
+      const target = networks.length === 1 ? networks[0]! : devnet;
+      if (initial === v && target === devnet) void run(v);
+      else go("explorer", target, v);
+    } else void run(v);
   };
   useEffect(() => {
     if (initial) void run(initial);
@@ -128,11 +141,18 @@ export default function Explorer({ initial, network }: { initial?: string; netwo
           <p className="label-mono mb-4">Explorer · read-only</p>
           <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">See where a transaction passed or failed.</h1>
           <p className="mt-5 max-w-[640px] text-[16px] leading-relaxed text-muted-foreground">
-            Paste any frame transaction hash, included or refused. You get each stage (mempool admission, Core, payer, the build's condition, inclusion) and the build's flow, block by block: green said YES, red said NO, grey was never reached. A rule contract address shows its settings. Reads a devnet from your browser; it never signs or sends anything.
+            Follow a recorded incident, or paste a transaction hash to see what passed or failed. A rule contract address shows its settings.
           </p>
         </Reveal>
 
-        <Reveal delay={0.1} className="mt-10">
+        {!initial && TRACES.length > 0 && <section className="mt-8" aria-label="Recorded incidents">
+          <h2 className="mb-3 text-[16px] font-semibold">Recorded incidents and examples</h2>
+          <div className="grid gap-3 sm:grid-cols-2">{TRACES.map((context) => <a key={context.id} href={href("explorer", "incident", context.id)} className="glass block rounded-2xl p-4 transition-colors hover:bg-foreground/[0.03]">
+            <p className="text-[14px] font-semibold">{context.title} →</p><p className="mt-1 text-[12px] text-muted-foreground">{context.steps.length} explained transactions · {context.network === "devnet1" ? "public" : "local"} devnet</p>
+          </a>)}</div>
+        </section>}
+
+        <Reveal delay={0.1} className="mt-8">
           <form
             onSubmit={(e) => (e.preventDefault(), submit())}
             className="glass-strong flex flex-col gap-2 rounded-[28px] p-2 sm:flex-row sm:items-center"
@@ -160,11 +180,7 @@ export default function Explorer({ initial, network }: { initial?: string; netwo
               {busy && <Loader2 className="size-4 animate-spin" />} Inspect
             </button>
           </form>
-          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 px-2 font-mono text-[11px] text-faint">
-            <span>rpc {d.rpcUrl}</span>
-            <span>sidecar {d.sidecarUrl}</span>
-            <span>factory 0x1edd…8380</span>
-          </div>
+          <details className="mt-3 px-2 font-mono text-[11px] text-faint"><summary className="cursor-pointer">Network details</summary><div className="mt-2 flex flex-wrap gap-x-6 gap-y-1"><span>rpc {d.rpcUrl}</span><span>sidecar {d.sidecarUrl}</span><span>factory 0x1edd…8380</span></div></details>
         </Reveal>
 
         <AnimatePresence mode="wait">
@@ -175,8 +191,7 @@ export default function Explorer({ initial, network }: { initial?: string; netwo
           )}
         </AnimatePresence>
 
-        <Recorded onPick={(h) => (setQ(h), go("explorer", "local", h))} />
-
+        {!initial && <>
         {/* recent admissions: every one opens in the inspector */}
         <section className="mt-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -245,6 +260,7 @@ export default function Explorer({ initial, network }: { initial?: string; netwo
             <p className="mt-4 text-[11.5px] leading-relaxed text-faint">From the SDK's devnet table.</p>
           </div>
         </section>
+        </>}
       </div>
     </div>
   );
@@ -274,7 +290,7 @@ function Result({ r, devnet }: { r: Lookup; devnet: DevnetName }) {
         <p className="mt-3 text-[13px] text-muted-foreground">{r.codeSize ? `${r.codeSize.toLocaleString("en-US")} bytes of code that is not Core followed by 101 argument bytes.` : "No code at this address."} Balance {formatEther(r.balance)} ETH.</p>
       </div>
     );
-  if (r.kind === "tx") return <TxView ins={r.ins} devnet={devnet} />;
+  if (r.kind === "tx") return <TxView ins={r.ins} devnet={devnet} recorded={r.recorded} />;
   const a = r.args;
   return (
     <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
@@ -327,27 +343,36 @@ const STAGE_TONE: Record<Stage["state"], string> = {
 };
 const STAGE_MARK: Record<Stage["state"], string> = { pass: "✓", fail: "✕", skipped: "·", unknown: "?" };
 
-function TxView({ ins, devnet }: { ins: Inspection; devnet: DevnetName }) {
+function TxView({ ins, devnet, recorded = false }: { ins: Inspection; devnet: DevnetName; recorded?: boolean }) {
   const head =
-    ins.status === "included" ? "Included" : ins.status === "refused" ? "Refused" : ins.status === "action-reverted" ? "Included, but the action reverted" : ins.status === "pending" ? "Pending" : ins.status === "dropped" ? "Admitted, then dropped" : "Not found";
+    ins.status === "included" ? "Included" : ins.status === "refused" ? "Refused" : ins.status === "action-reverted" ? (ins.transaction ? "Transaction reverted on chain" : "Included with a revert") : ins.status === "pending" ? "Pending" : ins.status === "dropped" ? "Admitted, then dropped" : "Not found";
   const checks = ins.stages.find((s) => s.checks)?.checks;
+  const saved = transactionsIn(ins.hash, devnet)[0]?.step;
   return (
     <div className="space-y-6">
+      <TransactionContext inspection={ins} network={devnet} />
+      {recorded && <p className="text-[12px] leading-relaxed text-muted-foreground">Showing saved evidence. The selected node or sidecar did not return this transaction; the recorded outcome has not been freshly verified.</p>}
+      {saved?.outcome === "refused" && <p className="text-[12px] leading-relaxed text-muted-foreground">{recorded ? "Showing the saved refusal from the demo; the sidecar no longer holds this hash. The flow below is recorded evidence." : "The incident preserves the original refusal. Live condition checks below describe the current state; they can differ from the state when this attempt was refused."}</p>}
       <div className="glass rounded-[24px] p-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className={cn("rounded-full px-3 py-1 font-mono text-[11px]", ins.status === "included" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ins.status === "unknown" ? "bg-foreground/[0.06] text-muted-foreground" : "bg-red-500/15 text-red-600 dark:text-red-400")}>{head}</span>
+          <span className={cn("rounded-full px-3 py-1 font-mono text-[11px]", ins.status === "included" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ins.status === "unknown" ? "bg-foreground/[0.06] text-muted-foreground" : "bg-red-500/15 text-red-600 dark:text-red-400")}>{recorded ? `Recorded: ${head}` : head}</span>
           {ins.flow && <span className="label-mono">trigger · {ins.flow.trigger}</span>}
         </div>
         <p className="mt-3 break-all font-mono text-[12.5px] text-foreground/90">{ins.hash}</p>
         <div className="mt-3 grid gap-x-8 gap-y-1 font-mono text-[11.5px] text-muted-foreground sm:grid-cols-2">
-          {ins.build && <span>build {ins.build}</span>}
-          {ins.payer && <span>payer {ins.payer}</span>}
+          {ins.build && <span className="break-all">{ins.triggerData !== null ? "build" : "account"} {ins.build}</span>}
+          {ins.payer && <span className="break-all">payer {ins.payer}</span>}
           {ins.block !== null && <span>block {ins.block.toLocaleString("en-US")}</span>}
           {ins.seenAt !== null && <span>seen by the sidecar {new Date(ins.seenAt).toLocaleString()}</span>}
-          <span>found on {ins.foundOn === "node" ? "the node" : ins.foundOn === "sidecar" ? "the sidecar" : "neither"}</span>
+          <span>{recorded ? "from the saved recording" : "found on "}{!recorded && (ins.foundOn === "node" ? "the node" : ins.foundOn === "sidecar" ? "the sidecar" : "neither")}</span>
         </div>
       </div>
 
+      {ins.transaction && <section className="glass rounded-2xl p-5 text-[13px]">
+        <h2 className="font-semibold">{ins.transaction.to === null ? "Contract deployment" : ins.transaction.input === "0x" ? "ETH transfer" : "Contract call"}</h2>
+        <dl className="mt-3 space-y-2 text-muted-foreground"><div><dt>From</dt><dd className="break-all font-mono text-[12px]">{ins.transaction.from}</dd></div><div><dt>To</dt><dd className="break-all font-mono text-[12px]">{ins.transaction.to ?? "New contract"}</dd></div><div><dt>Value</dt><dd>{formatEther(BigInt(ins.transaction.value))} ETH</dd></div>{ins.transaction.input !== "0x" && <div><dt>Call data</dt><dd className="break-all font-mono text-[12px]">{ins.transaction.input.slice(0, 10)} · {(ins.transaction.input.length - 2) / 2} bytes</dd></div>}</dl>
+        <p className="mt-3 text-[12px] text-muted-foreground">Ordinary transaction: no Popcorn validation frames were evaluated. A reverted on-chain call still uses gas.</p>
+      </section>}
       {/* the stages, left to right */}
       <div className="flex flex-wrap items-stretch gap-2">
         {ins.stages.map((s, i) => (
@@ -374,10 +399,10 @@ function TxView({ ins, devnet }: { ins: Inspection; devnet: DevnetName }) {
         <div className="glass rounded-[24px] p-6">
           <p className="label-mono mb-4">The build's flow</p>
           <FlowGraph flow={ins.flow} />
-          <FlowVerdict flow={ins.flow} />
+          <FlowVerdict flow={ins.flow} recorded={recorded} />
         </div>
       ) : (
-        ins.foundOn !== "nowhere" && <p className="text-[13px] text-muted-foreground">Not a Popcorn trigger (no pop(bytes) frame), so there is no flow to draw.</p>
+        !ins.transaction && <p className="text-[13px] text-muted-foreground">{saved ? "No condition flow was recorded for this step. Its role and related transactions are explained above." : "No Popcorn condition flow is available for this transaction."}</p>
       )}
 
       {checks && (
@@ -394,40 +419,5 @@ function TxView({ ins, devnet }: { ins: Inspection; devnet: DevnetName }) {
         Open in the devnet's explorer <ArrowUpRight className="size-3.5" />
       </a>
     </div>
-  );
-}
-
-/** The examples' recorded transactions, one click each: the included one and the refused one. */
-function Recorded({ onPick }: { onPick: (hash: string) => void }) {
-  const rows = PROJECTS.map((p) => ({ p, run: RUNS[p.key] })).filter((x) => x.run?.recorded);
-  return (
-    <section className="mt-20">
-      <p className="label-mono mb-3">Try a recorded transaction</p>
-      <p className="max-w-[620px] text-[13px] leading-relaxed text-muted-foreground">
-        Each example's featured transaction (included) and its refused case (sent to the sidecar and refused). They were recorded on the local devnet, so they open there: run <code className="font-mono">devnet/up.sh</code> to inspect them live.
-      </p>
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
-        {rows.map(({ p, run }) => {
-          const inc = run!.steps.find((s) => s.stage === "include") as { tx?: string } | undefined;
-          return (
-            <div key={p.key} className="glass rounded-2xl p-4">
-              <p className="text-[14px] font-semibold tracking-tight">{p.name}</p>
-              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[11px]">
-                {inc?.tx && (
-                  <button onClick={() => onPick(inc.tx!)} className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-400">
-                    included · {inc.tx.slice(0, 10)}…
-                  </button>
-                )}
-                {run!.failing.tx && (
-                  <button onClick={() => onPick(run!.failing.tx!)} className="rounded-full bg-red-500/15 px-3 py-1 text-red-600 hover:bg-red-500/25 dark:text-red-400">
-                    refused · {run!.failing.tx.slice(0, 10)}…
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
