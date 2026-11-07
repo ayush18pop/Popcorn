@@ -1,6 +1,6 @@
 # Popcorn developer site
 
-The site described in [`docs/ui-handoff.md`](../../docs/ui-handoff.md): the module catalog, a page per module, the
+The developer site: the block catalog, a page per block, the
 example player, a read-only explorer, the Claude skills and MCP pages, and the docs.
 
 ```sh

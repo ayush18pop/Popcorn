@@ -1,4 +1,4 @@
-// Recorded runs (examples/<corner>/<module>/run.json, docs/ui-handoff.md "Recorded runs"). The player replays these
+// Recorded runs (examples/<group>/<id>/run.json, written by packages/sdk/scripts/record-examples.ts). The player replays these
 // files and nothing else. A file with `recorded: false` is a sample in the recorder's format and is labelled as such.
 
 const files = import.meta.glob("../../../../examples/*/*/run.json", { import: "default", eager: true }) as Record<string, Run>;

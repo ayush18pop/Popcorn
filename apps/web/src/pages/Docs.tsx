@@ -23,7 +23,7 @@ const DOCS: Doc[] = [
   { id: "contracts", title: "Core: arguments, constants, errors", source: "contracts/core/LAYOUT.md", md: layout },
   { id: "devnets", title: "Devnets", source: "devnet/README.md", md: devnetReadme },
   { id: "rules", title: "Rule glossary", source: "packages/simulator/src/rules.ts" },
-  { id: "glossary", title: "Frame transactions", source: "docs/ui-handoff.md" },
+  { id: "glossary", title: "Frame transactions", source: "contracts/core/SPEC.md" },
   { id: "decisions", title: "Design decisions", source: "journal/DECISIONS.md", md: decisions },
 ];
 
