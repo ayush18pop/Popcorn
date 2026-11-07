@@ -8,8 +8,33 @@ import { BLOCKS, SHAPES, type ShapeId } from "@/lib/catalog";
 import { href } from "@/lib/route";
 import { cn } from "@/lib/utils";
 
-// The Claude skills live in the repo at .claude/skills/ (popcorn-build, popcorn-debug): opening the repository in Claude
-// Code loads them, together with the read-only MCP server from .mcp.json.
+// The agent skills live in the repo at .claude/skills/ (popcorn-build, popcorn-debug) as plain SKILL.md files: any agent
+// that reads skill folders can use them, together with the read-only MCP server (hosted, or from .mcp.json).
+
+const MCP_URL = "https://popcorn-mcp.vercel.app/mcp";
+const INSTALL_STEPS: { title: string; note: string; cmd: string }[] = [
+  { title: "1 · Get the skills", note: "Plain SKILL.md files. Put them where your agent reads skills (for example .claude/skills, or your agent's skills folder).", cmd: "npx degit ayush18pop/Popcorn/.claude/skills skills" },
+  { title: "2 · Connect the MCP server", note: "Hosted, read-only, Streamable HTTP. Add this to any MCP client's config.", cmd: `{ "mcpServers": { "popcorn": { "url": "${MCP_URL}" } } }` },
+  { title: "3 · Ask", note: "Describe the problem in plain words; the skill picks the blocks, builds and runs it.", cmd: "Pause our vault the moment assets per share fall below 1.0, with no Solidity." },
+];
+
+function CopyLine({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        void navigator.clipboard?.writeText(text);
+        setDone(true);
+        setTimeout(() => setDone(false), 1500);
+      }}
+      className="group flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-background/60 px-3 py-2.5 text-left font-mono text-[12px] text-foreground/90 hover:border-foreground/30"
+      title="Copy"
+    >
+      <span className="min-w-0 truncate">{text}</span>
+      <span className="shrink-0 text-[10.5px] text-faint group-hover:text-foreground">{done ? "copied" : "copy"}</span>
+    </button>
+  );
+}
 
 const SKILLS: { id: string; groups: ShapeId[]; does: string; tools: string[] }[] = [
   { id: "popcorn-build", groups: ["check", "join", "action", "payer"], does: "Turns a problem (“pay salaries privately”, “free transactions for our members”) into blocks, starts from the closest example project, deploys it on the local devnet and runs it.", tools: ["list_examples", "how_to_build", "get_block", "can_trigger", "build_trigger"] },
@@ -18,8 +43,8 @@ const SKILLS: { id: string; groups: ShapeId[]; does: string; tools: string[] }[]
 
 const CONVO = [
   { who: "you", text: "Our community wants free transactions for members, without a paymaster server that can cut people off." },
-  { who: "claude", text: "That is the Open Gas Network example: a Paymaster whose policy is public code, Membership Proof so each member admits one account without saying who, and an app account that lets the sponsor pay. I'll run it on your local devnet." },
-  { who: "claude", text: "can_trigger: ready. Sent from a key with no ETH and included; the sponsor paid, 839,535 gas. A second account from the same member is refused by the sponsor with 0x6d: nullifier already used." },
+  { who: "agent", text: "That is the Open Gas Network example: a Paymaster whose policy is public code, Membership Proof so each member admits one account without saying who, and an app account that lets the sponsor pay. I'll run it on your local devnet." },
+  { who: "agent", text: "can_trigger: ready. Sent from a key with no ETH and included; the sponsor paid, 839,535 gas. A second account from the same member is refused by the sponsor with 0x6d: nullifier already used." },
 ];
 
 const RULE = `# .claude/skills/popcorn-build/SKILL.md
@@ -39,13 +64,23 @@ export default function Skills() {
 
   return (
     <div className="relative overflow-x-clip">
-      <AuroraBackground className="h-[560px] bg-transparent">
+      <AuroraBackground className="h-[760px] bg-transparent">
         <div className="relative z-10 mx-auto w-full max-w-[1120px] px-4 pt-24 sm:px-6">
           <Reveal>
-            <p className="label-mono mb-4">Claude skills</p>
+            <p className="label-mono mb-4">Agent skills</p>
             <h1 className="text-chrome max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Describe the problem. Get a running project.</h1>
-            <p className="mt-5 max-w-[580px] text-[16px] leading-relaxed text-muted-foreground">
-              Two skills ship in the repository: one builds from a problem, one explains a refusal. Open Popcorn in Claude Code and both load, with the read-only MCP server.
+            <div className="mt-6 grid max-w-[760px] gap-3">
+              {INSTALL_STEPS.map((s) => (
+                <div key={s.title}>
+                  <p className="mb-1 text-[12.5px] text-muted-foreground">
+                    <span className="font-medium text-foreground">{s.title}</span> · {s.note}
+                  </p>
+                  <CopyLine text={s.cmd} />
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 max-w-[640px] text-[13px] leading-relaxed text-muted-foreground">
+              Works with any agent that reads skills and speaks MCP (Claude Code, Codex, Gemini CLI, OpenCode and others). Two skills: one builds from a problem, one explains a refusal. Or clone the repository: the skills and the MCP config are already in it.
             </p>
           </Reveal>
         </div>
@@ -140,7 +175,7 @@ export default function Skills() {
                 <Reveal key={i} delay={i * 0.15}>
                   <div className={cn("flex gap-3", c.who === "you" && "flex-row-reverse text-right")}>
                     <Avatar className="size-8 border border-[var(--glass-border)]">
-                      <AvatarFallback className="bg-foreground/[0.06] font-mono text-[10px]">{c.who === "you" ? "you" : "C"}</AvatarFallback>
+                      <AvatarFallback className="bg-foreground/[0.06] font-mono text-[10px]">{c.who === "you" ? "you" : "AI"}</AvatarFallback>
                     </Avatar>
                     <Spotlight className={cn("glass max-w-[440px] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed", c.who === "you" ? "text-foreground" : "text-foreground/85")}>{c.text}</Spotlight>
                   </div>

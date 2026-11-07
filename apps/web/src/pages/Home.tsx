@@ -274,7 +274,7 @@ export default function Home() {
             {[
               { t: "SDK", d: "A viem extension and a signer for every scheme.", s: "built" as const, h: href("docs", "sdk") },
               { t: "Contracts", d: "Core, conditions, signers, payers and templates in Solidity and Yul.", s: "built" as const, h: href("docs", "contracts") },
-              { t: "Claude skills", d: "Describe the protection you want; get the rule file.", s: "planned" as const, h: href("skills") },
+              { t: "Agent skills", d: "Describe the protection you want; your AI agent builds and runs it.", s: "built" as const, h: href("skills") },
               { t: "MCP server", d: "Read-only tools that plan and check rules. Never holds a key.", s: "planned" as const, h: href("mcp") },
             ].map((x, i) => (
               <Reveal key={x.t} delay={i * 0.06}>

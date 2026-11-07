@@ -151,11 +151,11 @@ function ProjectPage({ p }: { p: Project }) {
             <Reveal delay={0.14}>
               <div className="glass rounded-[24px] p-6">
                 <p className="label-mono mb-3">Build your own</p>
-                <p className="text-[13px] leading-relaxed text-muted-foreground">Start from this project with Claude, the MCP server or the SDK. The SDK calls below are the ones the recorder ran.</p>
+                <p className="text-[13px] leading-relaxed text-muted-foreground">Start from this project with your AI agent, the MCP server or the SDK. The SDK calls below are the ones the recorder ran.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <CopyButton text={prompt} label="Copy prompt" />
                   <a href={href("mcp")} className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12.5px] text-muted-foreground hover:text-foreground">Install the MCP server <ArrowUpRight className="size-3.5" /></a>
-                  <a href={href("skills")} className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12.5px] text-muted-foreground hover:text-foreground">Claude skill <ArrowUpRight className="size-3.5" /></a>
+                  <a href={href("skills")} className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12.5px] text-muted-foreground hover:text-foreground">Agent skill <ArrowUpRight className="size-3.5" /></a>
                 </div>
                 <pre className="mt-4 overflow-x-auto rounded-2xl border border-[var(--glass-border)] p-4 font-mono text-[11.5px] leading-relaxed text-foreground/85">{`bun packages/sdk/scripts/record-examples.ts ${p.id}`}</pre>
                 {include && <p className="mt-3 font-mono text-[11px] text-faint">featured tx {shortHash(include.tx)} · {fmt(include.gasUsed)} gas</p>}

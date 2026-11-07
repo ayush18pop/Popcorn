@@ -55,8 +55,8 @@ function safe(s: string): unknown {
 }
 
 const INSTALL = [
-  { id: "claude", label: "Claude Code", cmd: "claude mcp add popcorn -- bun /path/to/Popcorn/packages/mcp/src/index.ts   # or open the repo: .mcp.json adds it" },
-  { id: "json", label: "other clients", cmd: `{ "mcpServers": { "popcorn": { "command": "bun", "args": ["/path/to/Popcorn/packages/mcp/src/index.ts"] } } }` },
+  { id: "hosted", label: "hosted (any client)", cmd: `{ "mcpServers": { "popcorn": { "url": "https://popcorn-mcp.vercel.app/mcp" } } }` },
+  { id: "local", label: "local (stdio)", cmd: `{ "mcpServers": { "popcorn": { "command": "bun", "args": ["/path/to/Popcorn/packages/mcp/src/index.ts"] } } }` },
 ];
 
 export default function Mcp() {
@@ -85,7 +85,7 @@ export default function Mcp() {
           </div>
           <h1 className="text-chrome mt-4 max-w-[860px] text-[42px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[64px]">Tools that read. Never a key.</h1>
           <p className="mt-5 max-w-[600px] text-[16px] leading-relaxed text-muted-foreground">
-            An MCP server for Claude and other clients: browse the catalog, plan and check rules, explain why a trigger was refused. Read-only by default.
+            An MCP server for any agent: browse the catalog, plan and check rules, explain why a trigger was refused. Read-only by default.
           </p>
         </Reveal>
 
